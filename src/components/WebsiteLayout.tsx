@@ -285,7 +285,10 @@ export const WebsiteLayout = ({ children }: { children: React.ReactNode }) => {
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-6 mt-10 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 text-[10px] font-bold uppercase tracking-widest text-white/60">
-           <p>© {new Date().getFullYear()} {businessProfile.name}. All Rights Reserved.</p>
+           <div className="space-y-1 text-center md:text-left">
+              <p>© {new Date().getFullYear()} {businessProfile.name}. All Rights Reserved.</p>
+              <p className="text-white/40">Developed by Digital Communique Private Limited</p>
+           </div>
            <div className="flex items-center space-x-6">
               <span className="hover:text-white cursor-pointer transition-colors">Privacy Policy</span>
               <span className="hover:text-white cursor-pointer transition-colors">Terms of Service</span>

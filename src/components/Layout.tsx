@@ -275,6 +275,11 @@ export const Sidebar = () => {
              <LogOut size={20} />
            </button>
         </div>
+        {isOpen && (
+          <div className="mt-4 text-center">
+            <p className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">Developed by Digital Communique Private Limited</p>
+          </div>
+        )}
       </div>
     </aside>
   );

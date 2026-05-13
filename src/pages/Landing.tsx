@@ -175,11 +175,70 @@ export const LandingPage = () => {
                 className="space-y-6"
               >
                   <div className="space-y-4">
-                    <h2 className="text-2xl font-bold text-[#141414]">Welcome Back</h2>
-                    <p className="text-sm text-[#888888]">Enter your credentials to access the workspace.</p>
+                    <h2 className="text-2xl font-bold text-[#141414]">Portal Login</h2>
+                    <p className="text-sm text-[#888888]">Choose your portal or enter credentials.</p>
                   </div>
 
-                   <form onSubmit={handleManualLogin} className="space-y-4 pt-2" autoComplete="off">
+                  {/* Portal Selection Grid */}
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <button 
+                      onClick={() => handleQuickLogin('Admin123', 'admin@123')}
+                      className="p-3 bg-gray-50 border border-gray-100 rounded-xl hover:border-blue-600 hover:bg-blue-50 transition-all text-left flex items-start space-x-3 group"
+                    >
+                      <div className="p-2 bg-blue-100 text-blue-600 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <ShieldCheck size={18} />
+                      </div>
+                      <div>
+                        <span className="block text-[10px] font-black uppercase tracking-widest text-[#141414]">Master Panel</span>
+                        <span className="text-[9px] font-medium text-[#888888]">Administrator</span>
+                      </div>
+                    </button>
+                    <button 
+                      onClick={() => handleQuickLogin('centerabc', 'abc')}
+                      className="p-3 bg-gray-50 border border-gray-100 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all text-left flex items-start space-x-3 group"
+                    >
+                      <div className="p-2 bg-purple-100 text-purple-600 rounded-lg group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                        <UserPlus size={18} />
+                      </div>
+                      <div>
+                        <span className="block text-[10px] font-black uppercase tracking-widest text-[#141414]">Franchise Panel</span>
+                        <span className="text-[9px] font-medium text-[#888888]">Regional Head</span>
+                      </div>
+                    </button>
+                    <button 
+                      onClick={() => handleQuickLogin('teacher', 'teacher')}
+                      className="p-3 bg-gray-50 border border-gray-100 rounded-xl hover:border-green-600 hover:bg-green-50 transition-all text-left flex items-start space-x-3 group"
+                    >
+                      <div className="p-2 bg-green-100 text-green-600 rounded-lg group-hover:bg-green-600 group-hover:text-white transition-colors">
+                        <GraduationCap size={18} />
+                      </div>
+                      <div>
+                        <span className="block text-[10px] font-black uppercase tracking-widest text-[#141414]">Faculty Panel</span>
+                        <span className="text-[9px] font-medium text-[#888888]">Instructors</span>
+                      </div>
+                    </button>
+                    <button 
+                      onClick={() => handleQuickLogin('student', 'student')}
+                      className="p-3 bg-gray-50 border border-gray-100 rounded-xl hover:border-amber-600 hover:bg-amber-50 transition-all text-left flex items-start space-x-3 group"
+                    >
+                      <div className="p-2 bg-amber-100 text-amber-600 rounded-lg group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                        <QrCode size={18} />
+                      </div>
+                      <div>
+                        <span className="block text-[10px] font-black uppercase tracking-widest text-[#141414]">Student Panel</span>
+                        <span className="text-[9px] font-medium text-[#888888]">Learners</span>
+                      </div>
+                    </button>
+                  </div>
+
+                  <div className="relative py-2 flex items-center justify-center">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-100"></div>
+                    </div>
+                    <span className="relative z-10 px-4 bg-white text-[9px] font-black text-[#888888] uppercase tracking-widest">Or Manual Login</span>
+                  </div>
+
+                   <form onSubmit={handleManualLogin} className="space-y-4 pt-0" autoComplete="off">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-[#888888] uppercase tracking-widest">User ID</label>
                     <input 
