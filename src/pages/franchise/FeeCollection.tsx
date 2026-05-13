@@ -542,8 +542,17 @@ export const FeeCollection = () => {
                      </div>
 
                      <div className="relative z-10 w-full bg-white/40">
-                        {/* Header Selection: Banner takes absolute priority for "cover all top header space" */}
-                     {businessProfile.banners && businessProfile.banners.length > 0 ? (
+                        {/* Header Selection: Header Image takes absolute priority */}
+                        {businessProfile.headerImageUrl ? (
+                          <div className="w-full">
+                            <img 
+                              src={businessProfile.headerImageUrl} 
+                              alt="Institute Header" 
+                              className="w-full h-auto object-contain border-b-2 border-black block"
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                        ) : businessProfile.banners && businessProfile.banners.length > 0 ? (
                         <div className="w-full">
                            <img 
                              src={businessProfile.banners[0]} 

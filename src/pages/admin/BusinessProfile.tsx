@@ -66,7 +66,7 @@ export const BusinessProfile = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const compressed = await compressImage(reader.result as string, 512, 0.9, 'image/png');
+        const compressed = await compressImage(reader.result as string, 512, 0.7, 'image/jpeg');
         setFormData(prev => ({ ...prev, logoUrl: compressed }));
       };
       reader.readAsDataURL(file);
@@ -78,8 +78,8 @@ export const BusinessProfile = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = async () => {
-        // Headers are typically wider, so we compress with a larger width
-        const compressed = await compressImage(reader.result as string, 1200, 0.8, 'image/png');
+        // Headers are typically wider, so we compress with a larger width but lower quality to save space
+        const compressed = await compressImage(reader.result as string, 1200, 0.6, 'image/jpeg');
         setFormData(prev => ({ ...prev, headerImageUrl: compressed }));
       };
       reader.readAsDataURL(file);
