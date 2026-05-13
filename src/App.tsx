@@ -76,18 +76,25 @@ export default function App() {
 
     // Disable common shortcuts for DevTools and copying
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
+      // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+Shift+K, Ctrl+U, Ctrl+S
       if (
         e.key === 'F12' ||
-        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
-        (e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.key === 's' || e.key === 'S'))
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C' || e.key === 'K')) ||
+        (e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.key === 's' || e.key === 'S')) ||
+        (e.metaKey && e.altKey && e.key === 'i') // Mac CMD+ALT+I
       ) {
         e.preventDefault();
+        return false;
       }
       
-      // Also disable Ctrl+C, Ctrl+A, Ctrl+X, Ctrl+V for extra protection
-      if (e.ctrlKey && (e.key === 'c' || e.key === 'C' || e.key === 'a' || e.key === 'A' || e.key === 'x' || e.key === 'X' || e.key === 'v' || e.key === 'V')) {
+      // Also disable Ctrl+A, Ctrl+X, Ctrl+C, Ctrl+V for general users to prevent easy cloning
+      // But only if not in an input/textarea
+      const target = e.target as HTMLElement;
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+      
+      if (!isInput && e.ctrlKey && (e.key === 'c' || e.key === 'C' || e.key === 'v' || e.key === 'V' || e.key === 'a' || e.key === 'A' || e.key === 'x' || e.key === 'X')) {
         e.preventDefault();
+        return false;
       }
     };
 

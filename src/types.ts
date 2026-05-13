@@ -16,6 +16,7 @@ export interface BusinessProfile {
   website: string;
   workingHours: string;
   logoUrl?: string;
+  headerImageUrl?: string;
   signatureUrl?: string;
   mission: string;
   facebookUrl?: string;
@@ -80,18 +81,33 @@ export interface Franchise {
   enabledMenus?: string[]; // List of menu IDs enabled for this franchise
 }
 
+export interface PaymentModeDetail {
+  mode: string;
+  amount: number;
+  transactionId?: string;
+}
+
+export interface FeeHeadDetail {
+  type: string;
+  amount: number;
+  discount: number;
+  penalty: number;
+}
+
 export interface FeePayment {
   id: string;
   studentId: string;
   receiptNo: string;
   date: string;
   feeType: string;
+  heads?: FeeHeadDetail[];
   amount: number;
   discount: number;
   penalty: number;
   paidAmount: number;
   balance: number;
   paymentMode: string;
+  paymentModes?: PaymentModeDetail[];
   transactionId?: string;
   status: 'Paid' | 'Partial' | 'Pending';
   remarks?: string;

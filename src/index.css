@@ -30,4 +30,17 @@
     -moz-user-select: text;
     -ms-user-select: text;
   }
+
+  img {
+    /* Security: Prevent dragging images */
+    pointer-events: none;
+    -webkit-user-drag: none;
+  }
+}
+
+/* Security: Deter standard screen capture via Print */
+@media print {
+  body {
+    display: none !important;
+  }
 }

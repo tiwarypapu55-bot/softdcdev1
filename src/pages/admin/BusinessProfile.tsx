@@ -39,6 +39,7 @@ export const BusinessProfile = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [activeModal, setActiveModal] = useState<'signature' | 'backup' | 'logo' | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const headerInputRef = useRef<HTMLInputElement>(null);
   const signatureInputRef = useRef<HTMLInputElement>(null);
   const prospectusInputRef = useRef<HTMLInputElement>(null);
   const directorPhotoInputRef = useRef<HTMLInputElement>(null);
@@ -67,6 +68,19 @@ export const BusinessProfile = () => {
       reader.onloadend = async () => {
         const compressed = await compressImage(reader.result as string, 512, 0.9, 'image/png');
         setFormData(prev => ({ ...prev, logoUrl: compressed }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleHeaderUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        // Headers are typically wider, so we compress with a larger width
+        const compressed = await compressImage(reader.result as string, 1200, 0.8, 'image/png');
+        setFormData(prev => ({ ...prev, headerImageUrl: compressed }));
       };
       reader.readAsDataURL(file);
     }
@@ -337,6 +351,59 @@ export const BusinessProfile = () => {
                      </button>
                   </div>
                </div>
+            </div>
+
+            <div className="pt-8 border-t border-gray-100 space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                   <h4 className="text-sm font-black text-[#141414] uppercase tracking-tight">Receipt Header Image</h4>
+                   <p className="text-xs text-[#888888] font-medium leading-relaxed">This image will appear at the very top of all fee receipts. Best if pre-designed with logo & address.</p>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => headerInputRef.current?.click()}
+                  className="px-6 py-2 bg-purple-600 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-purple-700 transition-all shadow-lg shadow-purple-500/20"
+                >
+                  {formData.headerImageUrl ? 'Replace Header' : 'Upload Header'}
+                </button>
+                <input 
+                  type="file" 
+                  ref={headerInputRef} 
+                  onChange={handleHeaderUpload} 
+                  className="hidden" 
+                  accept="image/*"
+                />
+              </div>
+
+              {formData.headerImageUrl ? (
+                <div className="relative group rounded-2xl overflow-hidden border border-gray-100 bg-gray-50">
+                  <img src={formData.headerImageUrl} alt="Header Preview" className="w-full h-auto max-h-48 object-contain mx-auto" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity space-x-4">
+                    <button 
+                      type="button"
+                      onClick={() => headerInputRef.current?.click()}
+                      className="p-3 bg-white text-[#141414] rounded-full shadow-xl hover:scale-110 transition-transform"
+                    >
+                      <Upload size={20} />
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setFormData({ ...formData, headerImageUrl: '' })}
+                      className="p-3 bg-red-600 text-white rounded-full shadow-xl hover:scale-110 transition-transform"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div 
+                  onClick={() => headerInputRef.current?.click()}
+                  className="w-full h-32 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-gray-400 hover:border-blue-600 hover:text-blue-600 transition-all cursor-pointer"
+                >
+                  <ImageIcon size={32} />
+                  <span className="text-[10px] font-black uppercase tracking-widest mt-2">No custom header uploaded</span>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-8 border-t border-gray-100">

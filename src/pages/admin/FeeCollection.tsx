@@ -30,15 +30,13 @@ export const FeeCollection = () => {
   const [receiptType, setReceiptType] = useState<'SINGLE' | 'HISTORY'>('SINGLE');
   
   const [paymentData, setPaymentData] = useState({
-    feeType: '',
-    amount: 0,
-    discount: 0,
-    penalty: 0,
-    paidAmount: 0,
-    paymentMode: 'Cash',
-    transactionId: '',
+    heads: [{ type: '', amount: 0, discount: 0, penalty: 0 }],
+    paymentModes: [{ mode: 'Cash', amount: 0, transactionId: '' }],
     remarks: ''
   });
+
+  const totalPayable = paymentData.heads.reduce((acc, h) => acc + (h.amount + h.penalty - h.discount), 0);
+  const totalPaidInModes = paymentData.paymentModes.reduce((acc, m) => acc + m.amount, 0);
 
   const filteredStudents = searchTerm.length > 2 
     ? students.filter(s => 
@@ -53,33 +51,78 @@ export const FeeCollection = () => {
     setSearchTerm('');
   };
 
+  const addHead = () => {
+    setPaymentData({
+      ...paymentData,
+      heads: [...paymentData.heads, { type: '', amount: 0, discount: 0, penalty: 0 }]
+    });
+  };
+
+  const removeHead = (index: number) => {
+    if (paymentData.heads.length > 1) {
+      const newHeads = [...paymentData.heads];
+      newHeads.splice(index, 1);
+      setPaymentData({ ...paymentData, heads: newHeads });
+    }
+  };
+
+  const addPaymentMode = () => {
+    setPaymentData({
+      ...paymentData,
+      paymentModes: [...paymentData.paymentModes, { mode: 'Cash', amount: 0, transactionId: '' }]
+    });
+  };
+
+  const removePaymentMode = (index: number) => {
+    if (paymentData.paymentModes.length > 1) {
+      const newModes = [...paymentData.paymentModes];
+      newModes.splice(index, 1);
+      setPaymentData({ ...paymentData, paymentModes: newModes });
+    }
+  };
+
   const handlePayment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedStudent) return;
 
-    const netAmount = (paymentData.amount + paymentData.penalty) - paymentData.discount;
-    const balance = netAmount - paymentData.paidAmount;
+    if (totalPaidInModes === 0) {
+      alert('Paid amount cannot be zero');
+      return;
+    }
+
+    const subTotalAmount = paymentData.heads.reduce((acc, h) => acc + h.amount, 0);
+    const subTotalDiscount = paymentData.heads.reduce((acc, h) => acc + h.discount, 0);
+    const subTotalPenalty = paymentData.heads.reduce((acc, h) => acc + h.penalty, 0);
+    const balance = totalPayable - totalPaidInModes;
     
     const newPayment: FeePayment = {
       id: `p${Date.now()}`,
       studentId: selectedStudent.id,
       receiptNo: `RCPT${Date.now().toString().slice(-4)}`,
       date: new Date().toISOString().split('T')[0],
-      feeType: paymentData.feeType,
-      amount: paymentData.amount,
-      discount: paymentData.discount,
-      penalty: paymentData.penalty,
-      paidAmount: paymentData.paidAmount,
+      feeType: paymentData.heads.map(h => h.type).filter(Boolean).join(', '),
+      heads: paymentData.heads,
+      amount: subTotalAmount,
+      discount: subTotalDiscount,
+      penalty: subTotalPenalty,
+      paidAmount: totalPaidInModes,
       balance: balance > 0 ? balance : 0,
-      paymentMode: paymentData.paymentMode,
-      transactionId: paymentData.transactionId,
-      status: balance <= 0 ? 'Paid' : (paymentData.paidAmount > 0 ? 'Partial' : 'Pending'),
+      paymentMode: paymentData.paymentModes.map(m => m.mode).join(' + '),
+      paymentModes: paymentData.paymentModes,
+      status: balance <= 0 ? 'Paid' : (totalPaidInModes > 0 ? 'Partial' : 'Pending'),
       remarks: paymentData.remarks
     };
 
     addFeePayment(newPayment);
     setShowPaymentModal(false);
     setShowReceipt(newPayment);
+    
+    // Reset form
+    setPaymentData({
+      heads: [{ type: '', amount: 0, discount: 0, penalty: 0 }],
+      paymentModes: [{ mode: 'Cash', amount: 0, transactionId: '' }],
+      remarks: ''
+    });
   };
 
   const numberToWords = (num: number): string => {
@@ -351,93 +394,191 @@ export const FeeCollection = () => {
                 </button>
               </div>
 
-              <form onSubmit={handlePayment} className="p-8 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black text-[#888888] uppercase tracking-widest ml-1">Fee Type / Head</label>
-                    <select 
-                      required
-                      value={paymentData.feeType}
-                      onChange={(e) => setPaymentData({...paymentData, feeType: e.target.value})}
-                      className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold"
-                    >
-                      <option value="">Select Category</option>
-                      {feeStructures.map(f => <option key={f.id} value={f.head}>{f.head}</option>)}
-                      <option value="Admission Fee">Admission Fee</option>
-                      <option value="Monthly Fee">Monthly Fee</option>
-                      <option value="Exam Fee">Exam Fee</option>
-                    </select>
+              <form onSubmit={handlePayment} className="p-8 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                {/* Fee Heads Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                    <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-widest tracking-widest">Fee Heads / Categories</h3>
+                    <button type="button" onClick={addHead} className="text-[10px] font-black text-blue-600 uppercase flex items-center space-x-1 hover:underline">
+                      <Plus size={12} />
+                      <span>Add Head</span>
+                    </button>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black text-[#888888] uppercase tracking-widest ml-1">Payment Mode</label>
-                    <select 
-                      value={paymentData.paymentMode}
-                      onChange={(e) => setPaymentData({...paymentData, paymentMode: e.target.value})}
-                      className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold"
-                    >
-                      <option>Cash</option>
-                      <option>UPI / Online</option>
-                      <option>Bank Transfer</option>
-                      <option>Check</option>
-                    </select>
+                  
+                  <div className="space-y-4">
+                    {paymentData.heads.map((head, idx) => (
+                      <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-2xl relative group">
+                        <div className="md:col-span-1 space-y-1">
+                          <label className="text-[8px] font-black text-[#888888] uppercase tracking-widest">Type</label>
+                          <select 
+                            required
+                            value={head.type}
+                            onChange={(e) => {
+                              const newHeads = [...paymentData.heads];
+                              newHeads[idx].type = e.target.value;
+                              setPaymentData({ ...paymentData, heads: newHeads });
+                            }}
+                            className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-blue-600 font-bold text-[10px]"
+                          >
+                            <option value="">Select Category</option>
+                            {feeStructures.map(f => <option key={f.id} value={f.head}>{f.head}</option>)}
+                            <option value="Admission Fee">Admission Fee</option>
+                            <option value="Monthly Fee">Monthly Fee</option>
+                            <option value="Exam Fee">Exam Fee</option>
+                            <option value="Registration Fee">Registration Fee</option>
+                            <option value="Certificate Fee">Certificate Fee</option>
+                            <option value="Late Penalty">Late Penalty</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[8px] font-black text-[#888888] uppercase tracking-widest">Base Fee (₹)</label>
+                          <input 
+                            type="number"
+                            required
+                            value={head.amount}
+                            onChange={(e) => {
+                              const newHeads = [...paymentData.heads];
+                              newHeads[idx].amount = Number(e.target.value);
+                              setPaymentData({ ...paymentData, heads: newHeads });
+                            }}
+                            className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px]"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">Disc (₹)</label>
+                          <input 
+                            type="number"
+                            value={head.discount}
+                            onChange={(e) => {
+                              const newHeads = [...paymentData.heads];
+                              newHeads[idx].discount = Number(e.target.value);
+                              setPaymentData({ ...paymentData, heads: newHeads });
+                            }}
+                            className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px] text-emerald-600"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[8px] font-black text-red-500 uppercase tracking-widest">Pen (₹)</label>
+                          <div className="flex items-center space-x-2">
+                             <input 
+                                type="number"
+                                value={head.penalty}
+                                onChange={(e) => {
+                                  const newHeads = [...paymentData.heads];
+                                  newHeads[idx].penalty = Number(e.target.value);
+                                  setPaymentData({ ...paymentData, heads: newHeads });
+                                }}
+                                className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px] text-red-600"
+                             />
+                             {paymentData.heads.length > 1 && (
+                                <button type="button" onClick={() => removeHead(idx)} className="p-1 text-gray-300 hover:text-red-500 transition-colors">
+                                   <X size={14} />
+                                </button>
+                             )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black text-[#888888] uppercase tracking-widest ml-1">Total Fee Amount (₹)</label>
-                    <input 
-                      type="number"
-                      required
-                      value={paymentData.amount}
-                      onChange={(e) => setPaymentData({...paymentData, amount: Number(e.target.value)})}
-                      className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black text-emerald-600 uppercase tracking-widest ml-1">Discount Given (₹)</label>
-                    <input 
-                      type="number"
-                      value={paymentData.discount}
-                      onChange={(e) => setPaymentData({...paymentData, discount: Number(e.target.value)})}
-                      className="w-full p-4 bg-emerald-50 border border-emerald-100 rounded-2xl outline-none font-bold text-emerald-700"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black text-red-500 uppercase tracking-widest ml-1">Penalty / Late Fee (₹)</label>
-                    <input 
-                      type="number"
-                      value={paymentData.penalty}
-                      onChange={(e) => setPaymentData({...paymentData, penalty: Number(e.target.value)})}
-                      className="w-full p-4 bg-red-50 border border-red-100 rounded-2xl outline-none font-bold text-red-700"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center ml-1">
-                      <label className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Paid Amount (₹) *</label>
-                      <button 
-                        type="button"
-                        onClick={() => setPaymentData({...paymentData, paidAmount: (paymentData.amount + paymentData.penalty) - paymentData.discount})}
-                        className="text-[8px] font-black text-blue-600 uppercase tracking-wider hover:underline"
-                      >
-                        Set Full Payment
-                      </button>
+                </div>
+
+                {/* Payment Modes Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                    <h3 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest tracking-widest">Payment Modes / Transactions</h3>
+                    <div className="flex items-center space-x-4">
+                       <p className="text-[10px] font-black text-[#141414] uppercase">Total Payable: <span className="text-blue-600">₹{totalPayable.toLocaleString()}</span></p>
+                       <button type="button" onClick={addPaymentMode} className="text-[10px] font-black text-emerald-600 uppercase flex items-center space-x-1 hover:underline">
+                         <Plus size={12} />
+                         <span>Add Mode</span>
+                       </button>
                     </div>
-                    <input 
-                      type="number"
-                      required
-                      value={paymentData.paidAmount}
-                      onChange={(e) => setPaymentData({...paymentData, paidAmount: Number(e.target.value)})}
-                      className="w-full p-4 bg-blue-50 border border-blue-100 rounded-2xl outline-none font-black text-blue-800 text-lg"
-                    />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black text-[#888888] uppercase tracking-widest ml-1">Transaction ID / Ref (Optional)</label>
-                    <input 
-                      type="text"
-                      value={paymentData.transactionId}
-                      onChange={(e) => setPaymentData({...paymentData, transactionId: e.target.value})}
-                      placeholder="e.g. TXN123456"
-                      className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold"
-                    />
+                  
+                  <div className="space-y-3">
+                    {paymentData.paymentModes.map((pm, idx) => (
+                      <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-emerald-50/30 rounded-2xl relative border border-emerald-100/50">
+                        <div className="space-y-1">
+                          <label className="text-[8px] font-black text-[#888888] uppercase tracking-widest">Mode</label>
+                          <select 
+                            value={pm.mode}
+                            onChange={(e) => {
+                              const newModes = [...paymentData.paymentModes];
+                              newModes[idx].mode = e.target.value;
+                              setPaymentData({ ...paymentData, paymentModes: newModes });
+                            }}
+                            className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-emerald-600 font-bold text-[10px]"
+                          >
+                            <option>Cash</option>
+                            <option>UPI / Online</option>
+                            <option>Bank Transfer</option>
+                            <option>Check</option>
+                            <option>Card</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[8px] font-black text-[#888888] uppercase tracking-widest">Paid (₹)</label>
+                            {idx === 0 && (
+                               <button 
+                                  type="button" 
+                                  onClick={() => {
+                                     const newModes = [...paymentData.paymentModes];
+                                     newModes[0].amount = totalPayable;
+                                     setPaymentData({ ...paymentData, paymentModes: newModes });
+                                  }}
+                                  className="text-[7px] font-black text-emerald-600 uppercase hover:underline"
+                               >Set Remaining</button>
+                            )}
+                          </div>
+                          <input 
+                            type="number"
+                            required
+                            value={pm.amount}
+                            onChange={(e) => {
+                              const newModes = [...paymentData.paymentModes];
+                              newModes[idx].amount = Number(e.target.value);
+                              setPaymentData({ ...paymentData, paymentModes: newModes });
+                            }}
+                            className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px] text-blue-600"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[8px] font-black text-[#888888] uppercase tracking-widest">Transaction Ref</label>
+                          <div className="flex items-center space-x-2">
+                             <input 
+                                type="text"
+                                value={pm.transactionId}
+                                onChange={(e) => {
+                                  const newModes = [...paymentData.paymentModes];
+                                  newModes[idx].transactionId = e.target.value;
+                                  setPaymentData({ ...paymentData, paymentModes: newModes });
+                                }}
+                                placeholder="TXN ID / CHQ NO"
+                                className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px]"
+                             />
+                             {paymentData.paymentModes.length > 1 && (
+                                <button type="button" onClick={() => removePaymentMode(idx)} className="p-1 text-gray-300 hover:text-red-500 transition-colors">
+                                   <X size={14} />
+                                </button>
+                             )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
+                </div>
+
+                <div className="p-6 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-center justify-between">
+                   <div className="space-y-1">
+                      <p className="text-[10px] font-black text-[#888888] uppercase tracking-widest">Total Summary</p>
+                      <p className="text-xl font-black text-[#141414]">₹{totalPayable.toLocaleString()} <span className="text-[10px] font-bold text-[#888888] align-middle">TOTAL DUE</span></p>
+                   </div>
+                   <div className="text-right space-y-1">
+                      <p className="text-[10px] font-black text-[#888888] uppercase tracking-widest">Total Paid</p>
+                      <p className="text-xl font-black text-emerald-600">₹{totalPaidInModes.toLocaleString()}</p>
+                   </div>
                 </div>
 
                 <div className="space-y-2">
@@ -445,7 +586,8 @@ export const FeeCollection = () => {
                    <textarea 
                      value={paymentData.remarks}
                      onChange={(e) => setPaymentData({...paymentData, remarks: e.target.value})}
-                     className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold"
+                     className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-sm"
+                     placeholder="Additional notes about this payment..."
                      rows={2}
                    />
                 </div>
@@ -454,7 +596,7 @@ export const FeeCollection = () => {
                   <button 
                     type="button" 
                     onClick={() => setShowPaymentModal(false)}
-                    className="py-4 bg-gray-100 text-[#141414] text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-gray-200 transition-all font-mono"
+                    className="py-4 bg-gray-100 text-[#141414] text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-gray-200 transition-all"
                   >
                     DISCARD
                   </button>
@@ -463,7 +605,7 @@ export const FeeCollection = () => {
                     className="py-4 bg-[#141414] text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-blue-600 transition-all shadow-xl shadow-black/20 flex items-center justify-center space-x-3"
                   >
                      <Send size={18} />
-                     <span>Finalize Payment</span>
+                     <span>Finalize Receipt</span>
                   </button>
                 </div>
               </form>
@@ -524,9 +666,18 @@ export const FeeCollection = () => {
                      </div>
 
                      <div className="relative z-10 w-full bg-white/40">
-                        {/* Header Selection: Banner takes absolute priority for "cover all top header space" */}
-                     {businessProfile.banners && businessProfile.banners.length > 0 ? (
-                        <div className="w-full">
+                        {/* Header Selection: Custom Header Image takes precedence */}
+                        {businessProfile.headerImageUrl ? (
+                          <div className="w-full">
+                            <img 
+                              src={businessProfile.headerImageUrl} 
+                              alt="Institute Header" 
+                              className="w-full h-auto object-contain border-b-2 border-black block"
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                        ) : businessProfile.banners && businessProfile.banners.length > 0 ? (
+                          <div className="w-full">
                            <img 
                              src={businessProfile.banners[0]} 
                              alt="Institute Banner" 
@@ -643,33 +794,37 @@ export const FeeCollection = () => {
                                <tr className="bg-blue-50 divide-x-2 divide-black border-b-2 border-black">
                                   <th className="py-2">#</th>
                                   {receiptType === 'HISTORY' && <th className="py-2">Receipt No</th>}
-                                  <th className="py-2">Fees Type</th>
+                                  <th className="py-2">Fees Type / Head</th>
                                   <th className="py-2">Amount</th>
                                   <th className="py-2">Discount</th>
                                   <th className="py-2">Penalty</th>
-                                  <th className="py-2">Paid Amount</th>
-                                  <th className="py-2">Balance</th>
+                                  <th className="py-2">Sub-Total</th>
+                                  <th className="py-2 font-black text-blue-600">Paid Amt</th>
                                   <th className="py-2">Status</th>
                                   <th className="py-2">Date</th>
-                                  <th className="py-2">Pay Mode</th>
-                                  <th className="py-2">Transaction ID</th>
+                                  <th className="py-2">Status</th>
+                                  <th className="py-2">Date</th>
                                </tr>
                             </thead>
                             <tbody className="divide-y-2 divide-black font-bold">
                                {receiptType === 'SINGLE' ? (
-                                 <tr className="divide-x-2 divide-black">
-                                    <td className="py-2">1</td>
-                                    <td className="py-2 uppercase">{showReceipt.feeType}</td>
-                                    <td className="py-2">₹{showReceipt.amount}</td>
-                                    <td className="py-2">₹{showReceipt.discount}</td>
-                                    <td className="py-2">₹{showReceipt.penalty}</td>
-                                    <td className="py-2">₹{showReceipt.paidAmount}</td>
-                                    <td className="py-2">₹{showReceipt.balance}</td>
-                                    <td className="py-2 text-emerald-600">{showReceipt.status}</td>
-                                    <td className="py-2">{showReceipt.date}</td>
-                                    <td className="py-2">{showReceipt.paymentMode}</td>
-                                    <td className="py-2">{showReceipt.transactionId || '--'}</td>
-                                 </tr>
+                                  <>
+                                  {(showReceipt.heads && showReceipt.heads.length > 0 ? showReceipt.heads : [{ type: showReceipt.feeType, amount: showReceipt.amount, discount: showReceipt.discount, penalty: showReceipt.penalty }]).map((h, idx) => (
+                                     <tr key={idx} className="divide-x-2 divide-black">
+                                        <td className="py-2">{idx + 1}</td>
+                                        <td className="py-2 uppercase">{h.type}</td>
+                                        <td className="py-2">₹{h.amount}</td>
+                                        <td className="py-2">₹{h.discount}</td>
+                                        <td className="py-2">₹{h.penalty}</td>
+                                        <td className="py-2">₹{h.amount + h.penalty - h.discount}</td>
+                                        <td className="py-2 text-emerald-600">{showReceipt.status}</td>
+                                        <td className="py-2 bg-blue-50 font-black">
+                                           {idx === 0 ? `₹${showReceipt.paidAmount}` : '--'}
+                                        </td>
+                                        <td className="py-2">{showReceipt.date}</td>
+                                     </tr>
+                                  ))}
+                                  </>
                                ) : (
                                  feePayments.filter(p => p.studentId === showReceipt.studentId).map((hp, idx) => (
                                     <tr key={hp.id} className="divide-x-2 divide-black">
@@ -679,12 +834,12 @@ export const FeeCollection = () => {
                                        <td className="py-2">₹{hp.amount}</td>
                                        <td className="py-2">₹{hp.discount}</td>
                                        <td className="py-2">₹{hp.penalty}</td>
-                                       <td className="py-2">₹{hp.paidAmount}</td>
-                                       <td className="py-2">₹{hp.balance}</td>
-                                       <td className="py-2 text-emerald-600">{hp.status}</td>
+                                       <td className="py-2">₹{hp.amount + hp.penalty - hp.discount}</td>
+                                       <td className="py-2 bg-blue-50 font-black text-blue-600">₹{hp.paidAmount}</td>
+                                       <td className="py-2 text-emerald-600 font-bold">{hp.status}</td>
                                        <td className="py-2">{hp.date}</td>
-                                       <td className="py-2">{hp.paymentMode}</td>
-                                       <td className="py-2">{hp.transactionId || '--'}</td>
+                                       <td className="py-2 uppercase">{hp.paymentMode}</td>
+                                       
                                     </tr>
                                  ))
                                )}
@@ -726,7 +881,34 @@ export const FeeCollection = () => {
                         </div>
                       )}
 
-                      <div className="text-right mt-2 space-y-1">
+                                             {receiptType === 'SINGLE' && showReceipt.paymentModes && showReceipt.paymentModes.length > 0 && (
+                          <div className="mb-6">
+                             <div className="bg-emerald-600 text-white px-4 py-2 inline-flex items-center space-x-2 mb-2 rounded-lg">
+                               <Plus size={14} />
+                               <span className="text-[9px] font-black uppercase tracking-widest">Transaction Details (Modes)</span>
+                             </div>
+                             <table className="w-full border-2 border-black text-center text-[9px]">
+                                <thead>
+                                   <tr className="bg-emerald-50 divide-x-2 divide-black border-b-2 border-black font-black uppercase">
+                                      <th className="py-2">Payment Mode</th>
+                                      <th className="py-2">Paid Amount</th>
+                                      <th className="py-2 truncate">Transaction ID / Reference</th>
+                                   </tr>
+                                </thead>
+                                <tbody className="divide-y-2 divide-black font-bold uppercase">
+                                   {showReceipt.paymentModes.map((pm, idx) => (
+                                      <tr key={idx} className="divide-x-2 divide-black">
+                                         <td className="py-2">{pm.mode}</td>
+                                         <td className="py-2">₹{pm.amount}</td>
+                                         <td className="py-2">{pm.transactionId || 'CASH TRANSACTION'}</td>
+                                      </tr>
+                                   ))}
+                                </tbody>
+                             </table>
+                          </div>
+                       )}
+
+                       <div className="text-right mt-2 space-y-1">
                           <p className="text-[10px] font-black">
                              {receiptType === 'SINGLE' ? `Current Paid: ₹ ${showReceipt.paidAmount}` : `Total Paid to Date: ₹ ${feePayments.filter(p => p.studentId === showReceipt.studentId).reduce((acc, curr) => acc + curr.paidAmount, 0)}`}
                           </p>

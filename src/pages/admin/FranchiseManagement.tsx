@@ -443,9 +443,11 @@ export const AdminFranchiseManagement = () => {
                              <p className="text-[10px] font-bold text-[#141414] uppercase">Director Photo</p>
                              <div className="flex items-center space-x-3">
                                 <label htmlFor="dir-photo" className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-[10px] font-bold cursor-pointer hover:bg-gray-100 uppercase shadow-xs transition-colors">Choose File</label>
-                                <span className="text-[10px] text-gray-400 font-medium">No file chosen</span>
+                                <span className="text-[10px] text-gray-400 font-medium">
+                                   {newBranch.directorPhotoUrl ? "Photo Uploaded" : "No file chosen"}
+                                </span>
                              </div>
-                             <input type="file" id="dir-photo" className="hidden" />
+                             <input type="file" id="dir-photo" className="hidden" accept="image/*" onChange={handleDirectorPhotoUpload} />
                           </div>
                        </div>
                        <div className="space-y-4">
@@ -454,9 +456,11 @@ export const AdminFranchiseManagement = () => {
                              <p className="text-[10px] font-bold text-[#141414] uppercase">Upload Logo</p>
                              <div className="flex items-center space-x-3">
                                 <label htmlFor="inst-logo" className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-[10px] font-bold cursor-pointer hover:bg-gray-100 uppercase shadow-xs transition-colors">Choose File</label>
-                                <span className="text-[10px] text-gray-400 font-medium">No file chosen</span>
+                                <span className="text-[10px] text-gray-400 font-medium">
+                                   {newBranch.logoUrl ? "Logo Uploaded" : "No file chosen"}
+                                </span>
                              </div>
-                             <input type="file" id="inst-logo" className="hidden" />
+                             <input type="file" id="inst-logo" className="hidden" accept="image/*" onChange={handleLogoUpload} />
                           </div>
                        </div>
                     </div>
@@ -681,6 +685,71 @@ export const AdminFranchiseManagement = () => {
                           <label className="text-[10px] font-bold text-[#888888] uppercase tracking-widest">Revenue Share (%)</label>
                           <input required type="number" value={editingFranchise.revenueSharePercent} onChange={(e) => setEditingFranchise({...editingFranchise, revenueSharePercent: Number(e.target.value)})} className="w-full p-3 bg-[#F5F5F5] border-none rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none text-sm" />
                        </div>
+
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:col-span-2 bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                          <div className="space-y-4">
+                             <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Director Profile Photo</label>
+                             <div className="flex items-center space-x-4">
+                                <div className="w-16 h-16 bg-white border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center overflow-hidden">
+                                   {editingFranchise.directorPhotoUrl ? (
+                                      <img src={editingFranchise.directorPhotoUrl} alt="" className="w-full h-full object-cover" />
+                                   ) : (
+                                      <Users size={20} className="text-gray-300" />
+                                   )}
+                                </div>
+                                <label className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-[10px] font-black cursor-pointer hover:bg-gray-50 uppercase tracking-widest shadow-sm">
+                                   Change Photo
+                                   <input 
+                                      type="file" 
+                                      className="hidden" 
+                                      accept="image/*"
+                                      onChange={async (e) => {
+                                         const file = e.target.files?.[0];
+                                         if (file) {
+                                            const reader = new FileReader();
+                                            reader.onloadend = async () => {
+                                               const compressed = await compressImage(reader.result as string, 400, 0.7);
+                                               setEditingFranchise({ ...editingFranchise, directorPhotoUrl: compressed });
+                                            };
+                                            reader.readAsDataURL(file);
+                                         }
+                                      }} 
+                                   />
+                                </label>
+                             </div>
+                          </div>
+                          <div className="space-y-4">
+                             <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest block">Institute Logo</label>
+                             <div className="flex items-center space-x-4">
+                                <div className="w-16 h-16 bg-white border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center overflow-hidden">
+                                   {editingFranchise.logoUrl ? (
+                                      <img src={editingFranchise.logoUrl} alt="" className="w-full h-full object-contain p-2" />
+                                   ) : (
+                                      <ShieldCheck size={20} className="text-gray-300" />
+                                   )}
+                                </div>
+                                <label className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-[10px] font-black cursor-pointer hover:bg-gray-50 uppercase tracking-widest shadow-sm">
+                                   Change Logo
+                                   <input 
+                                      type="file" 
+                                      className="hidden" 
+                                      accept="image/*"
+                                      onChange={async (e) => {
+                                         const file = e.target.files?.[0];
+                                          if (file) {
+                                             const reader = new FileReader();
+                                             reader.onloadend = async () => {
+                                                const compressed = await compressImage(reader.result as string, 400, 0.8);
+                                                setEditingFranchise({ ...editingFranchise, logoUrl: compressed });
+                                             };
+                                             reader.readAsDataURL(file);
+                                          }
+                                       }} 
+                                    />
+                                 </label>
+                              </div>
+                           </div>
+                        </div>
                     </div>
                  </section>
 
