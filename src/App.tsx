@@ -85,18 +85,30 @@ export default function App() {
         e.preventDefault();
       }
       
-      // Also disable Ctrl+C and Ctrl+A for extra protection
-      if (e.ctrlKey && (e.key === 'c' || e.key === 'C' || e.key === 'a' || e.key === 'A')) {
+      // Also disable Ctrl+C, Ctrl+A, Ctrl+X, Ctrl+V for extra protection
+      if (e.ctrlKey && (e.key === 'c' || e.key === 'C' || e.key === 'a' || e.key === 'A' || e.key === 'x' || e.key === 'X' || e.key === 'v' || e.key === 'V')) {
+        e.preventDefault();
+      }
+    };
+
+    // Disable copy/cut
+    const handleCopyCut = (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
         e.preventDefault();
       }
     };
 
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('copy', handleCopyCut);
+    document.addEventListener('cut', handleCopyCut);
 
     return () => {
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('copy', handleCopyCut);
+      document.removeEventListener('cut', handleCopyCut);
     };
   }, []);
 
