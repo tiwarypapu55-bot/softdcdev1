@@ -177,28 +177,6 @@ export const LandingPage = () => {
                   <div className="space-y-4">
                     <h2 className="text-2xl font-bold text-[#141414]">Welcome Back</h2>
                     <p className="text-sm text-[#888888]">Enter your credentials to access the workspace.</p>
-                    
-                    {/* Panel Selection Hint */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                       {[
-                         { id: 'Admin', icon: ShieldCheck, color: 'text-purple-600', bg: 'bg-purple-50', credentials: { id: 'Admin123', pass: 'admin@123' } },
-                         { id: 'Franchise', icon: GraduationCap, color: 'text-blue-600', bg: 'bg-blue-50', credentials: { id: 'centerabc', pass: 'abc' } },
-                         { id: 'Teacher', icon: UserPlus, color: 'text-emerald-600', bg: 'bg-emerald-50', credentials: { id: 'teacher', pass: 'teacher' } },
-                         { id: 'Student', icon: Search, color: 'text-orange-600', bg: 'bg-orange-50', credentials: { id: 'student', pass: 'student' } }
-                       ].map((panel) => (
-                         <div 
-                           key={panel.id} 
-                           onClick={() => handleQuickLogin(panel.credentials.id, panel.credentials.pass)}
-                           className={clsx(
-                             "p-3 rounded-2xl flex flex-col items-center justify-center space-y-2 border-2 transition-all cursor-pointer",
-                             loginData.id === panel.credentials.id ? "border-blue-600 bg-white shadow-md scale-105" : "border-transparent " + panel.bg + " hover:border-gray-200"
-                           )}
-                         >
-                            <panel.icon size={18} className={panel.color} />
-                            <span className="text-[9px] font-black uppercase tracking-widest text-[#141414]">{panel.id} Panel</span>
-                         </div>
-                       ))}
-                    </div>
                   </div>
 
                    <form onSubmit={handleManualLogin} className="space-y-4 pt-2" autoComplete="off">
