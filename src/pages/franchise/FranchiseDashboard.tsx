@@ -46,22 +46,6 @@ import {
   Cell 
 } from 'recharts';
 
-const enrollmentData = [
-  { name: 'Jan', value: 40 },
-  { name: 'Feb', value: 30 },
-  { name: 'Mar', value: 65 },
-  { name: 'Apr', value: 45 },
-  { name: 'May', value: 80 },
-  { name: 'Jun', value: 55 },
-];
-
-const certificateData = [
-  { name: 'Tally Prime', value: 45, color: '#3B82F6' },
-  { name: 'GST', value: 25, color: '#10B981' },
-  { name: 'Data Entry', value: 20, color: '#F59E0B' },
-  { name: 'Others', value: 10, color: '#6366F1' },
-];
-
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#6366F1', '#EC4899'];
 
 const CenterStatCard = ({ label, value, icon: Icon, colorClass, gradient, subValue }: { label: string, value: string | number, icon: any, colorClass: string, gradient: string, subValue?: string }) => (
@@ -90,7 +74,7 @@ const CenterStatCard = ({ label, value, icon: Icon, colorClass, gradient, subVal
 );
 
 export const FranchiseDashboard = () => {
-  const { students, currentUser, certificates, walletTransactions, franchises, logout } = useApp();
+  const { students, currentUser, certificates, walletTransactions, franchises, logout, courses } = useApp();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([
     { id: 1, type: 'exam', title: 'Upcoming Exam:', message: 'Maths test scheduled on 20th May', time: '2 hours ago', icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -112,6 +96,42 @@ export const FranchiseDashboard = () => {
   const currentFranchise = franchises.find(f => f.id === currentUser?.franchiseId);
   const isBlocked = currentFranchise?.status === 'BLOCKED';
   const enabledMenus = currentFranchise?.enabledMenus || ['DASHBOARD'];
+
+  // Dynamic Enrollment Chart Data
+  const monthsAbbr = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const now = new Date();
+  const enrollmentData = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date();
+    d.setMonth(now.getMonth() - (5 - i));
+    const monthIndex = d.getMonth();
+    const year = d.getFullYear();
+
+    const monthStudents = myStudents.filter(s => {
+      const sDate = new Date(s.admissionDate);
+      return sDate.getMonth() === monthIndex && sDate.getFullYear() === year;
+    });
+
+    return {
+      name: monthsAbbr[monthIndex],
+      value: monthStudents.length
+    };
+  });
+
+  // Dynamic Course Distribution
+  const courseCounts: Record<string, number> = {};
+  myStudents.forEach(s => {
+    courseCounts[s.course] = (courseCounts[s.course] || 0) + 1;
+  });
+
+  const certificateData = Object.entries(courseCounts).map(([name, value], idx) => ({
+    name,
+    value: Math.round((value / myStudents.length) * 100),
+    color: COLORS[idx % COLORS.length]
+  })).slice(0, 4);
+
+  if (certificateData.length === 0) {
+    certificateData.push({ name: 'No Enrollment', value: 100, color: '#E5E7EB' });
+  }
 
   if (isBlocked) {
     return (

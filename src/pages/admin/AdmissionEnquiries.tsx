@@ -10,14 +10,17 @@ import {
   XCircle, 
   Clock, 
   MessageSquare,
-  ArrowUpRight
+  ArrowUpRight,
+  UserPlus
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { AdmissionEnquiry } from '../../types';
+import { useNavigate } from 'react-router-dom';
 
 export const AdmissionEnquiries = () => {
   const { enquiries, updateEnquiry, deleteEnquiry } = useApp();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [selectedEnquiry, setSelectedEnquiry] = useState<AdmissionEnquiry | null>(null);
@@ -48,6 +51,18 @@ export const AdmissionEnquiries = () => {
     if (selectedEnquiry?.id === id) {
       setSelectedEnquiry(prev => prev ? { ...prev, status } : null);
     }
+  };
+
+  const handleConvertToStudent = (enquiry: AdmissionEnquiry) => {
+    navigate('/admin/registration', { 
+      state: { 
+        name: enquiry.name,
+        email: enquiry.email,
+        contact: enquiry.phone,
+        course: enquiry.course,
+        convertedFromInquiryId: enquiry.id
+      }
+    });
   };
 
   return (
@@ -87,7 +102,6 @@ export const AdmissionEnquiries = () => {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-         {/* Enquiries List */}
          <div className="xl:col-span-2 space-y-4">
             {filteredEnquiries.length === 0 ? (
               <div className="p-20 bg-white border border-dashed border-gray-200 rounded-[3rem] flex flex-col items-center justify-center text-center space-y-4">
@@ -135,7 +149,6 @@ export const AdmissionEnquiries = () => {
             )}
          </div>
 
-         {/* Enquiry Detail Sidebar */}
          <div className="space-y-8">
             <AnimatePresence mode="wait">
                {selectedEnquiry ? (
@@ -200,7 +213,17 @@ export const AdmissionEnquiries = () => {
                            </div>
                         </div>
 
-                        <div className="flex items-center justify-between pt-4">
+                        {selectedEnquiry.status === 'ENROLLED' && (
+                          <button 
+                            onClick={() => handleConvertToStudent(selectedEnquiry)}
+                            className="w-full py-4 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-emerald-700 shadow-xl shadow-emerald-200 transition-all flex items-center justify-center space-x-2"
+                          >
+                            <UserPlus size={18} />
+                            <span>Convert to Student</span>
+                          </button>
+                        )}
+
+                        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                            <button 
                             onClick={() => deleteEnquiry(selectedEnquiry.id)}
                             className="text-[10px] font-black text-red-500 uppercase tracking-widest hover:underline"

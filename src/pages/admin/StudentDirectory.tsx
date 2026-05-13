@@ -23,7 +23,9 @@ import {
   X,
   CheckCircle,
   AlertCircle,
-  CreditCard
+  CreditCard,
+  Printer,
+  FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx } from 'clsx';
@@ -37,6 +39,8 @@ export const StudentDirectory = () => {
   const [filterBranch, setFilterBranch] = useState(currentUser?.role === 'FRANCHISE' ? currentUser.franchiseId : 'ALL');
   const [filterCourse, setFilterCourse] = useState('ALL');
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [studentToPrint, setStudentToPrint] = useState<Student | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -66,6 +70,11 @@ export const StudentDirectory = () => {
       updateStudent(editingStudent.id, formData);
       setEditingStudent(null);
     }
+  };
+
+  const handlePrint = (student: Student) => {
+    setStudentToPrint(student);
+    setShowPrintModal(true);
   };
 
   const filteredStudents = students.filter(s => {
@@ -262,6 +271,13 @@ export const StudentDirectory = () => {
                            <Edit2 size={16} />
                         </button>
                         <button 
+                           onClick={() => handlePrint(student)}
+                           className="p-2.5 bg-white border border-gray-100 text-gray-400 hover:text-blue-600 rounded-xl transition-all shadow-sm"
+                           title="Print Registration Form"
+                        >
+                           <Printer size={16} />
+                        </button>
+                        <button 
                           onClick={() => {
                             if (window.confirm('Are you sure you want to delete this student record?')) {
                               deleteStudent(student.id);
@@ -387,6 +403,133 @@ export const StudentDirectory = () => {
                  </div>
                  <button type="submit" className="w-full py-4 bg-[#141414] text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-600 transition-all shadow-xl shadow-black/10">Save Profile Updates</button>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showPrintModal && studentToPrint && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:p-0 print:bg-white text-left">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-[3rem] w-full max-w-4xl max-h-[90vh] overflow-y-auto p-12 shadow-2xl relative print:shadow-none print:p-0 print:max-h-none print:overflow-visible print:rounded-none"
+            >
+              <div className="absolute right-8 top-8 flex items-center space-x-3 print:hidden">
+                <button 
+                  onClick={() => window.print()}
+                  className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20"
+                >
+                  <Printer size={16} />
+                  <span>Print Now</span>
+                </button>
+                <button 
+                  onClick={() => setShowPrintModal(false)}
+                  className="p-3 bg-gray-100 text-gray-400 hover:text-red-500 rounded-2xl transition-all"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div id="printable-form" className="font-sans text-[#141414]">
+                <div className="flex justify-between items-start border-b-4 border-black pb-8 mb-8">
+                  <div className="flex items-center space-x-6">
+                    <div className="w-24 h-24 bg-black text-white flex items-center justify-center rounded-3xl overflow-hidden shrink-0">
+                      <GraduationCap size={48} />
+                    </div>
+                    <div>
+                      <h1 className="text-4xl font-black tracking-tighter uppercase leading-none mb-2">SoftDev Tally Guru</h1>
+                      <p className="text-xs font-black uppercase tracking-[0.3em] text-gray-400 italic">Advanced Software Curriculum</p>
+                      <div className="flex items-center space-x-4 mt-4">
+                        <div className="px-3 py-1 bg-gray-100 rounded-lg text-[10px] font-black uppercase">Center: {studentToPrint.studyCenter}</div>
+                        <div className="px-3 py-1 bg-gray-100 rounded-lg text-[10px] font-black uppercase">Reg Date: {studentToPrint.admissionDate}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="w-32 h-40 border-4 border-dashed border-gray-200 rounded-2xl flex items-center justify-center text-[10px] font-black text-gray-300 text-center uppercase p-4 overflow-hidden">
+                    {studentToPrint.photoUrl ? (
+                      <img src={studentToPrint.photoUrl} alt="Student" className="w-full h-full object-cover" />
+                    ) : (
+                      "Affix Recent Photo"
+                    )}
+                  </div>
+                </div>
+
+                <div className="text-center mb-10">
+                  <h2 className="text-2xl font-black uppercase tracking-[0.2em] bg-black text-white py-3 px-8 inline-block rounded-xl">Admission Registration Form</h2>
+                </div>
+
+                <div className="grid grid-cols-2 gap-x-12 gap-y-6 mb-12">
+                   {[
+                     { label: 'Full Name', value: studentToPrint.name },
+                     { label: 'Father\'s Name', value: studentToPrint.fatherName },
+                     { label: 'Mother\'s Name', value: studentToPrint.motherName },
+                     { label: 'Date of Birth', value: studentToPrint.dob },
+                     { label: 'Gender', value: studentToPrint.gender },
+                     { label: 'Contact Number', value: studentToPrint.contact },
+                     { label: 'Enrollment No.', value: studentToPrint.enrollmentNo },
+                     { label: 'Admission No.', value: studentToPrint.admissionNo },
+                     { label: 'Course Applied', value: studentToPrint.course },
+                     { label: 'Course Duration', value: studentToPrint.courseDuration },
+                     { label: 'Aadhar/ID Type', value: studentToPrint.identityType },
+                     { label: 'ID Number', value: studentToPrint.idNumber },
+                     { label: 'Qualification', value: studentToPrint.highestQualification },
+                     { label: 'Board/University', value: studentToPrint.qualificationDetail },
+                     { label: 'Passing Year', value: studentToPrint.passingYear },
+                     { label: 'State', value: studentToPrint.state },
+                     { label: 'District', value: studentToPrint.district },
+                     { label: 'Pincode', value: studentToPrint.pincode },
+                   ].map((item, i) => (
+                     <div key={i} className="flex justify-between items-baseline border-b border-gray-100 pb-2">
+                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{item.label}</span>
+                        <span className="text-sm font-bold uppercase">{item.value || 'N/A'}</span>
+                     </div>
+                   ))}
+                </div>
+
+                <div className="mb-12">
+                  <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Detailed Address</span>
+                  <p className="text-sm font-bold uppercase p-4 bg-gray-50 rounded-2xl min-h-[60px]">{studentToPrint.address || 'N/A'}</p>
+                </div>
+
+                <div className="bg-gray-50 p-8 rounded-[2rem] border border-gray-100 mb-12 page-break-inside-avoid">
+                  <h3 className="text-sm font-black uppercase tracking-widest mb-6 flex items-center border-b border-gray-200 pb-4">
+                    <FileText size={16} className="mr-2 text-blue-600" />
+                    No Refund & Non-Transferable Policy
+                  </h3>
+                  <ul className="space-y-4">
+                    {[
+                      "Once admission is confirmed after counseling, the admission fee paid to Softdev Tally Guru is non-refundable.",
+                      "All candidates are required to complete the course within the stipulated duration.",
+                      "The no-refund policy applies to all courses, irrespective of the type of admission.",
+                      "Admission is strictly non-transferable and cannot be transferred to another candidate.",
+                      "In exceptional circumstances, if a candidate is unable to attend the course, an extension may be granted solely at the discretion of the management."
+                    ].map((text, i) => (
+                      <li key={i} className="flex items-start space-x-3 text-[11px] font-bold text-gray-600 leading-relaxed italic">
+                        <div className="w-1.5 h-1.5 rounded-full bg-black shrink-0 mt-1.5" />
+                        <span>{text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="grid grid-cols-2 gap-12 pt-12 items-end">
+                   <div className="text-center">
+                      <div className="border-b-2 border-black w-48 mx-auto mb-3"></div>
+                      <p className="text-[10px] font-black uppercase tracking-widest">Student Signature</p>
+                   </div>
+                   <div className="text-center">
+                      <div className="border-b-2 border-black w-48 mx-auto mb-3"></div>
+                      <p className="text-[10px] font-black uppercase tracking-widest">Counselor/Admin Signature</p>
+                   </div>
+                </div>
+
+                <div className="mt-20 pt-8 border-t border-gray-100 text-center">
+                   <p className="text-[9px] font-black uppercase tracking-widest text-gray-300">Computer Generated Document | Registration ID: {studentToPrint.id}</p>
+                </div>
+              </div>
             </motion.div>
           </div>
         )}

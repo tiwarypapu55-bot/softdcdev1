@@ -13,74 +13,52 @@ import {
   MoreVertical,
   Calendar,
   Users,
-  AlertCircle
+  AlertCircle,
+  X
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { clsx } from 'clsx';
+import { Exam } from '../../types';
 
-interface Exam {
-  id: string;
-  name: string;
-  session: string;
-  trade: string;
-  unit: string;
-  startDate: string;
-  endDate: string;
-  remarks: string;
-  status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
-  invigilator: string;
-}
-
-const mockExams: Exam[] = [
-  {
-    id: 'EXM-2024-001',
-    name: 'Mid-term Tally Theory',
-    session: '2024-25',
-    trade: 'Accounting',
-    unit: 'Unit 1',
-    startDate: '2024-05-15',
-    endDate: '2024-05-15',
-    remarks: 'Focus on GST Vouchers',
-    status: 'UPCOMING',
-    invigilator: 'Dr. Rajesh Sharma'
-  },
-  {
-    id: 'EXM-2024-002',
-    name: 'Advanced Excel Practical',
-    session: '2024-25',
-    trade: 'Data Analytics',
-    unit: 'Final',
-    startDate: '2024-05-10',
-    endDate: '2024-05-12',
-    remarks: 'MACRO proficiency required',
-    status: 'ONGOING',
-    invigilator: 'Prof. Anita Desai'
-  },
-  {
-    id: 'EXM-2024-003',
-    name: 'Business Comm. Oral',
-    session: '2023-24',
-    trade: 'Soft Skills',
-    unit: 'Unit 3',
-    startDate: '2024-04-20',
-    endDate: '2024-04-22',
-    remarks: 'Viva Voce included',
-    status: 'COMPLETED',
-    invigilator: 'Mr. Kevin Peter'
-  }
-];
+const mockExams: Exam[] = []; // Removed since we use AppContext
 
 export const ExamMaster = () => {
+  const { exams, addExam, updateExam, deleteExam, courses, sessions } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newExam, setNewExam] = useState<Partial<Exam>>({
+    session: sessions.find(s => s.isDefault)?.name || '',
+    status: 'UPCOMING'
+  });
+
+  const handleAddExam = (e: React.FormEvent) => {
+    e.preventDefault();
+    const exam: Exam = {
+      ...newExam as Exam,
+      id: `EXM-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+    };
+    addExam(exam);
+    setShowAddModal(false);
+    setNewExam({});
+  };
+
+  const filteredExams = exams.filter(e => 
+    e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    e.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    e.trade.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
       <div className="flex items-center justify-between border-b border-gray-200 pb-8">
         <div>
-          <h1 className="text-3xl font-black text-[#141414] tracking-tight">Examination Master</h1>
-          <p className="text-sm text-[#888888]">Manage institutional exams, schedules and invigilation.</p>
+          <h1 className="text-3xl font-black text-[#141414] tracking-tight italic uppercase">Examination Master</h1>
+          <p className="text-sm font-bold text-[#888888] uppercase tracking-widest">Global Examination & Invigilation Control</p>
         </div>
-        <button className="px-6 py-3 bg-blue-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all flex items-center space-x-2">
+        <button 
+          onClick={() => setShowAddModal(true)}
+          className="px-8 py-4 bg-[#141414] text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-2xl hover:bg-blue-600 transition-all flex items-center space-x-3"
+        >
           <Plus size={18} />
           <span>Schedule New Exam</span>
         </button>
@@ -123,7 +101,7 @@ export const ExamMaster = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F0F0F0]">
-              {mockExams.map((exam, index) => (
+              {filteredExams.map((exam, index) => (
                 <tr key={exam.id} className="hover:bg-gray-50/50 transition-colors group">
                   <td className="px-6 py-4">
                     <span className="text-xs font-bold text-[#888888]">{index + 1}</span>
@@ -186,6 +164,143 @@ export const ExamMaster = () => {
           </table>
         </div>
       </div>
+
+      {/* Add Exam Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-[3rem] w-full max-w-2xl overflow-hidden shadow-2xl"
+          >
+            <div className="p-10 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+               <div>
+                  <h2 className="text-2xl font-black text-[#141414] uppercase tracking-tight">Schedule New Exam</h2>
+                  <p className="text-[10px] font-black text-[#888888] uppercase tracking-widest mt-1">Official Controller of Examinations</p>
+               </div>
+               <button onClick={() => setShowAddModal(false)} className="p-3 hover:bg-white rounded-2xl transition-all shadow-sm">
+                  <X size={24} />
+               </button>
+            </div>
+            
+            <form onSubmit={handleAddExam} className="p-10 space-y-6">
+               <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-[#888888] ml-2">Exam Name</label>
+                     <input 
+                        type="text" 
+                        required
+                        className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-blue-600 transition-all outline-none"
+                        value={newExam.name || ''}
+                        onChange={e => setNewExam({...newExam, name: e.target.value})}
+                        placeholder="e.g. Final Theory Exam"
+                     />
+                  </div>
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-[#888888] ml-2">Academic Session</label>
+                     <select 
+                        required
+                        className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-blue-600 transition-all outline-none appearance-none"
+                        value={newExam.session || ''}
+                        onChange={e => setNewExam({...newExam, session: e.target.value})}
+                     >
+                        <option value="">Select Session</option>
+                        {sessions.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                     </select>
+                  </div>
+               </div>
+
+               <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-[#888888] ml-2">Course / Trade</label>
+                     <select 
+                        required
+                        className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-blue-600 transition-all outline-none appearance-none"
+                        value={newExam.trade || ''}
+                        onChange={e => setNewExam({...newExam, trade: e.target.value})}
+                     >
+                        <option value="">Select Course</option>
+                        {courses.map(c => <option key={c.id} value={c.title}>{c.title}</option>)}
+                     </select>
+                  </div>
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-[#888888] ml-2">Exam Unit</label>
+                     <input 
+                        type="text" 
+                        required
+                        className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-blue-600 transition-all outline-none"
+                        value={newExam.unit || ''}
+                        onChange={e => setNewExam({...newExam, unit: e.target.value})}
+                        placeholder="e.g. Unit 1 or Final"
+                     />
+                  </div>
+               </div>
+
+               <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-[#888888] ml-2">Start Date</label>
+                     <input 
+                        type="date" 
+                        required
+                        className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-blue-600 transition-all outline-none"
+                        value={newExam.startDate || ''}
+                        onChange={e => setNewExam({...newExam, startDate: e.target.value})}
+                     />
+                  </div>
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-[#888888] ml-2">End Date</label>
+                     <input 
+                        type="date" 
+                        required
+                        className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-blue-600 transition-all outline-none"
+                        value={newExam.endDate || ''}
+                        onChange={e => setNewExam({...newExam, endDate: e.target.value})}
+                     />
+                  </div>
+               </div>
+
+               <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888888] ml-2">Invigilator Name</label>
+                  <input 
+                     type="text" 
+                     required
+                     className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-blue-600 transition-all outline-none"
+                     value={newExam.invigilator || ''}
+                     onChange={e => setNewExam({...newExam, invigilator: e.target.value})}
+                     placeholder="e.g. Dr. Rajesh Sharma"
+                  />
+               </div>
+
+               <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#888888] ml-2">Remarks</label>
+                  <textarea 
+                     className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:bg-white focus:ring-2 focus:ring-blue-600 transition-all outline-none resize-none"
+                     rows={3}
+                     value={newExam.remarks || ''}
+                     onChange={e => setNewExam({...newExam, remarks: e.target.value})}
+                     placeholder="Additional instructions..."
+                  />
+               </div>
+
+               <div className="pt-6 flex items-center space-x-4">
+                  <button 
+                     type="button"
+                     onClick={() => setShowAddModal(false)}
+                     className="flex-1 py-4 bg-gray-100 text-gray-500 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-gray-200 transition-all"
+                  >
+                     Cancel
+                  </button>
+                  <button 
+                     type="submit"
+                     className="flex-[2] py-4 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all"
+                  >
+                     Schedule Exam
+                  </button>
+               </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

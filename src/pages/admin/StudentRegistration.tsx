@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   User, 
@@ -20,16 +20,22 @@ import {
   Building2,
   Phone,
   Mail,
-  Award
+  Award,
+  Printer
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { clsx } from 'clsx';
 import { Student } from '../../types';
 import { compressImage } from '../../lib/storage';
+import { INDIAN_STATES, DISTRICTS_BY_STATE } from '../../constants/locationData';
+import { useLocation } from 'react-router-dom';
 
 export const StudentRegistration = () => {
-  const { franchises, courses, addStudent, currentUser } = useApp();
+  const { franchises, courses, addStudent, currentUser, businessProfile } = useApp();
+  const location = useLocation();
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [lastStudent, setLastStudent] = useState<Student | null>(null);
 
   const isFranchise = currentUser?.role === 'FRANCHISE';
 
@@ -78,14 +84,37 @@ export const StudentRegistration = () => {
     paidAmount: 0
   });
 
+  useEffect(() => {
+    if (location.state) {
+      const { name, email, contact, course } = location.state;
+      const matchedCourse = courses.find(c => c.title === course);
+      
+      setFormData(prev => ({
+        ...prev,
+        name: name || prev.name,
+        email: email || prev.email,
+        contact: contact || prev.contact,
+        course: course || prev.course,
+        courseCategory: matchedCourse?.category || prev.courseCategory,
+        courseDuration: matchedCourse?.duration || prev.courseDuration
+      }));
+    }
+  }, [location.state, courses]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    addStudent({
+    const newStudent = {
       ...formData as Student,
       id: `s${Date.now()}`
-    });
+    };
+    addStudent(newStudent);
+    setLastStudent(newStudent);
     setIsSuccess(true);
-    setTimeout(() => setIsSuccess(false), 3000);
+    setTimeout(() => setIsSuccess(false), 5000);
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   const handleFranchiseChange = (id: string) => {
@@ -187,10 +216,19 @@ export const StudentRegistration = () => {
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center space-x-2 px-6 py-3 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-2xl"
+            className="flex items-center justify-between gap-4 px-6 py-3 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-2xl"
           >
-            <CheckCircle2 size={18} />
-            <span className="text-sm font-black uppercase tracking-widest text-[10px]">Student Registered Successfully!</span>
+            <div className="flex items-center space-x-2">
+              <CheckCircle2 size={18} />
+              <span className="text-sm font-black uppercase tracking-widest text-[10px]">Student Registered Successfully!</span>
+            </div>
+            <button 
+              onClick={() => setShowPrintModal(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all"
+            >
+              <Printer size={14} />
+              <span>Print Form</span>
+            </button>
           </motion.div>
         )}
       </div>
@@ -447,14 +485,22 @@ export const StudentRegistration = () => {
           <InputField 
             label="State" 
             value={formData.state}
-            onChange={(val: string) => setFormData({...formData, state: val})}
-            placeholder="e.g., Uttar Pradesh"
+            onChange={(val: string) => {
+              setFormData({
+                ...formData, 
+                state: val,
+                district: '' // Reset district when state changes
+              });
+            }}
+            options={INDIAN_STATES}
+            placeholder="Select State"
           />
           <InputField 
             label="District" 
             value={formData.district}
             onChange={(val: string) => setFormData({...formData, district: val})}
-            placeholder="e.g., Lucknow"
+            options={formData.state ? DISTRICTS_BY_STATE[formData.state as string] || [] : []}
+            placeholder="Select District"
           />
           <InputField 
             label="Pincode" 
@@ -505,6 +551,156 @@ export const StudentRegistration = () => {
           </button>
         </div>
       </form>
+
+      <AnimatePresence>
+        {showPrintModal && lastStudent && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:p-0 print:bg-white">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-[3rem] w-full max-w-4xl max-h-[90vh] overflow-y-auto p-12 shadow-2xl relative print:shadow-none print:p-0 print:max-h-none print:overflow-visible print:rounded-none"
+            >
+              {/* Close and Print buttons - Hidden during print */}
+              <div className="absolute right-8 top-8 flex items-center space-x-3 print:hidden">
+                <button 
+                  onClick={handlePrint}
+                  className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20"
+                >
+                  <Printer size={16} />
+                  <span>Print Now</span>
+                </button>
+                <button 
+                  onClick={() => setShowPrintModal(false)}
+                  className="p-3 bg-gray-100 text-gray-400 hover:text-red-500 rounded-2xl transition-all"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Printable Content */}
+              <div id="printable-form" className="font-sans text-[#141414] relative overflow-hidden">
+                {/* Watermark */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] select-none z-0">
+                  <div className="flex flex-col items-center rotate-[-35deg] scale-150">
+                     {businessProfile.logoUrl ? (
+                       <img src={businessProfile.logoUrl} alt="" className="w-80 h-80 object-contain grayscale brightness-90 contrast-125" />
+                     ) : (
+                       <GraduationCap size={400} className="text-gray-400" />
+                     )}
+                     <h1 className="text-[6rem] font-black whitespace-nowrap uppercase text-gray-400 -mt-16 tracking-tighter">
+                       {businessProfile.name || 'SOFTDEV TALLY GURU'}
+                     </h1>
+                  </div>
+                </div>
+
+                <div className="relative z-10">
+                  {/* Header */}
+                  <div className="flex justify-between items-start border-b-4 border-black pb-8 mb-8">
+                    <div className="flex items-center space-x-6">
+                      <div className="w-24 h-24 bg-black text-white flex items-center justify-center rounded-3xl overflow-hidden shrink-0">
+                        <GraduationCap size={48} />
+                      </div>
+                      <div>
+                        <h1 className="text-4xl font-black tracking-tighter uppercase leading-none mb-2">SoftDev Tally Guru</h1>
+                        <p className="text-xs font-black uppercase tracking-[0.3em] text-gray-400 italic">Advanced Software Curriculum</p>
+                        <div className="flex items-center space-x-4 mt-4">
+                          <div className="px-3 py-1 bg-gray-100 rounded-lg text-[10px] font-black uppercase tracking-widest border border-gray-200">Study Center: {lastStudent.studyCenter}</div>
+                          <div className="px-3 py-1 bg-gray-100 rounded-lg text-[10px] font-black uppercase tracking-widest border border-gray-200">Reg. Date: {lastStudent.admissionDate}</div>
+                        </div>
+                      </div>
+                    </div>
+                  <div className="w-32 h-40 border-4 border-dashed border-gray-200 rounded-2xl flex items-center justify-center text-[10px] font-black text-gray-300 text-center uppercase p-4 overflow-hidden">
+                    {lastStudent.photoUrl ? (
+                      <img src={lastStudent.photoUrl} alt="Student" className="w-full h-full object-cover" />
+                    ) : (
+                      "Affix Recent Photo"
+                    )}
+                  </div>
+                </div>
+
+                <div className="text-center mb-10">
+                  <h2 className="text-2xl font-black uppercase tracking-[0.2em] bg-black text-white py-3 px-8 inline-block rounded-xl">Admission Registration Form</h2>
+                </div>
+
+                {/* Form Data Grid */}
+                <div className="grid grid-cols-2 gap-x-12 gap-y-6 mb-12">
+                   {[
+                     { label: 'Full Name', value: lastStudent.name },
+                     { label: 'Father\'s Name', value: lastStudent.fatherName },
+                     { label: 'Mother\'s Name', value: lastStudent.motherName },
+                     { label: 'Date of Birth', value: lastStudent.dob },
+                     { label: 'Gender', value: lastStudent.gender },
+                     { label: 'Contact Number', value: lastStudent.contact },
+                     { label: 'Enrollment No.', value: lastStudent.enrollmentNo },
+                     { label: 'Admission No.', value: lastStudent.admissionNo },
+                     { label: 'Course Applied', value: lastStudent.course },
+                     { label: 'Course Duration', value: lastStudent.courseDuration },
+                     { label: 'Aadhar/ID Type', value: lastStudent.identityType },
+                     { label: 'ID Number', value: lastStudent.idNumber },
+                     { label: 'Qualification', value: lastStudent.highestQualification },
+                     { label: 'Board/University', value: lastStudent.qualificationDetail },
+                     { label: 'Passing Year', value: lastStudent.passingYear },
+                     { label: 'State', value: lastStudent.state },
+                     { label: 'District', value: lastStudent.district },
+                     { label: 'Pincode', value: lastStudent.pincode },
+                   ].map((item, i) => (
+                     <div key={i} className="flex justify-between items-baseline border-b border-gray-100 pb-2">
+                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{item.label}</span>
+                        <span className="text-sm font-bold uppercase">{item.value || 'N/A'}</span>
+                     </div>
+                   ))}
+                </div>
+
+                <div className="mb-12">
+                  <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-2">Detailed Address</span>
+                  <p className="text-sm font-bold uppercase p-4 bg-gray-50 rounded-2xl min-h-[60px]">{lastStudent.address || 'N/A'}</p>
+                </div>
+
+                {/* Declaration Policy */}
+                <div className="bg-gray-50 p-8 rounded-[2rem] border border-gray-100 mb-12 page-break-inside-avoid">
+                  <h3 className="text-sm font-black uppercase tracking-widest mb-6 flex items-center border-b border-gray-200 pb-4">
+                    <FileText size={16} className="mr-2 text-blue-600" />
+                    No Refund & Non-Transferable Policy
+                  </h3>
+                  <ul className="space-y-4">
+                    {[
+                      "Once admission is confirmed after counseling, the admission fee paid to Softdev Tally Guru is non-refundable.",
+                      "All candidates are required to complete the course within the stipulated duration.",
+                      "The no-refund policy applies to all courses, irrespective of the type of admission.",
+                      "Admission is strictly non-transferable and cannot be transferred to another candidate.",
+                      "In exceptional circumstances, if a candidate is unable to attend the course, an extension may be granted solely at the discretion of the management."
+                    ].map((text, i) => (
+                      <li key={i} className="flex items-start space-x-3 text-[11px] font-bold text-gray-600 leading-relaxed italic">
+                        <div className="w-1.5 h-1.5 rounded-full bg-black shrink-0 mt-1.5" />
+                        <span>{text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Signatures */}
+                <div className="grid grid-cols-2 gap-12 pt-12 items-end">
+                   <div className="text-center">
+                      <div className="border-b-2 border-black w-48 mx-auto mb-3"></div>
+                      <p className="text-[10px] font-black uppercase tracking-widest">Student Signature</p>
+                   </div>
+                   <div className="text-center">
+                      <div className="border-b-2 border-black w-48 mx-auto mb-3"></div>
+                      <p className="text-[10px] font-black uppercase tracking-widest">Counselor/Admin Signature</p>
+                   </div>
+                </div>
+
+                {/* Footer */}
+                <div className="mt-20 pt-8 border-t border-gray-100 text-center">
+                   <p className="text-[9px] font-black uppercase tracking-widest text-gray-300">Computer Generated Document | Registration ID: {lastStudent.id}</p>
+                </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

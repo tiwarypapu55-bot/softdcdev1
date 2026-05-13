@@ -122,14 +122,34 @@ export const AdminDashboard = () => {
   const activeBranches = franchises.filter(f => f.status === 'APPROVED').length;
   const totalIncome = feePayments.reduce((sum, p) => sum + p.paidAmount, 0);
 
-  const last6Months = [
-    { month: 'Jan', revenue: 45000, students: 12 },
-    { month: 'Feb', revenue: 52000, students: 45 },
-    { month: 'Mar', revenue: 48000, students: 28 },
-    { month: 'Apr', revenue: 61000, students: 54 },
-    { month: 'May', revenue: 55000, students: 42 },
-    { month: 'Jun', revenue: 72000, students: 80 },
-  ];
+  // Dynamic Chart Data for last 6 months
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  
+  const last6Months = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date();
+    d.setMonth(now.getMonth() - (5 - i));
+    const monthIndex = d.getMonth();
+    const monthLabel = months[monthIndex];
+    const year = d.getFullYear();
+
+    const monthPayments = feePayments.filter(p => {
+      const pDate = new Date(p.date);
+      return pDate.getMonth() === monthIndex && pDate.getFullYear() === year;
+    });
+
+    const monthStudents = students.filter(s => {
+      const sDate = new Date(s.admissionDate);
+      return sDate.getMonth() === monthIndex && sDate.getFullYear() === year;
+    });
+
+    return {
+      month: monthLabel,
+      revenue: monthPayments.reduce((sum, p) => sum + p.paidAmount, 0),
+      students: monthStudents.length
+    };
+  });
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">

@@ -35,6 +35,19 @@ export interface BusinessProfile {
   gallery?: { id: string; url: string; caption?: string }[];
 }
 
+export interface Exam {
+  id: string;
+  name: string;
+  session: string;
+  trade: string;
+  unit: string;
+  startDate: string;
+  endDate: string;
+  remarks: string;
+  status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
+  invigilator: string;
+}
+
 export type UserRole = 'ADMINISTRATOR' | 'ADMIN' | 'FRANCHISE' | 'TEACHER' | 'STUDENT';
 
 export interface User {

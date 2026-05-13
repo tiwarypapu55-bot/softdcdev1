@@ -4,7 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Franchise, Student, Certificate, WalletTransaction, UserRole, Course, FeeStructure, FeePayment, FranchiseFee, AdmissionEnquiry, BusinessProfile, BusinessTransaction, AcademicSession, Announcement, Voucher } from '../types';
+import { User, Franchise, Student, Certificate, WalletTransaction, UserRole, Course, FeeStructure, FeePayment, FranchiseFee, AdmissionEnquiry, Exam, BusinessProfile, BusinessTransaction, AcademicSession, Announcement, Voucher } from '../types';
 
 interface AppState {
   currentUser: User | null;
@@ -22,6 +22,7 @@ interface AppState {
   sessions: AcademicSession[];
   announcements: Announcement[];
   vouchers: Voucher[];
+  exams: Exam[];
   isLoading: boolean;
 }
 
@@ -57,6 +58,9 @@ interface AppContextType extends AppState {
   addEnquiry: (enquiry: AdmissionEnquiry) => void;
   updateEnquiry: (id: string, updates: Partial<AdmissionEnquiry>) => void;
   deleteEnquiry: (id: string) => void;
+  addExam: (exam: Exam) => void;
+  updateExam: (id: string, updates: Partial<Exam>) => void;
+  deleteExam: (id: string) => void;
   login: (email: string, role: UserRole) => void;
   logout: () => void;
 }
@@ -78,6 +82,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [sessions, setSessions] = useState<AcademicSession[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [exams, setExams] = useState<Exam[]>([]);
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile>({
     id: 'bp1',
     name: 'SOFTDEV TALLY GURU',
@@ -127,6 +132,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const savedSessions = localStorage.getItem('sessions');
     const savedAnnouncements = localStorage.getItem('announcements');
     const savedVouchers = localStorage.getItem('vouchers');
+    const savedExams = localStorage.getItem('exams');
     const savedWalletTransactions = localStorage.getItem('walletTransactions');
     const savedBusinessTransactions = localStorage.getItem('businessTransactions');
     const savedBusinessProfile = localStorage.getItem('businessProfile');
@@ -271,6 +277,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         { id: 'a2', title: 'New GST Course Material Updated', content: 'The latest GST professional course modules have been uploaded to the E-Content section.', target: ['FRANCHISE', 'TEACHER'], date: '2024-04-22', priority: 'MEDIUM', status: 'PUBLISHED' },
       ];
       setAnnouncements(initialAnnouncements);
+    }
+
+    if (savedExams) setExams(JSON.parse(savedExams));
+    else {
+      const initialExams: Exam[] = [
+        {
+          id: 'EXM-2024-001',
+          name: 'Mid-term Tally Theory',
+          session: '2024-25',
+          trade: 'Accounting',
+          unit: 'Unit 1',
+          startDate: '2024-05-15',
+          endDate: '2024-05-15',
+          remarks: 'Focus on GST Vouchers',
+          status: 'UPCOMING',
+          invigilator: 'Dr. Rajesh Sharma'
+        },
+        {
+          id: 'EXM-2024-002',
+          name: 'Advanced Excel Practical',
+          session: '2024-25',
+          trade: 'Data Analytics',
+          unit: 'Final',
+          startDate: '2024-05-10',
+          endDate: '2024-05-12',
+          remarks: 'MACRO proficiency required',
+          status: 'ONGOING',
+          invigilator: 'Prof. Anita Desai'
+        }
+      ];
+      setExams(initialExams);
     }
 
     if (savedVouchers) setVouchers(JSON.parse(savedVouchers));
@@ -445,6 +482,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       saveData('sessions', sessions);
       saveData('announcements', announcements);
       saveData('vouchers', vouchers);
+      saveData('exams', exams);
       saveData('walletTransactions', walletTransactions);
       saveData('businessTransactions', businessTransactions);
       saveData('businessProfile', businessProfile);
@@ -542,12 +580,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAnnouncements(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
   const deleteAnnouncement = (id: string) => setAnnouncements(prev => prev.filter(a => a.id !== id));
 
+  const addExam = (e: Exam) => setExams(prev => [...prev, e]);
+  const updateExam = (id: string, updates: Partial<Exam>) =>
+    setExams(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
+  const deleteExam = (id: string) => setExams(prev => prev.filter(e => e.id !== id));
+
   const addFeeStructure = (f: FeeStructure) => setFeeStructures(prev => [...prev, f]);
   const updateFeeStructure = (id: string, updates: Partial<FeeStructure>) =>
     setFeeStructures(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
   const deleteFeeStructure = (id: string) => setFeeStructures(prev => prev.filter(f => f.id !== id));
 
-  const addFeePayment = (p: FeePayment) => setFeePayments(prev => [...prev, p]);
+  const addFeePayment = (p: FeePayment) => {
+    setFeePayments(prev => [...prev, p]);
+    
+    // Update student's paid amount and status
+    setStudents(prev => prev.map(s => {
+      if (s.id === p.studentId) {
+        const newPaidAmount = s.paidAmount + p.paidAmount;
+        const newStatus = newPaidAmount >= s.totalFees ? 'PAID' : (newPaidAmount > 0 ? 'PARTIAL' : 'PENDING');
+        return { ...s, paidAmount: newPaidAmount, feeStatus: newStatus };
+      }
+      return s;
+    }));
+
+    // Record as business transaction (Income)
+    const student = students.find(s => s.id === p.studentId);
+    addBusinessTransaction({
+      id: Math.random().toString(36).substr(2, 9),
+      date: p.date,
+      type: 'INCOME',
+      category: 'Fee Collection',
+      amount: p.paidAmount,
+      description: `Fee Payment - ${student?.name || 'Unknown'} (${p.feeType})`,
+      paymentMode: p.paymentMode,
+      referenceId: p.studentId,
+      status: 'SUCCESS'
+    });
+  };
 
   const addEnquiry = (e: AdmissionEnquiry) => setEnquiries(prev => [e, ...prev]);
   const updateEnquiry = (id: string, updates: Partial<AdmissionEnquiry>) =>
@@ -563,11 +632,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      currentUser, franchises, students, certificates, walletTransactions, businessTransactions, courses, feeStructures, feePayments, franchiseFees, enquiries, businessProfile, sessions, announcements, vouchers, isLoading,
+      currentUser, franchises, students, certificates, walletTransactions, businessTransactions, courses, feeStructures, feePayments, franchiseFees, enquiries, businessProfile, sessions, announcements, vouchers, exams, isLoading,
       setCurrentUser, addFranchise, updateFranchise, deleteFranchise, addStudent, updateStudent,
       issueCertificate, addWalletTransaction, addBusinessTransaction, addVoucher, updateVoucher, verifyVoucher, addCourse, updateCourse, deleteCourse, 
       addSession, updateSession, deleteSession,
       addAnnouncement, updateAnnouncement, deleteAnnouncement,
+      addExam, updateExam, deleteExam,
       addFeeStructure, updateFeeStructure, deleteFeeStructure, addFeePayment,
       addEnquiry, updateEnquiry, deleteEnquiry,
       addFranchiseFee, updateFranchiseFee, updateBusinessProfile, login, logout
