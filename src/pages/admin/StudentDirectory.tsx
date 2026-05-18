@@ -27,7 +27,15 @@ import {
   Printer,
   FileText,
   Award,
-  MessageCircle
+  MessageCircle,
+  FileCheck,
+  ShieldCheck,
+  CheckCircle2,
+  XCircle,
+  FileSearch,
+  LayoutGrid,
+  RefreshCw,
+  Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx } from 'clsx';
@@ -55,17 +63,42 @@ export const StudentDirectory = () => {
     totalFees: 0
   });
 
+  const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
+
   const handleEdit = (s: Student) => {
-    setEditingStudent(s);
-    setFormData({
-      name: s.name,
-      contact: s.contact,
-      email: s.email,
-      course: s.course,
-      feeStatus: s.feeStatus,
-      kycStatus: s.kycStatus,
-      totalFees: s.totalFees || 0
+    const prefix = currentUser?.role === 'FRANCHISE' ? '/franchise' : '/admin';
+    navigate(`${prefix}/registration/${s.id}`);
+  };
+
+  const updateDocStatus = (studentId: string, docId: string, status: 'APPROVED' | 'REJECTED') => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+
+    const updatedDocs = (student.kycDocs || []).map(doc => 
+      doc.id === docId ? { ...doc, status } : doc
+    );
+
+    // If all docs are approved, auto-set student status to APPROVED
+    const allApproved = updatedDocs.every(d => d.status === 'APPROVED');
+    // If any doc is rejected, set student status to REJECTED
+    const anyRejected = updatedDocs.some(d => d.status === 'REJECTED');
+
+    let newKycStatus = student.kycStatus;
+    if (allApproved && updatedDocs.length > 0) newKycStatus = 'APPROVED';
+    else if (anyRejected) newKycStatus = 'REJECTED';
+
+    updateStudent(studentId, { 
+      kycDocs: updatedDocs,
+      kycStatus: newKycStatus as any
     });
+
+    if (viewingStudent?.id === studentId) {
+      setViewingStudent({
+        ...student,
+        kycDocs: updatedDocs,
+        kycStatus: newKycStatus as any
+      });
+    }
   };
 
   const handleUpdate = (e: React.FormEvent) => {
@@ -320,6 +353,13 @@ export const StudentDirectory = () => {
                            <MessageCircle size={14} />
                         </button>
                         <button 
+                           onClick={() => setViewingStudent(student)}
+                           className="p-2 text-[#6366f1] hover:bg-indigo-50 rounded-lg transition-all"
+                           title="Quick KYC Dossier"
+                        >
+                           <FileCheck size={14} />
+                        </button>
+                        <button 
                            onClick={() => handleView(student)}
                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                            title="View Profile"
@@ -375,6 +415,129 @@ export const StudentDirectory = () => {
            </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {viewingStudent && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white rounded-[3rem] w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl"
+            >
+               <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 text-left">
+                  <div className="flex items-center space-x-4">
+                     <div className="w-12 h-12 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm shrink-0">
+                        <img src={viewingStudent.photoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${viewingStudent.name}`} alt="" className="w-full h-full object-cover" />
+                     </div>
+                     <div>
+                        <h3 className="text-xl font-black text-[#141414] tracking-tight uppercase truncate max-w-[300px]">{viewingStudent.name}</h3>
+                        <p className="text-[10px] font-bold text-[#888888] uppercase tracking-widest italic">{viewingStudent.course} • ID: {viewingStudent.admissionNo}</p>
+                     </div>
+                  </div>
+                  <button 
+                    onClick={() => setViewingStudent(null)}
+                    className="p-3 bg-white border border-gray-200 rounded-2xl text-gray-400 hover:text-red-500 transition-all shadow-sm"
+                  >
+                    <X size={20} />
+                  </button>
+               </div>
+
+               <div className="flex-1 overflow-y-auto p-10 bg-white text-left">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                     <div>
+                        <h4 className="text-[10px] font-black text-[#141414] uppercase tracking-[0.2em] mb-6 flex items-center">
+                           <FileSearch size={14} className="mr-2 text-blue-600" />
+                           KYC Dossier - Documents
+                        </h4>
+                        <div className="space-y-6">
+                           {(viewingStudent.kycDocs || []).map((doc) => (
+                              <div key={doc.id} className="p-6 rounded-[2rem] border border-gray-100 bg-gray-50/30 group hover:border-blue-200 hover:bg-white transition-all shadow-sm">
+                                 <div className="flex items-center justify-between mb-4">
+                                    <div>
+                                       <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{doc.type}</p>
+                                       <p className="text-sm font-black text-[#141414] mt-1">{doc.name}</p>
+                                    </div>
+                                    <span className={clsx(
+                                       "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest",
+                                       doc.status === 'APPROVED' ? "bg-emerald-50 text-emerald-600" : 
+                                       doc.status === 'REJECTED' ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"
+                                    )}>{doc.status}</span>
+                                 </div>
+                                 
+                                 <div className="aspect-video w-full bg-black rounded-2xl overflow-hidden mb-4 relative group/doc">
+                                    <img src={doc.url} alt={doc.name} className="w-full h-full object-contain" />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/doc:opacity-100 transition-opacity flex items-center justify-center space-x-2 text-white">
+                                       <a 
+                                         href={doc.url} 
+                                         target="_blank" 
+                                         rel="noreferrer" 
+                                         className="p-3 bg-white text-[#141414] rounded-full hover:scale-110 transition-transform shadow-xl"
+                                         title="View Original"
+                                       >
+                                          <Eye size={18} />
+                                       </a>
+                                       <a 
+                                         href={doc.url} 
+                                         download={doc.name}
+                                         className="p-3 bg-blue-600 text-white rounded-full hover:scale-110 transition-transform shadow-xl"
+                                         title="Download"
+                                       >
+                                          <Download size={18} />
+                                       </a>
+                                    </div>
+                                 </div>
+
+                                 <div className="flex items-center space-x-2">
+                                    <button 
+                                      onClick={() => updateDocStatus(viewingStudent.id, doc.id, 'APPROVED')}
+                                      className="flex-1 py-3 bg-white border border-emerald-100 text-emerald-600 text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                                    >
+                                       Approve
+                                    </button>
+                                    <button 
+                                      onClick={() => updateDocStatus(viewingStudent.id, doc.id, 'REJECTED')}
+                                      className="flex-1 py-3 bg-white border border-red-100 text-red-600 text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                                    >
+                                       Reject
+                                    </button>
+                                 </div>
+                              </div>
+                           ))}
+                           {(viewingStudent.kycDocs || []).length === 0 && (
+                             <div className="py-20 text-center border-2 border-dashed border-gray-100 rounded-[2.5rem] opacity-50">
+                                <FileText size={32} className="mx-auto text-gray-300 mb-4" />
+                                <p className="text-[10px] font-black uppercase tracking-widest text-[#888888]">No KYC documents uploaded</p>
+                             </div>
+                           )}
+                        </div>
+                     </div>
+                     <div className="space-y-10">
+                        <div>
+                           <h4 className="text-[10px] font-black text-[#141414] uppercase tracking-[0.2em] mb-6 flex items-center">
+                              <LayoutGrid size={14} className="mr-2 text-blue-600" />
+                              Quick Info
+                           </h4>
+                           <div className="bg-gray-50/50 rounded-3xl p-8 border border-gray-100 space-y-4">
+                              {[
+                                { label: 'Father\'s Name', value: viewingStudent.fatherName },
+                                { label: 'Contact', value: viewingStudent.contact },
+                                { label: 'KYC Status', value: viewingStudent.kycStatus },
+                              ].map((info, i) => (
+                                <div key={i} className="flex items-center justify-between border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                                   <p className="text-[9px] font-black text-[#888888] uppercase tracking-widest">{info.label}</p>
+                                   <p className="text-[11px] font-bold text-[#141414] uppercase">{info.value || 'N/A'}</p>
+                                </div>
+                              ))}
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {editingStudent && (

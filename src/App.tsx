@@ -208,7 +208,7 @@ export default function App() {
                   <Accounts />
                 </ProtectedRoute>
               } />
-              <Route path={`/${pathPrefix}/registration`} element={
+              <Route path={`/${pathPrefix}/registration/:id?`} element={
                 <ProtectedRoute roles={['ADMIN', 'ADMINISTRATOR']}>
                   <StudentRegistration />
                 </ProtectedRoute>
@@ -277,7 +277,7 @@ export default function App() {
               <FeeMaster />
             </ProtectedRoute>
           } />
-          <Route path="/franchise/registration" element={
+          <Route path="/franchise/registration/:id?" element={
             <ProtectedRoute roles={['FRANCHISE']}>
               <StudentRegistration />
             </ProtectedRoute>

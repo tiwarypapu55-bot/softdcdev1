@@ -13,6 +13,7 @@ export interface BusinessProfile {
   phone: string;
   address: string;
   regionalAddress?: string;
+  pincode?: string;
   website: string;
   workingHours: string;
   logoUrl?: string;
@@ -176,13 +177,15 @@ export interface Student {
   
   // Existing system fields
   feeStatus: 'PAID' | 'PARTIAL' | 'PENDING';
-  kycStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  kycStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
   kycDocs: DocumentRecord[];
   documents?: {
     id: string;
     type: string;
     url: string;
     name: string;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED';
+    uploadedAt: string;
   }[];
   totalFees: number;
   paidAmount: number;

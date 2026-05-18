@@ -344,6 +344,10 @@ export const BusinessProfile = () => {
                 <input type="text" value={formData.regionalAddress || ''} onChange={(e) => setFormData({...formData, regionalAddress: e.target.value})} className="w-full p-4 pl-12 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold" />
               </div>
             </div>
+            <div className="space-y-2 md:col-span-1">
+              <label className="text-[10px] font-black text-[#888888] uppercase tracking-widest ml-1">Pin Code</label>
+              <input type="text" value={formData.pincode || ''} onChange={(e) => setFormData({...formData, pincode: e.target.value})} className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold" placeholder="E.g. 272001" />
+            </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-[#888888] uppercase tracking-widest ml-1">Website URL</label>
               <div className="relative">

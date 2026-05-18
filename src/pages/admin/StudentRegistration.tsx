@@ -31,7 +31,7 @@ import { clsx } from 'clsx';
 import { Student } from '../../types';
 import { compressImage } from '../../lib/storage';
 import { INDIAN_STATES, DISTRICTS_BY_STATE } from '../../constants/locationData';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 
 const Section = ({ title, icon: Icon, children, variant = 'blue' }: { title: string, icon: any, children: React.ReactNode, variant?: 'blue' | 'orange' | 'green' | 'gray' }) => (
   <div className={clsx(
@@ -92,13 +92,16 @@ const InputField = ({ label, required, type = "text", value, onChange, placehold
 );
 
 export const StudentRegistration = () => {
-  const { franchises, courses, addStudent, currentUser, businessProfile, feeStructures, franchiseFees, addWalletTransaction, courseCategories } = useApp();
+  const { students, franchises, courses, addStudent, updateStudent, currentUser, businessProfile, feeStructures, franchiseFees, addWalletTransaction, courseCategories } = useApp();
   const location = useLocation();
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [isSuccess, setIsSuccess] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [lastStudent, setLastStudent] = useState<Student | null>(null);
 
   const isFranchise = currentUser?.role === 'FRANCHISE';
+  const isEditMode = !!id;
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const [formData, setFormData] = useState<Partial<Student>>({
@@ -144,26 +147,39 @@ export const StudentRegistration = () => {
     kycStatus: 'PENDING',
     kycDocs: [],
     documents: [
-      { id: 'doc-1', type: 'AADHAR', name: 'Aadhar / ID Card', url: '' },
-      { id: 'doc-2', type: 'QUALIFICATION', name: 'Qualification Document', url: '' },
-      { id: 'doc-3', type: 'PHOTO', name: 'Profile Photo', url: '' },
-      { id: 'doc-4', type: 'SIGNATURE', name: 'Student Signature', url: '' },
-      { id: 'doc-5', type: 'ADDRESS_PROOF', name: 'Address Proof', url: '' },
-      { id: 'doc-6', type: 'OTHER', name: 'Other Document', url: '' },
+      { id: 'doc-1', type: 'AADHAR', name: 'Aadhar / ID Card', url: '', status: 'PENDING', uploadedAt: new Date().toISOString() },
+      { id: 'doc-2', type: 'QUALIFICATION', name: 'Qualification Document', url: '', status: 'PENDING', uploadedAt: new Date().toISOString() },
+      { id: 'doc-3', type: 'PHOTO', name: 'Profile Photo', url: '', status: 'PENDING', uploadedAt: new Date().toISOString() },
+      { id: 'doc-4', type: 'SIGNATURE', name: 'Student Signature', url: '', status: 'PENDING', uploadedAt: new Date().toISOString() },
+      { id: 'doc-5', type: 'ADDRESS_PROOF', name: 'Address Proof', url: '', status: 'PENDING', uploadedAt: new Date().toISOString() },
+      { id: 'doc-6', type: 'OTHER', name: 'Other Document', url: '', status: 'PENDING', uploadedAt: new Date().toISOString() },
     ],
     totalFees: 0,
     paidAmount: 0
   });
 
+  useEffect(() => {
+    if (isEditMode && id) {
+      const studentToEdit = students.find(s => s.id === id);
+      if (studentToEdit) {
+        setFormData({
+          ...studentToEdit,
+          // Ensure documents exist even if legacy data
+          documents: studentToEdit.documents || formData.documents
+        });
+      }
+    }
+  }, [id, students, isEditMode]);
+
   const handleDocumentUpload = (id: string, url: string) => {
     setFormData(prev => ({
       ...prev,
-      documents: prev.documents?.map(doc => doc.id === id ? { ...doc, url } : doc)
+      documents: (prev.documents || []).map(doc => doc.id === id ? { ...doc, url, status: 'PENDING', uploadedAt: new Date().toISOString() } : doc)
     }));
   };
 
   useEffect(() => {
-    if (location.state) {
+    if (!isEditMode && location.state) {
       const { name, email, contact, course } = location.state;
       const matchedCourse = courses.find(c => c.title === course);
       
@@ -200,46 +216,68 @@ export const StudentRegistration = () => {
     setShowConfirmDialog(false);
     setIsSubmitting(true);
     try {
-      // Find the registration fee for this center
-      const centerFee = franchiseFees.find(ff => ff.franchiseId === formData.franchiseId);
-      const regFee = centerFee?.registrationFees || 0;
+      if (!isEditMode) {
+        // Find the registration fee for this center
+        const centerFee = franchiseFees.find(ff => ff.franchiseId === formData.franchiseId);
+        const regFee = centerFee?.registrationFees || 0;
 
-      if (regFee > 0) {
-        try {
-          addWalletTransaction({
-            id: `reg-${Date.now()}`,
-            franchiseId: formData.franchiseId!,
-            amount: regFee,
-            type: 'DEBIT',
-            purpose: `Student Registration Fee: ${formData.name} (${formData.admissionNo})`,
-            timestamp: new Date().toISOString(),
-            status: 'SUCCESS'
-          });
-        } catch (walletError: any) {
-          alert(walletError.message || 'Insufficient wallet balance for registration.');
-          setIsSubmitting(false);
-          return;
+        if (regFee > 0) {
+          try {
+            addWalletTransaction({
+              id: `reg-${Date.now()}`,
+              franchiseId: formData.franchiseId!,
+              amount: regFee,
+              type: 'DEBIT',
+              purpose: `Student Registration Fee: ${formData.name} (${formData.admissionNo})`,
+              timestamp: new Date().toISOString(),
+              status: 'SUCCESS'
+            });
+          } catch (walletError: any) {
+            alert(walletError.message || 'Insufficient wallet balance for registration.');
+            setIsSubmitting(false);
+            return;
+          }
         }
       }
 
-      const newStudent = {
+      const photoUrl = formData.documents?.find(d => d.type === 'PHOTO')?.url || '';
+      const kycDocs = (formData.documents || []).filter(d => d.url !== '').map(d => ({
+        id: d.id,
+        type: d.type as any,
+        name: d.name,
+        url: d.url,
+        status: d.status || 'PENDING',
+        uploadedAt: d.uploadedAt || new Date().toISOString()
+      }));
+
+      const studentData = {
         ...formData as Student,
-        id: `s${Date.now()}`
+        id: isEditMode ? id : `s${Date.now()}`,
+        photoUrl: photoUrl || (formData as Student).photoUrl,
+        kycDocs: kycDocs.length > 0 ? kycDocs : (formData as Student).kycDocs
       };
       
       // Artificial delay for feedback if it's too fast
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      addStudent(newStudent);
-      setLastStudent(newStudent);
-      setIsSuccess(true);
+      if (isEditMode) {
+        updateStudent(id as string, studentData);
+        alert('Student record updated successfully!');
+        navigate(-1);
+      } else {
+        addStudent(studentData);
+        setLastStudent(studentData);
+        setIsSuccess(true);
+      }
       
       window.scrollTo({ top: 0, behavior: 'smooth' });
       
-      setTimeout(() => setIsSuccess(false), 5000);
+      if (!isEditMode) {
+        setTimeout(() => setIsSuccess(false), 5000);
+      }
     } catch (error) {
-      console.error('Registration failed:', error);
-      alert('Failed to register student. Please try again.');
+      console.error('Operation failed:', error);
+      alert('Action failed. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

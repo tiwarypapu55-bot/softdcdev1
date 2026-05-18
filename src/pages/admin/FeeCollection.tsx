@@ -193,7 +193,7 @@ export const FeeCollection = () => {
       <style>{`
         @media print {
           @page {
-            size: A5 landscape;
+            size: A5 portrait;
             margin: 0;
           }
           body * {
@@ -206,9 +206,9 @@ export const FeeCollection = () => {
             position: absolute;
             left: 0;
             top: 0;
-            width: 210mm;
-            height: 148mm;
-            padding: 10mm;
+            width: 148mm;
+            height: 210mm;
+            padding: 5mm;
             background: white !important;
           }
           .print\\:hidden {
@@ -224,7 +224,6 @@ export const FeeCollection = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Student Search & Selection */}
         <div className="lg:col-span-1 space-y-6">
           <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm space-y-4">
             <h2 className="text-[10px] font-black uppercase tracking-widest text-[#888888]">Find Student</h2>
@@ -389,7 +388,6 @@ export const FeeCollection = () => {
           )}
         </div>
 
-        {/* Right Column: Deposited Fees & Receipts */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
             <div className="p-8 border-b border-gray-50 flex items-center justify-between">
@@ -504,10 +502,9 @@ export const FeeCollection = () => {
               </div>
 
               <form onSubmit={handlePayment} className="p-8 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                {/* Fee Heads Section */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-                    <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-widest tracking-widest">Fee Heads / Categories</h3>
+                    <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Fee Heads / Categories</h3>
                     <button type="button" onClick={addHead} className="text-[10px] font-black text-blue-600 uppercase flex items-center space-x-1 hover:underline">
                       <Plus size={12} />
                       <span>Add Head</span>
@@ -597,10 +594,9 @@ export const FeeCollection = () => {
                   </div>
                 </div>
 
-                {/* Payment Modes Section */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-                    <h3 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest tracking-widest">Payment Modes / Transactions</h3>
+                    <h3 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Payment Modes / Transactions</h3>
                     <div className="flex items-center space-x-4">
                        <p className="text-[10px] font-black text-[#141414] uppercase">Total Payable: <span className="text-blue-600">₹{totalPayable.toLocaleString()}</span></p>
                        <button type="button" onClick={addPaymentMode} className="text-[10px] font-black text-emerald-600 uppercase flex items-center space-x-1 hover:underline">
@@ -729,10 +725,9 @@ export const FeeCollection = () => {
         )}
       </AnimatePresence>
 
-      {/* Receipt Modal (Print View Overlay) */}
       <AnimatePresence>
         {showReceipt && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-10 bg-black/60 backdrop-blur-md overflow-y-auto pt-20 pb-20">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-10 bg-black/60 backdrop-blur-md overflow-y-auto">
             <motion.div 
                initial={{ scale: 0.95, opacity: 0 }}
                animate={{ scale: 1, opacity: 1 }}
@@ -753,8 +748,7 @@ export const FeeCollection = () => {
                   </div>
                </div>
 
-               {/* Receipt Layout */}
-               <div className="p-8 relative print:p-0 bg-gray-50/50" id="printable-receipt">
+               <div className="p-8 relative bg-gray-50/50" id="printable-receipt">
                   <div className="flex justify-end space-x-4 mb-6 print:hidden">
                     <button 
                       onClick={() => {
@@ -774,326 +768,238 @@ export const FeeCollection = () => {
                     </button>
                   </div>
 
-                  <div className="bg-white relative shadow-sm border border-gray-200 p-10 max-w-[210mm] mx-auto print:border-0 print:shadow-none print:p-4">
-                     
-                     {/* Dynamic Header from Admin Panel */}
-                     {/* Receipt Header Image */}
-                     <div className="mb-4">
+                  <div className="bg-white relative shadow-sm border border-gray-200 p-8 max-w-[148mm] mx-auto print:border-0 print:shadow-none print:p-4">
+                     {/* Watermark Logo */}
+                     <div className="absolute inset-0 z-0 opacity-[0.03] flex items-center justify-center pointer-events-none overflow-hidden grayscale">
                         {businessProfile.receiptHeaderUrl ? (
-                          <img src={businessProfile.receiptHeaderUrl} alt="Header" className="w-full h-auto mx-auto" />
-                        ) : (
-                          <div className="flex flex-col items-center border-b-[1.5px] border-black pb-4 text-center">
-                            <p className="text-[10px] font-bold text-gray-800">An ISO 9001 : 2015 Certified Institute</p>
-                            <p className="text-[11px] font-black text-emerald-700">बस्ती मंडल का नं. 1 कंप्यूटर ट्रेनिंग इंस्टिट्यूट</p>
-                            <h1 className="text-4xl font-black text-red-600 tracking-tight uppercase leading-none mt-1">{businessProfile.name}</h1>
-                            <div className="bg-indigo-900/5 px-4 py-1 rounded text-[8px] font-bold text-indigo-900 border border-indigo-900/10 mt-1">
-                               [ RUN UNDER : SOFTDEV TALLY GURU PRASHIKSHAN SANSTHAN SOCIETY ] [ REG No. : G-58913 / 1442 ]
-                            </div>
-                            <p className="text-[9px] font-black text-blue-800 mt-1">(A Complete Computer Education Institute) (An Authorised Tally Education Partner)</p>
-                            <p className="text-[9px] font-bold text-red-600 uppercase">Head Office : {businessProfile.address} - {businessProfile.pincode || '272001'}</p>
-                            <p className="text-[9px] font-black text-[#141414]">Website : {businessProfile.website}  Phone : {businessProfile.phone}</p>
-                          </div>
+                           <img src={businessProfile.receiptHeaderUrl} alt="Logo" className="w-[80%] h-auto rotate-[-30deg]" />
+                        ) : businessProfile.headerImageUrl && (
+                           <img src={businessProfile.headerImageUrl} alt="Logo" className="w-[80%] h-auto rotate-[-30deg]" />
                         )}
                      </div>
 
-                     <div className="bg-blue-600 p-2 text-center border-y-2 border-black mb-8 text-white">
-                        <h2 className="text-sm font-black uppercase tracking-widest underline decoration-2 underline-offset-4">
-                          {receiptType === 'SINGLE' ? 'FEE RECEIPT' : 'STUDENT FEE STATEMENT'}
-                        </h2>
-                     </div>
-
-                     {/* Receipt Details Section */}
-                     {(() => {
-                        const student = students.find(s => s.id === showReceipt.studentId);
-                        if (!student) return null;
-                        return (
-                          <div className="grid grid-cols-2 divide-x-2 divide-black border-2 border-black mb-8 text-[11px]">
-                             <div className="divide-y-2 divide-black">
-                                <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50">STUDENT NAME</div>
-                                   <div className="px-4 flex items-center font-bold uppercase">{student.name}</div>
-                                </div>
-                                <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50">FATHER'S NAME</div>
-                                   <div className="px-4 flex items-center font-bold uppercase">{student.fatherName}</div>
-                                </div>
-                                <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50">MOTHER'S NAME</div>
-                                   <div className="px-4 flex items-center font-bold uppercase">{student.motherName}</div>
-                                </div>
-                                <div className="grid grid-cols-2 divide-x-2 divide-black min-h-[2.5rem]">
-                                   <div className="px-4 py-2 flex items-center font-black bg-blue-50">COURSE ENROLLED</div>
-                                   <div className="px-4 py-2 flex items-center font-bold uppercase">{student.course} ({student.courseDuration || 'N/A'})</div>
-                                </div>
-                                <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50">MOBILE NO</div>
-                                   <div className="px-4 flex items-center font-bold">{student.contact}</div>
-                                </div>
-                             </div>
-
-                             <div className="divide-y-2 divide-black">
-                                <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50">RECEIPT NO</div>
-                                   <div className="px-4 flex items-center font-bold uppercase">{showReceipt.receiptNo}</div>
-                                </div>
-                                <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50">ENROLLMENT NO</div>
-                                   <div className="px-4 flex items-center font-bold uppercase">{student.enrollmentNo || 'N/A'}</div>
-                                </div>
-                                <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50">DATE / TIME</div>
-                                   <div className="px-4 flex items-center font-bold">
-                                      {showReceipt.date} {showReceipt.collectionTime && `| ${showReceipt.collectionTime}`}
-                                   </div>
-                                </div>
-                                <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50">INT. NUMBER</div>
-                                   <div className="px-4 flex items-center font-bold uppercase">
-                                      {(() => {
-                                        const studentPayments = feePayments
-                                          .filter(p => p.studentId === showReceipt.studentId)
-                                          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-                                        const idx = studentPayments.findIndex(p => p.id === showReceipt.id);
-                                        return idx !== -1 ? `${idx + 1}` : '--';
-                                      })()}
-                                   </div>
-                                </div>
-                                <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50">ADMISSION DATE</div>
-                                   <div className="px-4 flex items-center font-bold uppercase">{student.admissionDate}</div>
-                                </div>
-                             </div>
-                          </div>
-                        );
-                     })()}
-                     
-                     {/* Student Info Section */}
-
-                     <div className="mb-6">
-                        <div className="bg-blue-600 text-white px-4 py-2 flex items-center mb-2">
-                           <FileText size={14} className="mr-2" />
-                           <span className="text-[10px] font-black uppercase tracking-widest">
-                              FEE COURSE SUMMARY
-                           </span>
+                     <div className="relative z-10">
+                        {/* Header Image Block */}
+                        <div className="border-b-2 border-black pb-2 mb-4">
+                           {businessProfile.receiptHeaderUrl ? (
+                              <img src={businessProfile.receiptHeaderUrl} alt="Header" className="w-full h-auto object-contain block" style={{ maxHeight: '180px' }} />
+                           ) : businessProfile.headerImageUrl ? (
+                              <img src={businessProfile.headerImageUrl} alt="Header" className="w-full h-auto object-contain block" style={{ maxHeight: '180px' }} />
+                           ) : (
+                              <div className="flex flex-col items-center text-center">
+                                 <p className="text-[10px] font-bold text-gray-800">An ISO 9001 : 2015 Certified Institute</p>
+                                 <h1 className="text-4xl font-black text-red-600 tracking-tight uppercase leading-none mt-1">{businessProfile.name}</h1>
+                                 <p className="text-[10px] font-black">{businessProfile.address} - Pin: {businessProfile.pincode}</p>
+                                 <p className="text-[10px] font-black">Contact: {businessProfile.contact} | {businessProfile.email}</p>
+                              </div>
+                           )}
                         </div>
-                        <table className="w-full border-t-[1.5px] border-l-[1.5px] border-black text-center text-[9px]">
-                           <thead>
-                              <tr className="bg-blue-50 divide-x-[1.5px] divide-black border-b-[1.5px] border-black font-black uppercase">
-                                 <th className="py-2 min-w-[25px]">#</th>
-                                 <th className="py-2 px-4 text-left">Fees Type</th>
-                                 <th className="py-2">Total Payable</th>
-                                 <th className="py-2">Disc.</th>
-                                 <th className="py-2">Pen.</th>
-                                 <th className="py-2">T.Paid</th>
-                                 <th className="py-2">Balance</th>
-                                 <th className="py-2">Inst.No</th>
-                                 <th className="py-2">Date</th>
-                              </tr>
-                           </thead>
-                           <tbody className="divide-y-[1.5px] divide-black border-b-[1.5px] border-r-[1.5px] border-black font-bold uppercase">
-                              {(showReceipt.heads && showReceipt.heads.length > 0 ? showReceipt.heads : [{ type: showReceipt.feeType, amount: showReceipt.amount, discount: showReceipt.discount, penalty: showReceipt.penalty }]).map((h, idx) => (
-                                 <tr key={idx} className="divide-x-[1.5px] divide-black">
-                                    <td className="py-2">{idx + 1}</td>
-                                    <td className="py-2 px-4 text-left">{h.type}</td>
-                                    <td className="py-2">₹{h.amount.toFixed(2)}</td>
-                                    <td className="py-2">₹{h.discount.toFixed(2)}</td>
-                                    <td className="py-2">₹{h.penalty.toFixed(2)}</td>
-                                    <td className="py-2 text-emerald-700 font-black">₹{idx === 0 ? showReceipt.paidAmount.toFixed(2) : '0.00'}</td>
-                                    <td className="py-2 text-red-600">₹{idx === 0 ? showReceipt.balance.toFixed(2) : '0.00'}</td>
-                                    <td className="py-2">
-                                       {(() => {
-                                         const studentPayments = feePayments
-                                           .filter(p => p.studentId === showReceipt.studentId)
-                                           .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-                                         const instIdx = studentPayments.findIndex(p => p.id === showReceipt.id);
-                                         return instIdx !== -1 ? `${instIdx + 1}` : '--';
-                                       })()}
-                                    </td>
-                                    <td className="py-2">{showReceipt.date}</td>
-                                 </tr>
-                              ))}
-                           </tbody>
-                        </table>
-                     </div>
 
-                     <div className="text-center my-6">
-                        <h2 className="text-lg font-black text-blue-600 tracking-widest uppercase">DEPOSITED FEE</h2>
-                     </div>
-
-                      {/* Deposited Fees Table Grouped by Installment */}
-                      <table className="w-full border-t-[1.5px] border-l-[1.5px] border-black text-[9px] mb-2 text-center overflow-hidden">
-                         <thead>
-                            <tr className="bg-blue-600 text-white divide-x-[1.5px] divide-black border-b-[1.5px] border-black">
-                               <th className="py-1.5 px-2 min-w-[30px]">#</th>
-                               <th className="py-1.5 px-2 text-left">Installment</th>
-                               <th className="py-1.5 px-2 text-left">Receipt No..</th>
-                              <th className="py-1.5 px-2 text-left">Fee Type</th>
-                              <th className="py-1.5 px-2">Amount</th>
-                              <th className="py-1.5 px-2 text-left">Pay Mode</th>
-                              <th className="py-1.5 px-2">Date</th>
-                           </tr>
-                        </thead>
-                        <tbody className="divide-y-[1.5px] divide-black border-b-[1.5px] border-r-[1.5px] border-black font-bold">
-                           {(() => {
-                             const currentInstallmentNo = getInstallmentNumber(showReceipt.date, showReceipt.studentId);
-                             const history = feePayments
-                              .filter(p => p.studentId === showReceipt.studentId && (receiptType === 'HISTORY' || getInstallmentNumber(p.date, p.studentId) === currentInstallmentNo))
-                              .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-                              
-                             const rows: any[] = [];
-                             history.forEach(p => {
-                               const installment = getInstallmentNumber(p.date, p.studentId);
-                               const billableTotal = (p.amount || 0) + (p.penalty || 0) - (p.discount || 0);
-                               rows.push({
-                                 installment,
-                                 receiptNo: p.receiptNo,
-                                 feeType: p.feeType,
-                                 amount: billableTotal,
-                                 mode: p.paymentMode,
-                                 date: p.date
-                               });
-                             });
-
-                             return rows.map((row, idx) => (
-                               <tr key={idx} className="divide-x-[1.5px] divide-black">
-                                  <td className="py-1.5">{idx + 1}</td>
-                                  <td className="py-1.5 px-3 text-left uppercase text-blue-700">{row.installment}</td>
-                                  
-                                  <td className="py-1.5 px-3 text-left uppercase">{row.receiptNo}</td>
-                                  <td className="py-1.5 px-3 text-left uppercase truncate max-w-[120px]">{row.feeType}</td>
-                                  <td className="py-1.5 text-gray-900">{row.amount.toFixed(2)}</td>
-                                  <td className="py-1.5 px-3 text-left uppercase text-indigo-700">{row.mode}</td>
-                                  <td className="py-1.5">{row.date}</td>
-                               </tr>
-                             ));
-                           })()}
-                           <tr className="bg-gray-100 divide-x-[1.5px] divide-black font-black">
-                              <td colSpan={4} className="py-1.5 px-4 text-left uppercase">Total</td>
-                              <td className="py-1.5">
-                                 {(() => {
-                                   const currentInstallmentNo = getInstallmentNumber(showReceipt.date, showReceipt.studentId);
-                                   const studentPayments = feePayments.filter(p => p.studentId === showReceipt.studentId && (receiptType === 'HISTORY' || getInstallmentNumber(p.date, p.studentId) === currentInstallmentNo));
-                                   return studentPayments.reduce((acc, p) => acc + (p.amount + (p.penalty || 0) - (p.discount || 0)), 0).toFixed(2);
-                                 })()}
-                              </td>
-                              <td colSpan={2}></td>
-                           </tr>
-                        </tbody>
-                     </table>
-                     
-                     <div className="mb-12 px-2 flex justify-between items-center border-b border-gray-100 pb-4">
-                        <p className="text-[12px] font-bold">
-                           <span className="font-black">Amount In Words:</span> Rupees {numberToWords(receiptType === 'SINGLE' ? showReceipt.paidAmount : feePayments.filter(p => p.studentId === showReceipt.studentId).reduce((acc, curr) => acc + curr.paidAmount, 0))}
-                        </p>
                         {(() => {
                            const student = students.find(s => s.id === showReceipt.studentId);
                            if (!student) return null;
-                           const studentPayments = feePayments.filter(p => p.studentId === showReceipt.studentId);
-                           const totalPaid = studentPayments.reduce((acc, curr) => acc + curr.paidAmount, 0);
-                           const totalInvoiced = studentPayments.reduce((acc, p) => acc + (p.amount + (p.penalty || 0) - (p.discount || 0)), 0);
-                           
+
                            return (
-                             <div className="text-right border-l-4 border-blue-600 pl-6">
-                               <p className="text-[11px] font-black text-blue-600 uppercase tracking-tight">Total Course Fee: ₹{totalInvoiced}</p>
-                               <p className="text-[11px] font-black text-red-600 uppercase tracking-tight">Remaining Balance: ₹{totalInvoiced - totalPaid}</p>
+                             <div className="grid grid-cols-2 divide-x-2 divide-black border-2 border-black mb-8 text-[11px]">
+                               <div className="divide-y-2 divide-black">
+                                 <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
+                                   <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Branch / Franchise</div>
+                                   <div className="px-4 flex items-center font-bold uppercase truncate text-[10px] text-blue-600">{student.studyCenter || franchises.find(f => f.id === student.franchiseId)?.name || 'N/A'}</div>
+                                 </div>
+                                 <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
+                                   <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Admission Date</div>
+                                   <div className="px-4 flex items-center font-bold uppercase text-[10px]">{student.admissionDate}</div>
+                                 </div>
+                                 <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
+                                   <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Course</div>
+                                   <div className="px-4 flex items-center font-black truncate text-[10px] text-red-600">{student.course} ({student.courseDuration || 'N/A'})</div>
+                                 </div>
+                                 <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
+                                   <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Mobile</div>
+                                   <div className="px-4 flex items-center font-bold uppercase text-[10px]">{student.contact}</div>
+                                 </div>
+                                 <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
+                                   <div className="px-4 flex items-center font-black bg-blue-50 text-blue-600 text-[10px]">Student Name</div>
+                                   <div className="px-4 flex items-center font-black uppercase text-blue-600 text-[10px]">{student.name}</div>
+                                 </div>
+                               </div>
+
+                               <div className="divide-y-2 divide-black text-left">
+                                 <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
+                                   <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Receipt No</div>
+                                   <div className="px-4 flex items-center font-bold uppercase text-[10px]">{showReceipt.receiptNo}</div>
+                                 </div>
+                                 <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
+                                   <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Date / Time</div>
+                                   <div className="px-4 flex items-center font-bold uppercase text-[10px]">
+                                     {showReceipt.date} {showReceipt.collectionTime && `| ${showReceipt.collectionTime}`}
+                                   </div>
+                                 </div>
+                                 <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
+                                   <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Admission No</div>
+                                   <div className="px-4 flex items-center font-black uppercase text-blue-600 text-[10px]">{student.admissionNo || '--'}</div>
+                                 </div>
+                                 <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
+                                   <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Father's Name</div>
+                                   <div className="px-4 flex items-center font-bold uppercase text-[10px]">{student.fatherName}</div>
+                                 </div>
+                                 <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
+                                   <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Total Course Fee</div>
+                                   <div className="px-4 flex items-center font-bold uppercase text-[10px]">₹{student.totalFees || '--'}</div>
+                                 </div>
+                               </div>
                              </div>
                            );
                         })()}
-                     </div>
+                        
+                        {receiptType === 'SINGLE' ? (
+                          <>
+                             <div className="bg-blue-600 text-white px-4 py-1 flex items-center mb-0 print:bg-blue-600">
+                                <FileText size={12} className="mr-2" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">FEES DEPOSITED DETAILS</span>
+                             </div>
 
-                     {/* Signatures */}
-                     <div className="flex justify-between mt-12 mb-10 px-4 border-t border-gray-200 pt-4">
-                        <div className="text-center w-64 border-t border-black/40 pt-1">
-                           <p className="text-[11px] font-black uppercase">Student Signature</p>
+                             <table className="w-full border-t-[1.5px] border-l-[1.5px] border-black text-center text-[10px] mb-8">
+                                <thead className="bg-gray-100">
+                                   <tr className="divide-x-[1.5px] divide-black border-b-[1.5px] border-black">
+                                      <th className="py-2 font-black uppercase">PARTICULARS</th>
+                                      <th className="py-2 font-black uppercase">AMOUNT</th>
+                                      <th className="py-2 font-black uppercase">DISC.</th>
+                                      <th className="py-2 font-black uppercase">PEN.</th>
+                                      <th className="py-2 font-black uppercase">TOTAL</th>
+                                   </tr>
+                                </thead>
+                                <tbody className="divide-y-[1.5px] divide-black">
+                                   {showReceipt.heads.map((h, i) => (
+                                      <tr key={i} className="divide-x-[1.5px] divide-black">
+                                         <td className="py-2 font-bold uppercase">{h.type}</td>
+                                         <td className="py-2 font-bold text-blue-600">₹{h.amount.toLocaleString()}</td>
+                                         <td className="py-2 font-bold text-emerald-600">₹{h.discount.toLocaleString()}</td>
+                                         <td className="py-2 font-bold text-red-600">₹{h.penalty.toLocaleString()}</td>
+                                         <td className="py-2 font-black bg-gray-50">₹{(h.amount + h.penalty - h.discount).toLocaleString()}</td>
+                                      </tr>
+                                   ))}
+                                   <tr className="divide-x-[1.5px] divide-black bg-gray-100 font-black">
+                                      <td className="py-2 uppercase">TOTAL PAID (IN WORDS: {numberToWords(showReceipt.paidAmount)})</td>
+                                      <td colSpan={4} className="py-2">₹{showReceipt.paidAmount.toLocaleString()}</td>
+                                   </tr>
+                                </tbody>
+                             </table>
+
+                             <div className="grid grid-cols-2 gap-8 mb-8">
+                                <div className="space-y-2">
+                                   <div className="bg-emerald-600 text-white px-4 py-1 flex items-center print:bg-emerald-600">
+                                      <Clock size={12} className="mr-2" />
+                                      <span className="text-[9px] font-black uppercase tracking-widest">PAYMENT MODES</span>
+                                   </div>
+                                   <div className="border border-black p-4 space-y-1">
+                                      {showReceipt.paymentModes?.map((m, i) => (
+                                         <div key={i} className="flex justify-between text-[10px] font-bold border-b border-gray-100 last:border-0 pb-1">
+                                            <span className="uppercase">{m.mode} {m.transactionId && `[ ${m.transactionId} ]`}</span>
+                                            <span>₹{m.amount.toLocaleString()}</span>
+                                         </div>
+                                      )) || (
+                                         <div className="flex justify-between text-[10px] font-bold">
+                                            <span className="uppercase">{showReceipt.paymentMode}</span>
+                                            <span>₹{showReceipt.paidAmount.toLocaleString()}</span>
+                                         </div>
+                                      )}
+                                      {showReceipt.remarks && (
+                                         <div className="pt-2 text-[8px] font-bold italic border-t border-black mt-2">
+                                            Note: {showReceipt.remarks}
+                                         </div>
+                                      )}
+                                   </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                   <div className="bg-red-600 text-white px-4 py-1 flex items-center print:bg-red-600">
+                                      <GraduationCap size={12} className="mr-2" />
+                                      <span className="text-[9px] font-black uppercase tracking-widest">FEE SUMMARY</span>
+                                   </div>
+                                   <div className="border-2 border-black divide-y-2 divide-black">
+                                      <div className="flex justify-between p-3 text-[11px] font-black bg-blue-50">
+                                         <span>BALANCE DUE</span>
+                                         <span className="text-red-600">₹{showReceipt.balance.toLocaleString()}</span>
+                                      </div>
+                                   </div>
+                                </div>
+                             </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-center mb-6">
+                               <span className="px-8 py-2 border-2 border-emerald-600 rounded-full text-emerald-600 font-black text-xs uppercase tracking-[0.2em] shadow-sm">
+                                  FEE COURSE SUMMARY
+                               </span>
+                            </div>
+
+                            <table className="w-full border-t-[1.5px] border-l-[1.5px] border-black text-center text-[9px] mb-8">
+                               <thead className="bg-[#141414] text-white">
+                                  <tr className="divide-x-[1.5px] divide-black border-b-[1.5px] border-black">
+                                     <th className="py-2 uppercase font-black">Date</th>
+                                     <th className="py-2 uppercase font-black">Receipt No</th>
+                                     <th className="py-2 uppercase font-black">Particulars</th>
+                                     <th className="py-2 uppercase font-black">Paid Amt</th>
+                                     <th className="py-2 uppercase font-black">Balance</th>
+                                  </tr>
+                               </thead>
+                               <tbody className="divide-y-[1.5px] divide-black">
+                                  {feePayments
+                                    .filter(p => p.studentId === showReceipt.studentId)
+                                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                                    .map(p => (
+                                       <tr key={p.id} className="divide-x-[1.5px] divide-black font-bold">
+                                          <td className="py-2">{p.date}</td>
+                                          <td className="py-2">{p.receiptNo}</td>
+                                          <td className="py-2 uppercase">{p.feeType}</td>
+                                          <td className="py-2 text-emerald-600">₹{p.paidAmount.toLocaleString()}</td>
+                                          <td className="py-2 text-red-600">₹{p.balance.toLocaleString()}</td>
+                                       </tr>
+                                    ))}
+                                  {(() => {
+                                      const studentPayments = feePayments.filter(p => p.studentId === showReceipt.studentId);
+                                      const totalPaid = studentPayments.reduce((acc, p) => acc + p.paidAmount, 0);
+                                      const latestBalance = studentPayments.length > 0 
+                                          ? studentPayments.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0].balance 
+                                          : 0;
+                                      
+                                      return (
+                                          <tr className="divide-x-[1.5px] divide-black bg-gray-100 font-black text-[10px]">
+                                              <td colSpan={3} className="py-3 uppercase text-right px-6">Total Deposited Fees</td>
+                                              <td className="py-3 text-emerald-600">₹{totalPaid.toLocaleString()}</td>
+                                              <td className="py-3 text-red-600">₹{latestBalance.toLocaleString()}</td>
+                                          </tr>
+                                      );
+                                  })()}
+                               </tbody>
+                            </table>
+                          </>
+                        )}
+
+                        <div className="flex justify-between items-end mt-12 border-t-2 border-black pt-8">
+                           <div className="text-[9px] font-black space-y-4 max-w-[65%]">
+                              <p className="text-red-600 underline">Terms & Conditions:</p>
+                              <ol className="list-decimal list-inside space-y-1">
+                                 <li>Fees once paid will not be refunded or adjusted in any case.</li>
+                                 <li>Student must carry this receipt for any official work.</li>
+                                 <li>Payment is valid only for the mentioned course and duration.</li>
+                                 <li>Fine may apply for late fee deposition.</li>
+                              </ol>
+                           </div>
+                           <div className="text-center">
+                              <div className="w-32 border-b-2 border-black mb-1 mx-auto"></div>
+                              <p className="text-[10px] font-black uppercase">Center Head Signature</p>
+                              <p className="text-[8px] font-bold text-gray-500">(Office Seal Required)</p>
+                           </div>
                         </div>
-                        <div className="text-center w-64 border-t border-black/40 pt-1">
-                           <p className="text-[11px] font-black uppercase">Cashier Signature</p>
-                        </div>
                      </div>
-
-                     {/* Instructions Box */}
-                     <div className="border border-yellow-200 p-6 bg-yellow-50/50 rounded-xl mb-6">
-                        <h4 className="text-[11px] font-black uppercase mb-3">Instructions:</h4>
-                        <ul className="text-[10px] font-bold text-gray-700 space-y-1 mt-1 list-none leading-relaxed">
-                           <li>• Fees once paid is non-refundable.</li>
-                           <li>• Keep this receipt safely.</li>
-                           <li>• This is system generated receipt.</li>
-                           <li>• Once the fee has been paid, it will not be refunded under any circumstances, nor can it be transferred or adjusted to any other course or student.</li>
-                        </ul>
-                     </div>
-
-                     <div className="flex justify-end print:hidden">
-                       <button 
-                         onClick={() => {
-                           const student = students.find(s => s.id === showReceipt.studentId);
-                           if (student) sendWhatsAppReceipt(showReceipt, student);
-                         }}
-                         className="flex items-center space-x-2 text-emerald-600 hover:text-emerald-700 transition-colors"
-                       >
-                         <MessageCircle size={16} />
-                         <span className="text-[10px] font-black uppercase tracking-widest border-b border-emerald-600">Share on WhatsApp</span>
-                       </button>
-                     </div>
-
                   </div>
                </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
-
-      <style>{`
-        @media print {
-          @page {
-            size: A5 landscape;
-            margin: 0;
-          }
-          body { 
-            visibility: hidden !important; 
-            background: white !important;
-          }
-          #active-app-root {
-            display: none !important;
-          }
-          #printable-receipt { 
-            visibility: visible !important;
-            position: fixed !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 210mm !important;
-            height: 148mm !important;
-            margin: 0 !important;
-            padding: 5mm !important;
-            display: flex !important;
-            flex-direction: column;
-            justify-content: flex-start;
-            overflow: hidden;
-            box-sizing: border-box;
-            background: white !important;
-            z-index: 9999999;
-          }
-          #printable-receipt > div {
-             border: 1px solid black !important;
-             height: 100% !important;
-             overflow: hidden;
-             display: flex;
-             flex-direction: column;
-          }
-          #printable-receipt * { 
-            visibility: visible !important; 
-            font-size: 10px !important;
-          }
-          #printable-receipt h1 { font-size: 24px !important; }
-          #printable-receipt h2 { font-size: 16px !important; }
-          #printable-receipt th, #printable-receipt td { padding: 4px !important; }
-          
-          .print\:hidden { display: none !important; }
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-        }
-      `}</style>
     </div>
   );
 };

@@ -363,7 +363,18 @@ const CategoryManager = ({ isViewOnly }: { isViewOnly: boolean }) => {
     setShowModal(false);
   };
 
-  const filtered = courseCategories.filter(cat => 
+  const inferredCategories = Array.from(new Set(courses.map(c => c.category)))
+    .filter(name => name && !courseCategories.find(cat => cat.name === name))
+    .map(name => ({
+      id: `inferred-${name}`,
+      name,
+      description: 'Auto-detected from Course Master',
+      isInferred: true
+    }));
+
+  const allCategories = [...courseCategories, ...inferredCategories];
+
+  const filtered = allCategories.filter(cat => 
     cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (cat.description || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -420,22 +431,29 @@ const CategoryManager = ({ isViewOnly }: { isViewOnly: boolean }) => {
                      >
                        <Edit2 size={14} />
                      </button>
-                     <button 
-                       onClick={(e) => {
-                         e.stopPropagation();
-                         if (window.confirm(`Delete category "${cat.name}"? This will also unassign it from all courses.`)) {
-                           deleteCourseCategory(cat.id);
-                         }
-                       }}
-                       className="p-1.5 bg-red-50 text-red-600 hover:bg-red-500 hover:text-white rounded-lg transition-all shadow-sm flex items-center justify-center cursor-pointer relative z-10"
-                       title="Delete Category"
-                     >
-                       <Trash2 size={16} />
-                     </button>
+                     {!cat.isInferred && (
+                       <button 
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           if (window.confirm(`Delete category "${cat.name}"? This will also unassign it from all courses.`)) {
+                             deleteCourseCategory(cat.id);
+                           }
+                         }}
+                         className="p-1.5 bg-red-50 text-red-600 hover:bg-red-500 hover:text-white rounded-lg transition-all shadow-sm flex items-center justify-center cursor-pointer relative z-10"
+                         title="Delete Category"
+                       >
+                         <Trash2 size={16} />
+                       </button>
+                     )}
                    </div>
                  )}
               </div>
-              <p className="text-sm font-black text-[#141414]">{cat.name}</p>
+              <div className="flex items-center space-x-2">
+                <p className="text-sm font-black text-[#141414]">{cat.name}</p>
+                {cat.isInferred && (
+                  <span className="px-2 py-0.5 bg-amber-50 text-amber-600 text-[8px] font-black uppercase tracking-tighter rounded border border-amber-200">Inferred</span>
+                )}
+              </div>
               <p className="text-[10px] text-[#888888] mt-1 font-bold">
                 {courses.filter(c => c.category?.trim().toLowerCase() === cat.name?.trim().toLowerCase()).length} Courses Included
               </p>

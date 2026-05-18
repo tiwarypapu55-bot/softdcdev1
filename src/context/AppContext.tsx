@@ -200,7 +200,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         admissionDate: '2024-04-10', highestQualification: '12th', qualificationDetail: 'Science Stream',
         passingYear: '2023', address: '12, Malviya Road, Basti', state: 'Uttar Pradesh', district: 'Basti',
         pincode: '272001', remark: 'Good performance', enquirySource: 'Direct Website', verificationCode: 'V-9912',
-        feeStatus: 'PARTIAL', kycStatus: 'VERIFIED', kycDocs: [], totalFees: 5000, paidAmount: 2500,
+        feeStatus: 'PARTIAL', kycStatus: 'PENDING', kycDocs: [
+          { id: 'kd1', type: 'AADHAR', name: 'Aadhar Card', url: 'https://via.placeholder.com/800x500?text=Aadhar+Card+Preview', status: 'PENDING', uploadedAt: new Date().toISOString() },
+          { id: 'kd2', type: 'QUALIFICATION', name: '12th Marksheet', url: 'https://via.placeholder.com/800x1100?text=Marksheet+Preview', status: 'PENDING', uploadedAt: new Date().toISOString() }
+        ], 
+        documents: [
+          { id: 'doc-1', type: 'AADHAR', name: 'Aadhar / ID Card', url: 'https://via.placeholder.com/800x500?text=Aadhar+Card+Preview', status: 'PENDING', uploadedAt: new Date().toISOString() },
+          { id: 'doc-2', type: 'QUALIFICATION', name: 'Qualification Document', url: 'https://via.placeholder.com/800x1100?text=Marksheet+Preview', status: 'PENDING', uploadedAt: new Date().toISOString() },
+        ],
+        totalFees: 5000, paidAmount: 2500,
         certificateStatus: 'NOT_APPLIED'
       },
       {
@@ -214,7 +222,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         admissionDate: '2024-05-02', highestQualification: 'B.Sc', qualificationDetail: 'Computer Science',
         passingYear: '2024', address: 'Mohalla Azad Nagar, Basti', state: 'Uttar Pradesh', district: 'Basti',
         pincode: '272002', remark: 'Inquisitive learner', enquirySource: 'Friend Referral', verificationCode: 'V-9913',
-        feeStatus: 'PAID', kycStatus: 'VERIFIED', kycDocs: [], totalFees: 4500, paidAmount: 4500,
+        feeStatus: 'PAID', kycStatus: 'APPROVED', kycDocs: [
+          { id: 'kd3', type: 'AADHAR', name: 'Aadhar Card', url: 'https://via.placeholder.com/800x500?text=Aadhar+Card+Approved', status: 'APPROVED', uploadedAt: new Date().toISOString() }
+        ],
+        documents: [
+          { id: 'doc-1', type: 'AADHAR', name: 'Aadhar / ID Card', url: 'https://via.placeholder.com/800x500?text=Aadhar+Card+Approved', status: 'APPROVED', uploadedAt: new Date().toISOString() },
+        ],
+        totalFees: 4500, paidAmount: 4500,
         certificateStatus: 'ISSUED'
       }
     ];
