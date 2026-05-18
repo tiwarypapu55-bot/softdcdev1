@@ -31,7 +31,7 @@ export const TimeTable = () => {
     { id: '2', day: 'MONDAY', time: '11:00 AM - 12:30 PM', subject: 'GST Professional', faculty: 'Anita Rao', room: 'Theory 02', type: 'THEORY' },
     { id: '3', day: 'MONDAY', time: '01:30 PM - 03:00 PM', subject: 'Financial Accounting', faculty: 'Rajesh K', room: 'Lab 03', type: 'PRACTICAL' },
     { id: '4', day: 'TUESDAY', time: '09:00 AM - 10:30 AM', subject: 'Excel Mastery', faculty: 'Sonia M', room: 'Lab 02', type: 'PRACTICAL' },
-    { id: '5', day: 'TUESDAY', time: '11:00 AM - 12:30 PM', subject: 'Voucher Entry', faculty: 'Vinay Singh', room: 'Theory 01', type: 'THEORY' },
+    { id: '5', day: 'TUESDAY', time: '11:00 AM - 12:30 PM', subject: 'Account Transactions', faculty: 'Vinay Singh', room: 'Theory 01', type: 'THEORY' },
   ];
 
   const currentDaySchedule = schedule.filter(s => s.day === selectedDay);

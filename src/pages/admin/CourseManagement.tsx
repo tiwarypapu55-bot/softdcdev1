@@ -23,7 +23,7 @@ import { clsx } from 'clsx';
 import { Course } from '../../types';
 
 export const CourseManagement = () => {
-  const { courses, addCourse, updateCourse, deleteCourse } = useApp();
+  const { courses, addCourse, updateCourse, deleteCourse, courseCategories } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -33,10 +33,12 @@ export const CourseManagement = () => {
     duration: '',
     description: '',
     level: 'Beginner',
-    rating: 4.5
+    rating: 4.5,
+    imageUrl: '',
+    bannerUrl: ''
   });
 
-  const categories = Array.from(new Set(courses.map(c => c.category)));
+  const categories = Array.from(new Set([...courseCategories.map(c => c.name), ...courses.map(c => c.category)]));
 
   const handleOpenModal = (course?: Course) => {
     if (course) {
@@ -46,14 +48,27 @@ export const CourseManagement = () => {
       setEditingCourse(null);
       setFormData({
         title: '',
-        category: '',
+        category: courseCategories[0]?.name || '',
         duration: '',
         description: '',
         level: 'Beginner',
-        rating: 4.5
+        rating: 4.5,
+        imageUrl: '',
+        bannerUrl: ''
       });
     }
     setIsModalOpen(true);
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>, field: 'imageUrl' | 'bannerUrl') => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, [field]: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSave = (e: React.FormEvent) => {
@@ -102,9 +117,9 @@ export const CourseManagement = () => {
           />
         </div>
         <div className="flex gap-2">
-           {categories.map(cat => (
+           {categories.map((cat, idx) => (
              <button 
-                key={cat}
+                key={`${cat}-${idx}`}
                 onClick={() => setSearchTerm(cat)}
                 className="px-4 py-2 bg-white border border-gray-100 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all whitespace-nowrap"
              >
@@ -119,35 +134,58 @@ export const CourseManagement = () => {
           <motion.div 
             layout
             key={course.id}
-            className="group bg-white rounded-3xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col h-full"
+            className="group bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col h-full"
           >
-            <div className="flex justify-between items-start mb-4">
-              <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[9px] font-black uppercase tracking-widest rounded-full">{course.category}</span>
-              <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => handleOpenModal(course)} className="p-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors">
+            <div className="relative h-48 bg-gray-100">
+              {course.bannerUrl ? (
+                <img src={course.bannerUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-300">
+                  <BookOpen size={48} />
+                </div>
+              )}
+              <div className="absolute top-4 left-4">
+                <span className="px-3 py-1 bg-white/90 backdrop-blur-md text-blue-600 text-[9px] font-black uppercase tracking-widest rounded-full shadow-sm">{course.category}</span>
+              </div>
+              <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => handleOpenModal(course)} className="p-2 bg-white/90 backdrop-blur-md text-gray-600 rounded-lg hover:text-blue-600 shadow-sm transition-colors">
                   <Edit2 size={14} />
                 </button>
-                <button onClick={() => deleteCourse(course.id)} className="p-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors">
+                <button 
+                  type="button"
+                  onClick={(e) => { 
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if(window.confirm('Delete course?')) deleteCourse(course.id);
+                  }} 
+                  className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-500 hover:text-white shadow-sm transition-all border border-red-100 cursor-pointer relative z-40"
+                  title="Delete Course"
+                >
                   <Trash2 size={14} />
                 </button>
               </div>
             </div>
             
-            <h3 className="text-lg font-black text-[#141414] leading-tight mb-2 group-hover:text-blue-600 transition-colors">{course.title}</h3>
-            <p className="text-xs text-[#888888] line-clamp-2 mb-6 flex-grow">{course.description}</p>
-            
-            <div className="pt-6 border-t border-gray-50 flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-1.5 text-[#141414]">
-                  <Clock size={14} className="text-blue-600" />
-                  <span className="text-[10px] font-black">{course.duration}</span>
-                </div>
-                <div className="flex items-center space-x-1.5 text-[#141414]">
-                  <Star size={14} className="text-orange-400 fill-orange-400" />
-                  <span className="text-[10px] font-black">{course.rating}</span>
-                </div>
+            <div className="p-6 flex flex-col flex-grow">
+              <div className="flex items-center space-x-3 mb-4">
+                {course.imageUrl && <img src={course.imageUrl} className="w-10 h-10 rounded-lg object-cover" alt="" />}
+                <h3 className="text-lg font-black text-[#141414] leading-tight group-hover:text-blue-600 transition-colors uppercase">{course.title}</h3>
               </div>
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{course.level}</span>
+              <p className="text-xs text-[#888888] line-clamp-2 mb-6 flex-grow">{course.description}</p>
+              
+              <div className="pt-6 border-t border-gray-50 flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-1.5 text-[#141414]">
+                    <Clock size={14} className="text-blue-600" />
+                    <span className="text-[10px] font-black">{course.duration}</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5 text-[#141414]">
+                    <Star size={14} className="text-orange-400 fill-orange-400" />
+                    <span className="text-[10px] font-black">{course.rating}</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{course.level}</span>
+              </div>
             </div>
           </motion.div>
         ))}
@@ -161,7 +199,7 @@ export const CourseManagement = () => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl"
+              className="bg-white rounded-[2.5rem] w-full max-w-2xl overflow-hidden shadow-2xl overflow-y-auto max-h-[90vh]"
             >
               <div className="px-8 py-6 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
                 <h2 className="text-xl font-black text-[#141414] uppercase tracking-tight">
@@ -187,14 +225,15 @@ export const CourseManagement = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-[#888888] uppercase tracking-widest ml-1">Category</label>
-                    <input 
+                    <select 
                       required
-                      type="text" 
                       value={formData.category}
                       onChange={(e) => setFormData({...formData, category: e.target.value})}
-                      placeholder="e.g., Accounting"
-                      className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold"
-                    />
+                      className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold appearance-none"
+                    >
+                      <option value="">Select Category</option>
+                      {courseCategories.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
+                    </select>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-[#888888] uppercase tracking-widest ml-1">Duration</label>
@@ -220,6 +259,27 @@ export const CourseManagement = () => {
                       <option>Professional</option>
                       <option>All Levels</option>
                     </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[#888888] uppercase tracking-widest ml-1">Photo (Square preferred)</label>
+                    <div className="relative">
+                      <input type="file" accept="image/*" onChange={(e) => handleFile(e, 'imageUrl')} className="hidden" id="c-thumb-mgmt" />
+                      <label htmlFor="c-thumb-mgmt" className="block w-full p-4 bg-gray-50 border border-dashed border-gray-200 rounded-2xl text-center cursor-pointer hover:bg-gray-100">
+                        {formData.imageUrl ? <img src={formData.imageUrl} className="h-8 mx-auto" /> : <Plus size={20} className="mx-auto text-gray-400" />}
+                      </label>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[#888888] uppercase tracking-widest ml-1">Banner (16:9 preferred)</label>
+                    <div className="relative">
+                      <input type="file" accept="image/*" onChange={(e) => handleFile(e, 'bannerUrl')} className="hidden" id="c-banner-mgmt" />
+                      <label htmlFor="c-banner-mgmt" className="block w-full p-4 bg-gray-50 border border-dashed border-gray-200 rounded-2xl text-center cursor-pointer hover:bg-gray-100">
+                        {formData.bannerUrl ? <img src={formData.bannerUrl} className="h-8 mx-auto" /> : <Plus size={20} className="mx-auto text-gray-400" />}
+                      </label>
+                    </div>
                   </div>
                 </div>
 

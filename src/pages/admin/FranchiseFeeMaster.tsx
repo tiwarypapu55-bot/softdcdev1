@@ -103,8 +103,9 @@ export const FranchiseFeeMaster = () => {
                   <input 
                     type="number"
                     required
-                    value={formData.registrationFees}
-                    onChange={(e) => setFormData({...formData, registrationFees: Number(e.target.value)})}
+                    value={formData.registrationFees || ''}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setFormData({...formData, registrationFees: e.target.value === '' ? 0 : Number(e.target.value)})}
                     placeholder="Enter registration fee"
                     className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold"
                   />
@@ -115,8 +116,9 @@ export const FranchiseFeeMaster = () => {
                   <input 
                     type="number"
                     required
-                    value={formData.marksheetFees}
-                    onChange={(e) => setFormData({...formData, marksheetFees: Number(e.target.value)})}
+                    value={formData.marksheetFees || ''}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setFormData({...formData, marksheetFees: e.target.value === '' ? 0 : Number(e.target.value)})}
                     placeholder="Enter marksheet fee"
                     className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold"
                   />

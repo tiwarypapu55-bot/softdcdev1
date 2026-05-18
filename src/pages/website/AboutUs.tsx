@@ -8,12 +8,22 @@ import { WebsiteLayout } from '../../components/WebsiteLayout';
 import { motion } from 'motion/react';
 import { ShieldCheck, Target, Users, BookOpen, Award, CheckCircle2 } from 'lucide-react';
 
+import { useApp } from '../../context/AppContext';
+
 export const AboutUs = () => {
+  const { businessProfile } = useApp();
   return (
     <WebsiteLayout>
       {/* Hero */}
       <section className="bg-[#141414] text-white py-32 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-blue-600 skew-x-12 translate-x-1/3 opacity-20"></div>
+        {businessProfile.aboutUsUrl ? (
+          <div className="absolute inset-0">
+             <img src={businessProfile.aboutUsUrl} alt="About Us" className="w-full h-full object-cover opacity-30" />
+             <div className="absolute inset-0 bg-gradient-to-r from-[#141414] to-transparent"></div>
+          </div>
+        ) : (
+          <div className="absolute top-0 right-0 w-1/2 h-full bg-blue-600 skew-x-12 translate-x-1/3 opacity-20"></div>
+        )}
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -72,20 +82,33 @@ export const AboutUs = () => {
            </div>
            
            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {[
-                { name: 'Dr. Vivek Sharma', role: 'Founder & CEO', img: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=1974&auto=format&fit=crop' },
-                { name: 'Sameer Sinha', role: 'Head of Academics', img: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=1974&auto=format&fit=crop' },
-                { name: 'Priya Verma', role: 'Placement Director', img: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=1976&auto=format&fit=crop' }
-              ].map((member, i) => (
-                <div key={i} className="group">
-                  <div className="aspect-[4/5] bg-gray-200 rounded-[3rem] overflow-hidden mb-6 relative">
-                     <img src={member.img} alt={member.name} className="w-full h-full object-cover grayscale transition-all duration-500 group-hover:grayscale-0 group-hover:scale-110" />
-                     <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-transparent opacity-60"></div>
+              {(businessProfile.visionaries && businessProfile.visionaries.length > 0) ? (
+                businessProfile.visionaries.map((member) => (
+                  <div key={member.id} className="group">
+                    <div className="aspect-[4/5] bg-gray-200 rounded-[3rem] overflow-hidden mb-6 relative">
+                       <img src={member.imageUrl} alt={member.name} className="w-full h-full object-cover grayscale transition-all duration-500 group-hover:grayscale-0 group-hover:scale-110" />
+                       <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-transparent opacity-60"></div>
+                    </div>
+                    <h4 className="text-xl font-black text-[#141414]">{member.name}</h4>
+                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-1">{member.role}</p>
                   </div>
-                  <h4 className="text-xl font-black text-[#141414]">{member.name}</h4>
-                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-1">{member.role}</p>
-                </div>
-              ))}
+                ))
+              ) : (
+                [
+                  { name: 'Dr. Vivek Sharma', role: 'Founder & CEO', img: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=1974&auto=format&fit=crop' },
+                  { name: 'Sameer Sinha', role: 'Head of Academics', img: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=1974&auto=format&fit=crop' },
+                  { name: 'Priya Verma', role: 'Placement Director', img: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=1976&auto=format&fit=crop' }
+                ].map((member, i) => (
+                  <div key={i} className="group">
+                    <div className="aspect-[4/5] bg-gray-200 rounded-[3rem] overflow-hidden mb-6 relative">
+                       <img src={member.img} alt={member.name} className="w-full h-full object-cover grayscale transition-all duration-500 group-hover:grayscale-0 group-hover:scale-110" />
+                       <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-transparent opacity-60"></div>
+                    </div>
+                    <h4 className="text-xl font-black text-[#141414]">{member.name}</h4>
+                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-1">{member.role}</p>
+                  </div>
+                ))
+              )}
            </div>
         </div>
       </section>

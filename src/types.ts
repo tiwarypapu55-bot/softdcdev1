@@ -34,6 +34,12 @@ export interface BusinessProfile {
   directorMessage?: string;
   banners?: string[];
   gallery?: { id: string; url: string; caption?: string }[];
+  aboutUsUrl?: string;
+  contactUsUrl?: string;
+  featuredCoursesBannerUrl?: string;
+  successStoriesBannerUrl?: string;
+  visionaries?: { id: string; name: string; role: string; imageUrl: string }[];
+  receiptHeaderUrl?: string;
 }
 
 export interface Exam {
@@ -109,6 +115,7 @@ export interface FeePayment {
   paymentMode: string;
   paymentModes?: PaymentModeDetail[];
   transactionId?: string;
+  collectionTime?: string;
   status: 'Paid' | 'Partial' | 'Pending';
   remarks?: string;
 }
@@ -173,6 +180,7 @@ export interface Student {
   kycDocs: DocumentRecord[];
   totalFees: number;
   paidAmount: number;
+  certificateStatus?: 'NOT_APPLIED' | 'APPLIED' | 'ISSUED';
 }
 
 export interface DocumentRecord {
@@ -239,6 +247,34 @@ export interface Course {
   features?: string[];
   level: string;
   rating: number;
+  imageUrl?: string;
+  bannerUrl?: string;
+}
+
+export interface CourseCategory {
+  id: string;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  bannerUrl?: string;
+}
+
+export interface Program {
+  id: string;
+  title: string;
+  description: string;
+  includedCourseIds: string[];
+  imageUrl?: string;
+  bannerUrl?: string;
+  duration: string;
+  level: string;
+}
+
+export interface GlobalCourseSettings {
+  autoGenerateCode: boolean;
+  prerequisiteCheck: boolean;
+  passPercentage: number;
+  minAttendance: number;
 }
 
 export interface FeeStructure {
@@ -308,6 +344,14 @@ export interface AcademicSession {
   endDate: string;
   status: 'ACTIVE' | 'INACTIVE';
   isDefault: boolean;
+}
+
+export interface Subject {
+  id: string;
+  name: string;
+  courseId: string;
+  courseName: string;
+  creditHours: number;
 }
 
 export interface NavigationItem {

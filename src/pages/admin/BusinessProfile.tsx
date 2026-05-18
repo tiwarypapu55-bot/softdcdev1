@@ -18,6 +18,7 @@ import {
   Twitter,
   Instagram,
   Linkedin,
+  Users,
   Clock,
   Info,
   X,
@@ -31,11 +32,12 @@ import {
   FileText
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { BusinessProfile as BusinessProfileType } from '../../types';
 import { clsx } from 'clsx';
 import { compressImage } from '../../lib/storage';
 
 export const BusinessProfile = () => {
-  const { businessProfile, updateBusinessProfile } = useApp();
+  const { businessProfile, updateBusinessProfile, clearData } = useApp();
   const [isSaving, setIsSaving] = useState(false);
   const [activeModal, setActiveModal] = useState<'signature' | 'backup' | 'logo' | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -45,6 +47,11 @@ export const BusinessProfile = () => {
   const directorPhotoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const aboutUsInputRef = useRef<HTMLInputElement>(null);
+  const contactUsInputRef = useRef<HTMLInputElement>(null);
+  const featuredCoursesInputRef = useRef<HTMLInputElement>(null);
+  const successStoriesInputRef = useRef<HTMLInputElement>(null);
+  const receiptHeaderInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false);
 
@@ -150,6 +157,18 @@ export const BusinessProfile = () => {
     }
   };
 
+  const handleExtraImageUrlUpload = (field: keyof BusinessProfileType, width: number = 1200) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const compressed = await compressImage(reader.result as string, width, 0.6);
+        setFormData(prev => ({ ...prev, [field]: compressed }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleProspectusUpload = (file: File) => {
     if (file.type !== 'application/pdf') {
       alert('Please upload a PDF file.');
@@ -194,10 +213,40 @@ export const BusinessProfile = () => {
 
   const handleManualBackup = () => {
     setIsBackingUp(true);
-    setTimeout(() => {
+    try {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(formData));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href",     dataStr);
+      downloadAnchorNode.setAttribute("download", `business_profile_backup_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+      
+      setTimeout(() => {
+        setIsBackingUp(false);
+      }, 1000);
+    } catch (error) {
+      console.error('Backup failed:', error);
       setIsBackingUp(false);
-      alert('Local storage backup downloaded successfully!');
-    }, 2000);
+      alert('Backup failed. Storage might be too large.');
+    }
+  };
+
+  const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const importedData = JSON.parse(event.target?.result as string);
+          setFormData(importedData);
+          alert('Backup data loaded into form. Please click "Save Profile" to apply changes.');
+        } catch (error) {
+          alert('Invalid backup file.');
+        }
+      };
+      reader.readAsText(file);
+    }
   };
 
   return (
@@ -530,6 +579,114 @@ export const BusinessProfile = () => {
           </div>
         </section>
 
+        {/* Visionaries Management */}
+        <section className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-8 py-6 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Users className="text-emerald-600" size={20} />
+              <h2 className="text-xs font-black uppercase tracking-widest text-[#141414]">Our Visionaries (Leadership Team)</h2>
+            </div>
+            <button 
+              type="button" 
+              onClick={() => {
+                const newVisionary = { id: Math.random().toString(36).substr(2, 9), name: '', role: '', imageUrl: '' };
+                setFormData(prev => ({ ...prev, visionaries: [...(prev.visionaries || []), newVisionary] }));
+              }}
+              className="text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:underline"
+            >
+              Add Visionary
+            </button>
+          </div>
+          <div className="p-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {(formData.visionaries || []).map((visionary, index) => (
+                <div key={visionary.id} className="space-y-4 group relative">
+                    <button 
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, visionaries: prev.visionaries?.filter(v => v.id !== visionary.id) }))}
+                      className="absolute -top-2 -right-2 p-1.5 bg-red-600 text-white rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    >
+                      <X size={12} />
+                    </button>
+                    <div 
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*';
+                        input.onchange = (e: any) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = async () => {
+                              const compressed = await compressImage(reader.result as string, 600, 0.7);
+                              setFormData(prev => ({
+                                ...prev,
+                                visionaries: prev.visionaries?.map(v => v.id === visionary.id ? { ...v, imageUrl: compressed } : v)
+                              }));
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        };
+                        input.click();
+                      }}
+                      className="aspect-[4/5] bg-gray-50 border-2 border-dashed border-gray-200 rounded-[2rem] flex flex-col items-center justify-center text-gray-400 hover:border-blue-600 hover:text-blue-600 transition-all cursor-pointer relative overflow-hidden group"
+                    >
+                      {visionary.imageUrl ? (
+                        <img src={visionary.imageUrl} alt={visionary.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <>
+                          <Upload size={32} />
+                          <span className="text-[9px] font-black uppercase tracking-widest mt-2">Upload Photo</span>
+                        </>
+                      )}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <Upload className="text-white" size={24} />
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <input 
+                        type="text" 
+                        value={visionary.name} 
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          visionaries: prev.visionaries?.map(v => v.id === visionary.id ? { ...v, name: e.target.value } : v)
+                        }))}
+                        className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl text-xs font-black uppercase tracking-tight outline-none focus:ring-2 focus:ring-blue-600"
+                        placeholder="Visionary Name"
+                      />
+                      <input 
+                        type="text" 
+                        value={visionary.role} 
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          visionaries: prev.visionaries?.map(v => v.id === visionary.id ? { ...v, role: e.target.value } : v)
+                        }))}
+                        className="w-full p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-[10px] font-black text-emerald-700 uppercase tracking-widest outline-none focus:ring-2 focus:ring-emerald-600"
+                        placeholder="Role / Designation"
+                      />
+                    </div>
+                </div>
+              ))}
+              {(formData.visionaries || []).length === 0 && (
+                <div className="md:col-span-3 py-12 text-center text-gray-300 border-2 border-dashed border-gray-100 rounded-[2rem]">
+                  <Users size={48} className="mx-auto mb-4 opacity-20" />
+                  <p className="text-[10px] font-black uppercase tracking-widest">No visionaries added yet.</p>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      const newVisionary = { id: Math.random().toString(36).substr(2, 9), name: '', role: '', imageUrl: '' };
+                      setFormData(prev => ({ ...prev, visionaries: [newVisionary] }));
+                    }}
+                    className="mt-4 text-[9px] font-black text-blue-600 uppercase tracking-widest hover:underline"
+                  >
+                    Add Now
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
         {/* Website Banners */}
         <section className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-8 py-6 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between">
@@ -591,7 +748,7 @@ export const BusinessProfile = () => {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {formData.gallery?.map((img) => (
                 <div key={img.id} className="space-y-3">
-                  <div className="aspect-square bg-gray-50 rounded-[2rem] relative group overflow-hidden border border-gray-100">
+                  <div className="aspect-square bg-gray-50 rounded-[2rem] relative group overflow-hidden border border-gray-100 shadow-sm">
                     <img src={img.url} alt={img.caption} className="w-full h-full object-cover" />
                     <button 
                       type="button"
@@ -620,6 +777,141 @@ export const BusinessProfile = () => {
                 <Upload size={32} />
                 <span className="text-[10px] font-black uppercase tracking-widest mt-2">Add Photo</span>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Website Content Management */}
+        <section className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-8 py-6 bg-gray-50/50 border-b border-gray-100 flex items-center space-x-3">
+            <Globe className="text-blue-600" size={20} />
+            <h2 className="text-xs font-black uppercase tracking-widest text-[#141414]">Website Static Page Images</h2>
+          </div>
+          <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* About Us Image */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black text-[#888888] uppercase tracking-widest">About Us Page Banner</label>
+                <button type="button" onClick={() => aboutUsInputRef.current?.click()} className="text-[9px] font-black text-blue-600 uppercase tracking-widest hover:underline">Upload</button>
+              </div>
+              <div className="aspect-video bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100 overflow-hidden group relative flex items-center justify-center">
+                {formData.aboutUsUrl ? (
+                  <img src={formData.aboutUsUrl} alt="About Us" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="text-center text-gray-300">
+                    <ImageIcon size={32} className="mx-auto mb-2" />
+                    <p className="text-[8px] font-black uppercase tracking-widest">No Image Set</p>
+                  </div>
+                )}
+                <input type="file" ref={aboutUsInputRef} className="hidden" accept="image/*" onChange={handleExtraImageUrlUpload('aboutUsUrl')} />
+                {formData.aboutUsUrl && (
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center space-x-2">
+                    <button type="button" onClick={() => aboutUsInputRef.current?.click()} className="p-2 bg-white text-[#141414] rounded-lg shadow-xl"><Upload size={14} /></button>
+                    <button type="button" onClick={() => setFormData({...formData, aboutUsUrl: ''})} className="p-2 bg-red-600 text-white rounded-lg shadow-xl"><X size={14} /></button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Contact Us Image */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black text-[#888888] uppercase tracking-widest">Contact Information Banner</label>
+                <button type="button" onClick={() => contactUsInputRef.current?.click()} className="text-[9px] font-black text-emerald-600 uppercase tracking-widest hover:underline">Upload</button>
+              </div>
+              <div className="aspect-video bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100 overflow-hidden group relative flex items-center justify-center">
+                {formData.contactUsUrl ? (
+                  <img src={formData.contactUsUrl} alt="Contact Us" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="text-center text-gray-300">
+                    <ImageIcon size={32} className="mx-auto mb-2" />
+                    <p className="text-[8px] font-black uppercase tracking-widest">No Image Set</p>
+                  </div>
+                )}
+                <input type="file" ref={contactUsInputRef} className="hidden" accept="image/*" onChange={handleExtraImageUrlUpload('contactUsUrl')} />
+                {formData.contactUsUrl && (
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center space-x-2">
+                    <button type="button" onClick={() => contactUsInputRef.current?.click()} className="p-2 bg-white text-[#141414] rounded-lg shadow-xl"><Upload size={14} /></button>
+                    <button type="button" onClick={() => setFormData({...formData, contactUsUrl: ''})} className="p-2 bg-red-600 text-white rounded-lg shadow-xl"><X size={14} /></button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Featured Courses Image */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black text-[#888888] uppercase tracking-widest">Featured Courses Section Image</label>
+                <button type="button" onClick={() => featuredCoursesInputRef.current?.click()} className="text-[9px] font-black text-purple-600 uppercase tracking-widest hover:underline">Upload</button>
+              </div>
+              <div className="aspect-video bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100 overflow-hidden group relative flex items-center justify-center">
+                {formData.featuredCoursesBannerUrl ? (
+                  <img src={formData.featuredCoursesBannerUrl} alt="Featured Courses" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="text-center text-gray-300">
+                    <ImageIcon size={32} className="mx-auto mb-2" />
+                    <p className="text-[8px] font-black uppercase tracking-widest">No Image Set</p>
+                  </div>
+                )}
+                <input type="file" ref={featuredCoursesInputRef} className="hidden" accept="image/*" onChange={handleExtraImageUrlUpload('featuredCoursesBannerUrl')} />
+                {formData.featuredCoursesBannerUrl && (
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center space-x-2">
+                    <button type="button" onClick={() => featuredCoursesInputRef.current?.click()} className="p-2 bg-white text-[#141414] rounded-lg shadow-xl"><Upload size={14} /></button>
+                    <button type="button" onClick={() => setFormData({...formData, featuredCoursesBannerUrl: ''})} className="p-2 bg-red-600 text-white rounded-lg shadow-xl"><X size={14} /></button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Success Stories Image */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black text-[#888888] uppercase tracking-widest">Success Stories / Impact Banner</label>
+                <button type="button" onClick={() => successStoriesInputRef.current?.click()} className="text-[9px] font-black text-orange-600 uppercase tracking-widest hover:underline">Upload</button>
+              </div>
+              <div className="aspect-video bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100 overflow-hidden group relative flex items-center justify-center">
+                {formData.successStoriesBannerUrl ? (
+                  <img src={formData.successStoriesBannerUrl} alt="Success Stories" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="text-center text-gray-300">
+                    <ImageIcon size={32} className="mx-auto mb-2" />
+                    <p className="text-[8px] font-black uppercase tracking-widest">No Image Set</p>
+                  </div>
+                )}
+                <input type="file" ref={successStoriesInputRef} className="hidden" accept="image/*" onChange={handleExtraImageUrlUpload('successStoriesBannerUrl')} />
+                {formData.successStoriesBannerUrl && (
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center space-x-2">
+                    <button type="button" onClick={() => successStoriesInputRef.current?.click()} className="p-2 bg-white text-[#141414] rounded-lg shadow-xl"><Upload size={14} /></button>
+                    <button type="button" onClick={() => setFormData({...formData, successStoriesBannerUrl: ''})} className="p-2 bg-red-600 text-white rounded-lg shadow-xl"><X size={14} /></button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Receipt Header Image */}
+            <div className="space-y-4 md:col-span-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black text-red-600 uppercase tracking-widest">Official Fee Receipt Top Header (Wide Image)</label>
+                <button type="button" onClick={() => receiptHeaderInputRef.current?.click()} className="text-[9px] font-black text-blue-600 uppercase tracking-widest hover:underline">Upload Official Header</button>
+              </div>
+              <div className="aspect-[4/1] bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100 overflow-hidden group relative flex items-center justify-center">
+                {formData.receiptHeaderUrl ? (
+                  <img src={formData.receiptHeaderUrl} alt="Receipt Header" className="w-full h-full object-contain bg-white" />
+                ) : (
+                  <div className="text-center text-gray-300">
+                    <ImageIcon size={32} className="mx-auto mb-2" />
+                    <p className="text-[8px] font-black uppercase tracking-widest">No Receipt Header Set (Default Layout will be used)</p>
+                  </div>
+                )}
+                <input type="file" ref={receiptHeaderInputRef} className="hidden" accept="image/*" onChange={handleExtraImageUrlUpload('receiptHeaderUrl', 2000)} />
+                {formData.receiptHeaderUrl && (
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center space-x-2">
+                    <button type="button" onClick={() => receiptHeaderInputRef.current?.click()} className="p-2 bg-white text-[#141414] rounded-lg shadow-xl"><Upload size={14} /></button>
+                    <button type="button" onClick={() => setFormData({...formData, receiptHeaderUrl: ''})} className="p-2 bg-red-600 text-white rounded-lg shadow-xl"><X size={14} /></button>
+                  </div>
+                )}
+              </div>
+              <p className="text-[9px] font-bold text-gray-400 uppercase italic">* Upload a wide image that contains your institute name, logo, and address details for the receipt.</p>
             </div>
           </div>
         </section>
@@ -713,6 +1005,30 @@ export const BusinessProfile = () => {
                    </div>
                 </div>
              </div>
+          </div>
+        </section>
+
+        {/* Danger Zone */}
+        <section className="bg-white rounded-[2rem] border border-red-100 shadow-sm overflow-hidden">
+          <div className="px-8 py-6 bg-red-50/50 border-b border-red-100 flex items-center space-x-3">
+            <X className="text-red-600" size={20} />
+            <h2 className="text-xs font-black uppercase tracking-widest text-red-600">Danger Zone</h2>
+          </div>
+          <div className="p-8">
+            <div className="p-6 bg-red-50 border border-red-100 rounded-2xl">
+              <h3 className="text-sm font-black text-red-600 uppercase tracking-tight mb-2">Reset Application Data</h3>
+              <p className="text-xs text-red-700/70 mb-6 leading-relaxed">
+                This action will permanently delete all student records, fee payments, franchise records, and business transactions. 
+                The menus and settings will remain active, but all data will be wiped. This Cannot be undone.
+              </p>
+              <button 
+                type="button"
+                onClick={clearData}
+                className="px-8 py-4 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-red-700 transition-all shadow-xl shadow-red-200"
+              >
+                Delete All Data & Factory Reset
+              </button>
+            </div>
           </div>
         </section>
       </form>
@@ -817,22 +1133,23 @@ export const BusinessProfile = () => {
                </div>
                <div className="p-8 space-y-6">
                   <div className="grid grid-cols-2 gap-4">
-                     <button 
-                       onClick={handleManualBackup}
-                       disabled={isBackingUp}
-                       className="p-6 bg-gray-50 border border-gray-100 rounded-[2rem] flex flex-col items-center justify-center space-y-3 hover:bg-white hover:shadow-xl transition-all group"
-                     >
-                        <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center", isBackingUp ? "bg-orange-50 text-orange-600 animate-spin" : "bg-white text-[#141414] shadow-sm")}>
-                           <RefreshCcw size={18} />
-                        </div>
-                        <span className="text-[9px] font-black uppercase tracking-widest">{isBackingUp ? 'Syncing...' : 'Quick Backup'}</span>
-                     </button>
-                     <button className="p-6 bg-gray-50 border border-gray-100 rounded-[2rem] flex flex-col items-center justify-center space-y-3 hover:bg-white hover:shadow-xl transition-all group">
-                        <div className="w-10 h-10 bg-white text-emerald-600 rounded-xl flex items-center justify-center shadow-sm">
-                           <Download size={18} />
-                        </div>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-[#141414]">Export SQL</span>
-                     </button>
+                      <button 
+                        onClick={handleManualBackup}
+                        disabled={isBackingUp}
+                        className="p-6 bg-gray-50 border border-gray-100 rounded-[2rem] flex flex-col items-center justify-center space-y-3 hover:bg-white hover:shadow-xl transition-all group"
+                      >
+                         <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center", isBackingUp ? "bg-orange-50 text-orange-600 animate-spin" : "bg-white text-[#141414] shadow-sm")}>
+                            <RefreshCcw size={18} />
+                         </div>
+                         <span className="text-[9px] font-black uppercase tracking-widest">{isBackingUp ? 'Syncing...' : 'Export JSON'}</span>
+                      </button>
+                      <label className="p-6 bg-gray-50 border border-gray-100 rounded-[2rem] flex flex-col items-center justify-center space-y-3 hover:bg-white hover:shadow-xl transition-all group cursor-pointer">
+                         <div className="w-10 h-10 bg-white text-blue-600 rounded-xl flex items-center justify-center shadow-sm">
+                            <Upload size={18} />
+                         </div>
+                         <span className="text-[9px] font-black uppercase tracking-widest text-[#141414]">Import JSON</span>
+                         <input type="file" accept=".json" onChange={handleImportBackup} className="hidden" />
+                      </label>
                   </div>
                   <div className="p-6 border border-orange-100 bg-orange-50/50 rounded-2xl space-y-3">
                      <div className="flex items-center space-x-2 text-orange-600">

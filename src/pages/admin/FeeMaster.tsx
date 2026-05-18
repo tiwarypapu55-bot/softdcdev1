@@ -37,7 +37,7 @@ export const FeeMaster = () => {
   const [editingFee, setEditingFee] = useState<FeeStructure | null>(null);
   
   const [formData, setFormData] = useState<Partial<FeeStructure>>({
-    head: '',
+    head: 'Course Fee',
     courseId: '',
     courseName: '',
     frequency: 'Monthly',
@@ -59,7 +59,7 @@ export const FeeMaster = () => {
     } else {
       setEditingFee(null);
       setFormData({
-        head: '',
+        head: 'Course Fee',
         courseId: '',
         courseName: '',
         frequency: 'Monthly',
@@ -278,14 +278,41 @@ export const FeeMaster = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                      <div className="space-y-2">
                         <label className="text-[9px] font-black text-[#888888] uppercase tracking-widest ml-1">Fee Head / Name</label>
-                        <input 
-                           required
-                           type="text"
-                           value={formData.head}
-                           onChange={(e) => setFormData({...formData, head: e.target.value})}
-                           className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none font-bold"
-                           placeholder="e.g., Annual Tuition"
-                        />
+                        <div className="space-y-2">
+                           <select 
+                              required
+                              value={['Course Fee', 'Admission Fee', 'Registration Fee', 'Exam Fee', 'Certificate Fee', 'Monthly Fee', 'Late Penalty', 'Prospectus Fee', 'Backpaper Fee'].includes(formData.head || '') ? formData.head : 'Other'}
+                              onChange={(e) => {
+                                 if (e.target.value === 'Other') {
+                                    setFormData({...formData, head: ''});
+                                 } else {
+                                    setFormData({...formData, head: e.target.value});
+                                 }
+                              }}
+                              className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none font-bold appearance-none"
+                           >
+                              <option value="Course Fee">Course Fee</option>
+                              <option value="Admission Fee">Admission Fee</option>
+                              <option value="Registration Fee">Registration Fee</option>
+                              <option value="Exam Fee">Exam Fee</option>
+                              <option value="Certificate Fee">Certificate Fee</option>
+                              <option value="Monthly Fee">Monthly Fee</option>
+                              <option value="Late Penalty">Late Penalty</option>
+                              <option value="Prospectus Fee">Prospectus Fee</option>
+                              <option value="Backpaper Fee">Backpaper Fee</option>
+                              <option value="Other">Other (Custom)</option>
+                           </select>
+                           {!['Course Fee', 'Admission Fee', 'Registration Fee', 'Exam Fee', 'Certificate Fee', 'Monthly Fee', 'Late Penalty', 'Prospectus Fee', 'Backpaper Fee'].includes(formData.head || '') && (
+                              <input 
+                                 type="text"
+                                 required
+                                 value={formData.head}
+                                 onChange={(e) => setFormData({...formData, head: e.target.value})}
+                                 placeholder="Enter custom fee head name..."
+                                 className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none font-bold animate-in slide-in-from-top-2"
+                              />
+                           )}
+                        </div>
                      </div>
                      <div className="space-y-2">
                         <label className="text-[9px] font-black text-[#888888] uppercase tracking-widest ml-1">Session</label>
@@ -329,8 +356,9 @@ export const FeeMaster = () => {
                         <label className="text-[9px] font-black text-[#888888] uppercase tracking-widest ml-1">Base Amount (₹)</label>
                         <input 
                            type="number"
-                           value={formData.amount}
-                           onChange={(e) => setFormData({...formData, amount: Number(e.target.value)})}
+                           value={formData.amount || ''}
+                           onFocus={(e) => e.target.select()}
+                           onChange={(e) => setFormData({...formData, amount: e.target.value === '' ? 0 : Number(e.target.value)})}
                            className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none font-bold"
                         />
                      </div>
@@ -338,8 +366,9 @@ export const FeeMaster = () => {
                         <label className="text-[9px] font-black text-[#888888] uppercase tracking-widest ml-1 text-emerald-600">Discount Amount (₹)</label>
                         <input 
                            type="number"
-                           value={formData.discount}
-                           onChange={(e) => setFormData({...formData, discount: Number(e.target.value)})}
+                           value={formData.discount || ''}
+                           onFocus={(e) => e.target.select()}
+                           onChange={(e) => setFormData({...formData, discount: e.target.value === '' ? 0 : Number(e.target.value)})}
                            className="w-full p-4 bg-emerald-50 border border-emerald-100 rounded-2xl focus:ring-2 focus:ring-emerald-600 outline-none font-bold text-emerald-700"
                         />
                      </div>
@@ -347,8 +376,9 @@ export const FeeMaster = () => {
                         <label className="text-[9px] font-black text-[#888888] uppercase tracking-widest ml-1 text-red-500">Late Penalty (₹ / Day)</label>
                         <input 
                            type="number"
-                           value={formData.latePenalty}
-                           onChange={(e) => setFormData({...formData, latePenalty: Number(e.target.value)})}
+                           value={formData.latePenalty || ''}
+                           onFocus={(e) => e.target.select()}
+                           onChange={(e) => setFormData({...formData, latePenalty: e.target.value === '' ? 0 : Number(e.target.value)})}
                            className="w-full p-4 bg-red-50 border border-red-100 rounded-2xl focus:ring-2 focus:ring-red-600 outline-none font-bold text-red-700"
                         />
                      </div>

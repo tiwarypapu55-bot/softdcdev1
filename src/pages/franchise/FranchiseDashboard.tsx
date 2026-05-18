@@ -76,11 +76,7 @@ const CenterStatCard = ({ label, value, icon: Icon, colorClass, gradient, subVal
 export const FranchiseDashboard = () => {
   const { students, currentUser, certificates, walletTransactions, franchises, logout, courses } = useApp();
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: 'exam', title: 'Upcoming Exam:', message: 'Maths test scheduled on 20th May', time: '2 hours ago', icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { id: 2, type: 'fee', title: 'Fee Due:', message: 'Fees of student John Doe are pending', time: '5 hours ago', icon: DollarSign, color: 'text-red-500', bg: 'bg-red-50' },
-    { id: 3, type: 'cert', title: 'Cert Ready:', message: '5 new certificates approved', time: 'Yesterday', icon: Award, color: 'text-green-600', bg: 'bg-green-50' },
-  ]);
+  const [notifications, setNotifications] = useState<{ id: number, type: string, title: string, message: string, time: string, icon: any, color: string, bg: string }[]>([]);
 
   const removeNotification = (id: number) => {
     setNotifications(notifications.filter(n => n.id !== id));
@@ -262,12 +258,12 @@ export const FranchiseDashboard = () => {
           subValue="Approved & Issued"
         />
         <CenterStatCard 
-          label="Pending Tasks" 
-          value="08" 
+          label="Pending KYC" 
+          value={myStudents.filter(s => s.kycStatus === 'PENDING').length.toString().padStart(2, '0')} 
           icon={Clock} 
           colorClass="text-indigo-600" 
           gradient="bg-gradient-to-br from-indigo-500 to-indigo-700"
-          subValue="Awaiting Action"
+          subValue="Awaiting Verification"
         />
       </div>
 
@@ -448,11 +444,14 @@ export const FranchiseDashboard = () => {
               ))}
            </div>
            
-           <div className="mt-8 p-6 bg-blue-50 rounded-[2rem] border border-blue-100 relative overflow-hidden group hover:bg-blue-600 transition-all cursor-pointer">
+           <div 
+             onClick={() => navigate('/franchise/wallet')}
+             className="mt-8 p-6 bg-blue-50 rounded-[2rem] border border-blue-100 relative overflow-hidden group hover:bg-blue-600 transition-all cursor-pointer"
+           >
               <div className="relative z-10 flex items-center justify-between">
                  <div>
                     <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest group-hover:text-white/60">Center Support</p>
-                    <p className="text-xs font-black text-[#141414] uppercase tracking-tight mt-1 group-hover:text-white">Raise Inquiry</p>
+                    <p className="text-xs font-black text-[#141414] uppercase tracking-tight mt-1 group-hover:text-white">Wallet & Support</p>
                  </div>
                  <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center group-hover:bg-white group-hover:text-blue-600 transition-all">
                     <ArrowRight size={18} />

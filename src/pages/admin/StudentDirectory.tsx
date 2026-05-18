@@ -25,7 +25,8 @@ import {
   AlertCircle,
   CreditCard,
   Printer,
-  FileText
+  FileText,
+  Award
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx } from 'clsx';
@@ -33,7 +34,7 @@ import { Student } from '../../types';
 import { useNavigate } from 'react-router-dom';
 
 export const StudentDirectory = () => {
-  const { students, franchises, courses, deleteStudent, currentUser } = useApp();
+  const { students, franchises, courses, deleteStudent, currentUser, franchiseFees, addWalletTransaction, updateStudent } = useApp();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBranch, setFilterBranch] = useState(currentUser?.role === 'FRANCHISE' ? currentUser.franchiseId : 'ALL');
@@ -41,6 +42,7 @@ export const StudentDirectory = () => {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [studentToPrint, setStudentToPrint] = useState<Student | null>(null);
+  const [viewType, setViewType] = useState<'VIEW' | 'PRINT'>('VIEW');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -48,7 +50,8 @@ export const StudentDirectory = () => {
     email: '',
     course: '',
     feeStatus: 'PENDING' as any,
-    kycStatus: 'PENDING' as any
+    kycStatus: 'PENDING' as any,
+    totalFees: 0
   });
 
   const handleEdit = (s: Student) => {
@@ -59,7 +62,8 @@ export const StudentDirectory = () => {
       email: s.email,
       course: s.course,
       feeStatus: s.feeStatus,
-      kycStatus: s.kycStatus
+      kycStatus: s.kycStatus,
+      totalFees: s.totalFees || 0
     });
   };
 
@@ -74,6 +78,40 @@ export const StudentDirectory = () => {
 
   const handlePrint = (student: Student) => {
     setStudentToPrint(student);
+    setViewType('PRINT');
+    setShowPrintModal(true);
+  };
+
+  const handleApplyCertificate = (student: Student) => {
+    // 1. Find the marksheet fee for this center
+    const centerFee = franchiseFees.find(ff => ff.franchiseId === student.franchiseId);
+    const certFee = centerFee?.marksheetFees || 0;
+
+    if (window.confirm(`Apply for Marksheet/Certificate for ${student.name}? Charges: ₹${certFee}`)) {
+      try {
+        addWalletTransaction({
+          id: `cert-${Date.now()}`,
+          franchiseId: student.franchiseId,
+          amount: certFee,
+          type: 'DEBIT',
+          purpose: `Certificate Application: ${student.name} (${student.admissionNo})`,
+          timestamp: new Date().toISOString(),
+          status: 'SUCCESS'
+        });
+        
+        // Update student status
+        updateStudent(student.id, { certificateStatus: 'APPLIED' });
+        
+        alert('Certificate application submitted successfully. Deduction confirmed.');
+      } catch (error: any) {
+        alert(error.message || 'Failed to apply for certificate.');
+      }
+    }
+  };
+
+  const handleView = (student: Student) => {
+    setStudentToPrint(student);
+    setViewType('VIEW');
     setShowPrintModal(true);
   };
 
@@ -116,37 +154,39 @@ export const StudentDirectory = () => {
       </div>
 
       {/* Filters & Search */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm">
-        <div className="md:col-span-2 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+      <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-4">
+        <div className="relative">
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
           <input 
             type="text" 
-            placeholder="Search by name, ID or enrollment..." 
+            placeholder="Search student by name, Branch , Roll No...." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold"
+            className="w-full pl-14 pr-6 py-4 bg-white border-2 border-emerald-500 rounded-xl outline-none focus:ring-4 focus:ring-emerald-500/10 font-bold text-gray-700 placeholder:text-gray-400 text-sm"
           />
         </div>
-        <div>
-          <select 
-            disabled={currentUser?.role === 'FRANCHISE'}
-            value={filterBranch}
-            onChange={(e) => setFilterBranch(e.target.value)}
-            className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold appearance-none disabled:bg-gray-100 disabled:text-gray-400"
-          >
-            <option value="ALL">All Branches</option>
-            {franchises.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <select 
-            value={filterCourse}
-            onChange={(e) => setFilterCourse(e.target.value)}
-            className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold appearance-none"
-          >
-            <option value="ALL">All Courses</option>
-            {courses.map(c => <option key={c.id} value={c.title}>{c.title}</option>)}
-          </select>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <select 
+              disabled={currentUser?.role === 'FRANCHISE'}
+              value={filterBranch}
+              onChange={(e) => setFilterBranch(e.target.value)}
+              className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold appearance-none disabled:bg-gray-100 disabled:text-gray-400 text-[10px] uppercase tracking-widest"
+            >
+              <option value="ALL">All Branches</option>
+              {franchises.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <select 
+              value={filterCourse}
+              onChange={(e) => setFilterCourse(e.target.value)}
+              className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold appearance-none text-[10px] uppercase tracking-widest"
+            >
+              <option value="ALL">All Courses</option>
+              {courses.map(c => <option key={c.id} value={c.title}>{c.title}</option>)}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -176,106 +216,107 @@ export const StudentDirectory = () => {
       </div>
 
       {/* Results Table */}
-      <div className="bg-white border border-gray-100 rounded-[2.5rem] overflow-hidden shadow-sm">
+      <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-2xl shadow-black/5">
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="px-8 py-6 text-[10px] font-black text-[#888888] uppercase tracking-widest">Student Info</th>
-                <th className="px-8 py-6 text-[10px] font-black text-[#888888] uppercase tracking-widest">Enrollment No</th>
-                <th className="px-8 py-6 text-[10px] font-black text-[#888888] uppercase tracking-widest">Branch / Center</th>
-                <th className="px-8 py-6 text-[10px] font-black text-[#888888] uppercase tracking-widest">Course Detail</th>
-                <th className="px-8 py-6 text-[10px] font-black text-[#888888] uppercase tracking-widest">Fee Status</th>
-                <th className="px-8 py-6 text-[10px] font-black text-[#888888] uppercase tracking-widest text-right">Action</th>
+              <tr className="bg-[#2D3748] text-white">
+                <th className="px-4 py-5 text-[11px] font-black uppercase tracking-tight border-r border-gray-700/50">Sr No.</th>
+                <th className="px-6 py-5 text-[11px] font-black uppercase tracking-tight border-r border-gray-700/50">Course</th>
+                <th className="px-6 py-5 text-[11px] font-black uppercase tracking-tight border-r border-gray-700/50">Admission No.</th>
+                <th className="px-6 py-5 text-[11px] font-black uppercase tracking-tight border-r border-gray-700/50">Enrollment No.</th>
+                <th className="px-6 py-5 text-[11px] font-black uppercase tracking-tight border-r border-gray-700/50">Student's Name</th>
+                <th className="px-6 py-5 text-[11px] font-black uppercase tracking-tight border-r border-gray-700/50">Father's Name</th>
+                <th className="px-6 py-5 text-[11px] font-black uppercase tracking-tight border-r border-gray-700/50">Phone</th>
+                <th className="px-6 py-5 text-[11px] font-black uppercase tracking-tight border-r border-gray-700/50">Admission Date</th>
+                <th className="px-6 py-5 text-[11px] font-black uppercase tracking-tight border-r border-gray-700/50">Status</th>
+                <th className="px-6 py-5 text-[11px] font-black uppercase tracking-tight">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filteredStudents.map((student) => (
-                <tr key={student.id} className="hover:bg-gray-50/50 transition-colors group">
-                  <td className="px-8 py-6">
-                    <div className="flex items-center space-x-4">
-                       <div className="w-12 h-12 bg-gray-100 rounded-2xl overflow-hidden flex-shrink-0">
+            <tbody className="divide-y divide-gray-100">
+              {filteredStudents.map((student, index) => (
+                <tr key={student.id} className="hover:bg-blue-50/30 transition-colors group">
+                  <td className="px-4 py-5 text-[11px] font-bold text-gray-600 border-r border-gray-100">{index + 1}</td>
+                  <td className="px-6 py-5 border-r border-gray-100">
+                    <p className="text-[10px] font-black text-[#141414] uppercase leading-tight line-clamp-2 max-w-[150px]">{student.course}</p>
+                  </td>
+                  <td className="px-6 py-5 border-r border-gray-100 whitespace-nowrap">
+                    <span className="text-[10px] font-mono font-black text-gray-500">{student.admissionNo}</span>
+                  </td>
+                  <td className="px-6 py-5 border-r border-gray-100 whitespace-nowrap">
+                    <span className="text-[10px] font-mono font-black text-blue-600">{student.enrollmentNo || "-"}</span>
+                  </td>
+                  <td className="px-6 py-5 border-r border-gray-100">
+                    <div className="flex items-center space-x-3">
+                       <div className="w-8 h-8 bg-gray-100 rounded-lg overflow-hidden shrink-0 border border-gray-200">
                           <img 
                             src={student.photoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${student.name}`} 
                             alt={student.name} 
                             className="w-full h-full object-cover"
                           />
                        </div>
-                       <div className="min-w-0">
-                          <p className="text-sm font-black text-[#141414] uppercase leading-none mb-1 truncate">{student.name}</p>
-                          <div className="flex items-center space-x-2 text-[#888888]">
-                             <Phone size={10} />
-                             <span className="text-[10px] font-bold">{student.contact}</span>
-                          </div>
-                       </div>
+                       <p className="text-[11px] font-black text-[#141414] uppercase truncate">{student.name}</p>
                     </div>
                   </td>
-                  <td className="px-8 py-6">
-                     <span className="text-xs font-mono font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-lg border border-blue-100 inline-block">
-                        {student.enrollmentNo || student.admissionNo}
+                  <td className="px-6 py-5 border-r border-gray-100 text-[11px] font-bold text-gray-600 uppercase">{student.fatherName || "-"}</td>
+                  <td className="px-6 py-5 border-r border-gray-100 text-[11px] font-black text-[#141414]">{student.contact}</td>
+                  <td className="px-6 py-5 border-r border-gray-100 text-[10px] font-bold text-gray-500 whitespace-nowrap">{student.admissionDate}</td>
+                  <td className="px-6 py-5 border-r border-gray-100">
+                     <span className={clsx(
+                       "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tight inline-flex items-center gap-1.5",
+                       student.feeStatus === 'PAID' ? "bg-emerald-100 text-emerald-700" : 
+                       student.feeStatus === 'PARTIAL' ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
+                     )}>
+                       <div className={clsx("w-1.5 h-1.5 rounded-full animate-pulse", 
+                         student.feeStatus === 'PAID' ? "bg-emerald-600" : 
+                         student.feeStatus === 'PARTIAL' ? "bg-amber-600" : "bg-red-600"
+                       )}></div>
+                       {student.feeStatus}
                      </span>
                   </td>
-                  <td className="px-8 py-6">
-                     <div className="flex items-center space-x-2">
-                        <Building2 size={12} className="text-gray-400" />
-                        <span className="text-[10px] font-black text-[#141414] uppercase tracking-tighter">
-                          {franchises.find(f => f.id === student.franchiseId)?.name || student.studyCenter}
-                        </span>
-                     </div>
-                  </td>
-                  <td className="px-8 py-6">
-                     <div>
-                        <p className="text-[10px] font-black text-[#141414] uppercase leading-none mb-1">{student.course}</p>
-                        <p className="text-[8px] font-black text-[#888888] uppercase tracking-widest">Reg: {student.admissionDate}</p>
-                     </div>
-                  </td>
-                  <td className="px-8 py-6">
-                     <div className="flex flex-col gap-1">
-                        <span className={clsx(
-                          "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest inline-flex w-fit items-center gap-1",
-                          student.feeStatus === 'PAID' ? "bg-emerald-50 text-emerald-600" : 
-                          student.feeStatus === 'PARTIAL' ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-600"
-                        )}>
-                          <div className={clsx("w-1 h-1 rounded-full", 
-                            student.feeStatus === 'PAID' ? "bg-emerald-600" : 
-                            student.feeStatus === 'PARTIAL' ? "bg-amber-600" : "bg-red-600"
-                          )}></div>
-                          {student.feeStatus}
-                        </span>
-                        <span className={clsx(
-                           "text-[7px] font-black uppercase tracking-[0.2em] ml-1",
-                           student.kycStatus === 'APPROVED' ? "text-emerald-500" : "text-gray-400"
-                        )}>
-                          KYC {student.kycStatus}
-                        </span>
-                     </div>
-                  </td>
-                  <td className="px-8 py-6 text-right">
-                     <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <td className="px-6 py-5">
+                     <div className="flex items-center space-x-1">
+                        {currentUser?.role === 'FRANCHISE' && (
+                           <button 
+                             onClick={() => student.certificateStatus === 'APPLIED' || student.certificateStatus === 'ISSUED' ? alert('Certificate already applied or issued for this student.') : handleApplyCertificate(student)}
+                             className={clsx(
+                               "p-2 rounded-lg transition-all",
+                               student.certificateStatus === 'APPLIED' ? "text-amber-600 bg-amber-50" : 
+                               student.certificateStatus === 'ISSUED' ? "text-emerald-600 bg-emerald-50" : "text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                             )}
+                             title="Apply for Marksheet/Certificate"
+                           >
+                              <Award size={14} />
+                           </button>
+                        )}
                         {currentUser?.role === 'FRANCHISE' && (
                            <button 
                              onClick={() => navigate('/franchise/collection', { state: { studentId: student.id } })}
-                             className="p-2.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl transition-all shadow-sm border border-blue-100"
+                             className="p-2 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-all"
                              title="Collect Fee"
                            >
-                              <CreditCard size={16} />
+                              <CreditCard size={14} />
                            </button>
                         )}
-                        <button className="p-2.5 bg-white border border-gray-100 text-gray-400 hover:text-blue-600 rounded-xl transition-all shadow-sm">
-                           <Eye size={16} />
+                        <button 
+                           onClick={() => handleView(student)}
+                           className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                           title="View Profile"
+                        >
+                           <Eye size={14} />
                         </button>
                         <button 
                            onClick={() => handleEdit(student)}
-                           className="p-2.5 bg-white border border-gray-100 text-gray-400 hover:text-emerald-600 rounded-xl transition-all shadow-sm"
+                           className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
                         >
-                           <Edit2 size={16} />
+                           <Edit2 size={14} />
                         </button>
                         <button 
                            onClick={() => handlePrint(student)}
-                           className="p-2.5 bg-white border border-gray-100 text-gray-400 hover:text-blue-600 rounded-xl transition-all shadow-sm"
+                           className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                            title="Print Registration Form"
                         >
-                           <Printer size={16} />
+                           <Printer size={14} />
                         </button>
                         <button 
                           onClick={() => {
@@ -283,9 +324,9 @@ export const StudentDirectory = () => {
                               deleteStudent(student.id);
                             }
                           }}
-                          className="p-2.5 bg-white border border-gray-100 text-gray-400 hover:text-red-500 rounded-xl transition-all shadow-sm"
+                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                         >
-                           <Trash2 size={16} />
+                           <Trash2 size={14} />
                         </button>
                      </div>
                   </td>
@@ -293,7 +334,7 @@ export const StudentDirectory = () => {
               ))}
               {filteredStudents.length === 0 && (
                 <tr>
-                   <td colSpan={6} className="py-32 text-center">
+                   <td colSpan={10} className="py-32 text-center">
                       <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-200">
                          <UserCircle size={48} />
                       </div>
@@ -389,6 +430,17 @@ export const StudentDirectory = () => {
                        </select>
                     </div>
                     <div className="space-y-2">
+                       <label className="text-[10px] font-black text-[#888888] uppercase tracking-widest ml-1 text-blue-600">Total Fee (₹)</label>
+                       <input 
+                         type="number" 
+                         value={formData.totalFees}
+                         onChange={(e) => setFormData({ ...formData, totalFees: Number(e.target.value) })}
+                         className="w-full p-4 bg-blue-50 border border-blue-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold text-blue-700" 
+                       />
+                    </div>
+                 </div>
+                 <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
                        <label className="text-[10px] font-black text-[#888888] uppercase tracking-widest ml-1">KYC Status</label>
                        <select 
                          value={formData.kycStatus}
@@ -434,31 +486,51 @@ export const StudentDirectory = () => {
               </div>
 
               <div id="printable-form" className="font-sans text-[#141414]">
-                <div className="flex justify-between items-start border-b-4 border-black pb-8 mb-8">
-                  <div className="flex items-center space-x-6">
-                    <div className="w-24 h-24 bg-black text-white flex items-center justify-center rounded-3xl overflow-hidden shrink-0">
-                      <GraduationCap size={48} />
-                    </div>
-                    <div>
-                      <h1 className="text-4xl font-black tracking-tighter uppercase leading-none mb-2">SoftDev Tally Guru</h1>
-                      <p className="text-xs font-black uppercase tracking-[0.3em] text-gray-400 italic">Advanced Software Curriculum</p>
-                      <div className="flex items-center space-x-4 mt-4">
-                        <div className="px-3 py-1 bg-gray-100 rounded-lg text-[10px] font-black uppercase">Center: {studentToPrint.studyCenter}</div>
-                        <div className="px-3 py-1 bg-gray-100 rounded-lg text-[10px] font-black uppercase">Reg Date: {studentToPrint.admissionDate}</div>
+                  {/* Header Section Matches Image */}
+                  <div className="text-center space-y-1 mb-8">
+                     {businessProfile.receiptHeaderUrl ? (
+                       <img src={businessProfile.receiptHeaderUrl} alt="Header" className="w-full h-auto mx-auto" />
+                     ) : (
+                       <div className="flex flex-col items-center">
+                         <p className="text-[10px] font-bold text-gray-800">An ISO 9001 : 2015 Certified Institute</p>
+                         <p className="text-[11px] font-black text-emerald-700">बस्ती मंडल का नं. 1 कंप्यूटर ट्रेनिंग इंस्टिट्यूट</p>
+                         <h1 className="text-4xl font-black text-red-600 tracking-tight uppercase leading-none mt-1">{franchises.find(f => f.id === currentUser?.franchiseId)?.name || businessProfile.name || "SOFTDEV TALLY GURU"}</h1>
+                         <div className="bg-indigo-900/5 px-4 py-1 rounded text-[8px] font-bold text-indigo-900 border border-indigo-900/10 mt-1">
+                             [ RUN UNDER : SOFTDEV TALLY GURU PRASHIKSHAN SANSTHAN SOCIETY ] [ REG No. : G-58913 / 1442 ]
+                         </div>
+                         <p className="text-[9px] font-black text-blue-800 mt-1">(A Complete Computer Education Institute) (An Authorised Tally Education Partner)</p>
+                         <p className="text-[9px] font-bold text-red-600 uppercase">Head Office : {businessProfile.address} - {businessProfile.pincode || '272001'}</p>
+                         <p className="text-[9px] font-black text-[#141414]">Website : {businessProfile.website}  Phone : {businessProfile.phone}</p>
+                       </div>
+                     )}
+                  </div>
+
+                  <div className="flex justify-between items-start border-b-[1.5px] border-black pb-4 mb-6">
+                    <div className="flex items-center space-x-6">
+                      <div className="w-20 h-20 bg-blue-600 text-white flex items-center justify-center rounded-2xl overflow-hidden shrink-0">
+                        <GraduationCap size={40} />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-black tracking-tight uppercase leading-none mb-1 text-blue-800">Registration Details</h2>
+                        <div className="flex items-center space-x-4 mt-2">
+                          <div className="px-3 py-1 bg-gray-100 rounded-lg text-[9px] font-black uppercase text-gray-600">Center: {studentToPrint.studyCenter}</div>
+                          <div className="px-3 py-1 bg-gray-100 rounded-lg text-[9px] font-black uppercase text-gray-600">Reg Date: {studentToPrint.admissionDate}</div>
+                        </div>
                       </div>
                     </div>
+                    <div className="w-24 h-32 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center text-[8px] font-black text-gray-300 text-center uppercase p-2 overflow-hidden bg-gray-50">
+                      {studentToPrint.photoUrl ? (
+                        <img src={studentToPrint.photoUrl} alt="Student" className="w-full h-full object-cover" />
+                      ) : (
+                        "Affix Photo"
+                      )}
+                    </div>
                   </div>
-                  <div className="w-32 h-40 border-4 border-dashed border-gray-200 rounded-2xl flex items-center justify-center text-[10px] font-black text-gray-300 text-center uppercase p-4 overflow-hidden">
-                    {studentToPrint.photoUrl ? (
-                      <img src={studentToPrint.photoUrl} alt="Student" className="w-full h-full object-cover" />
-                    ) : (
-                      "Affix Recent Photo"
-                    )}
-                  </div>
-                </div>
 
                 <div className="text-center mb-10">
-                  <h2 className="text-2xl font-black uppercase tracking-[0.2em] bg-black text-white py-3 px-8 inline-block rounded-xl">Admission Registration Form</h2>
+                  <h2 className="text-2xl font-black uppercase tracking-[0.2em] bg-black text-white py-3 px-8 inline-block rounded-xl">
+                    {viewType === 'PRINT' ? 'Admission Registration Form' : 'Student Profile Details'}
+                  </h2>
                 </div>
 
                 <div className="grid grid-cols-2 gap-x-12 gap-y-6 mb-12">

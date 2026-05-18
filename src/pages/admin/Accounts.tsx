@@ -47,6 +47,7 @@ import { AnimatePresence } from 'motion/react';
 export const Accounts = () => {
   const { businessTransactions, feePayments, students, franchises, addBusinessTransaction, currentUser, vouchers, verifyVoucher, addVoucher, businessProfile } = useApp();
   const isFranchise = currentUser?.role === 'FRANCHISE';
+  const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'ADMINISTRATOR';
   const myFranchiseId = currentUser?.franchiseId;
 
   const filteredFeePayments = isFranchise 
@@ -73,7 +74,7 @@ export const Accounts = () => {
   });
 
   const [voucherData, setVoucherData] = useState({
-    franchiseId: '',
+    franchiseId: isFranchise ? (myFranchiseId || '') : '',
     amount: '',
     remarks: '',
     date: new Date().toISOString().split('T')[0]
@@ -197,6 +198,36 @@ export const Accounts = () => {
     v.remarks.toLowerCase().includes(voucherSearch.toLowerCase())
   ).sort((a, b) => b.voucherNo.localeCompare(a.voucherNo));
 
+  const handleDownload = () => {
+    if (filteredActivities.length === 0) {
+      alert('No transactions to export');
+      return;
+    }
+
+    const headers = ['Date', 'Type', 'Category', 'Description', 'Mode', 'Amount'];
+    const csvContent = [
+      headers.join(','),
+      ...filteredActivities.map(a => [
+        new Date(a.date).toLocaleString(),
+        a.type,
+        `"${a.category.replace(/"/g, '""')}"`,
+        `"${a.description.replace(/"/g, '""')}"`,
+        a.mode,
+        a.amount
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `financial_statement_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto pb-20 bg-background min-h-screen">
       {/* Header section */}
@@ -233,7 +264,10 @@ export const Accounts = () => {
             <Coins size={14} />
             <span>Fund Provision</span>
           </button>
-          <button className="flex items-center space-x-2 px-6 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-[#141414] hover:bg-gray-50 shadow-sm transition-all border-b-2">
+          <button 
+            onClick={handleDownload}
+            className="flex items-center space-x-2 px-6 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-[#141414] hover:bg-gray-50 shadow-sm transition-all border-b-2"
+          >
             <Download size={14} />
             <span>Export CSV</span>
           </button>
@@ -469,7 +503,7 @@ export const Accounts = () => {
                            <Check size={12} strokeWidth={3} />
                            <span>Verified</span>
                         </div>
-                     ) : (
+                     ) : isAdmin ? (
                         <button 
                           onClick={() => verifyVoucher(voucher.id)}
                           className="flex items-center space-x-1.5 px-4 py-2 bg-amber-500 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-amber-600 shadow-md shadow-amber-500/20 transition-all"
@@ -477,6 +511,11 @@ export const Accounts = () => {
                            <Clock size={12} strokeWidth={3} />
                            <span>Approve</span>
                         </button>
+                     ) : (
+                        <div className="flex items-center space-x-1.5 px-4 py-2 bg-amber-100 text-amber-600 rounded-xl text-[9px] font-black uppercase tracking-widest">
+                           <Clock size={12} strokeWidth={3} />
+                           <span>Pending</span>
+                        </div>
                      )}
                   </td>
                 </tr>
@@ -633,6 +672,7 @@ export const Accounts = () => {
                     type="number" 
                     required 
                     value={formData.amount}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                     className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-black text-xl" 
                   />
@@ -742,6 +782,7 @@ export const Accounts = () => {
                     required 
                     placeholder="0.00"
                     value={voucherData.amount}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setVoucherData({ ...voucherData, amount: e.target.value })}
                     className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-black text-2xl" 
                   />
@@ -784,7 +825,7 @@ export const Accounts = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
-              className="bg-white rounded-[1rem] w-full max-w-2xl p-16 shadow-2xl relative my-8"
+              className="bg-white rounded-[1rem] w-full max-w-2xl p-10 shadow-2xl relative my-8"
               style={{ minHeight: '800px', display: 'flex', flexDirection: 'column' }}
             >
                <button 
@@ -794,98 +835,102 @@ export const Accounts = () => {
                 <X size={20} />
               </button>
 
-                   <div id="printable-accounts-receipt" className="flex-grow flex flex-col p-8 md:p-16">
-                <div className="flex justify-between items-start mb-12">
-                   <div className="space-y-4 w-full">
-                      <div className="flex justify-center mb-6">
-                         {businessProfile.logoUrl ? (
-                            <img 
-                              src={businessProfile.logoUrl} 
-                              alt={businessProfile.name} 
-                              className="h-20 w-auto object-contain"
-                              referrerPolicy="no-referrer"
-                            />
-                         ) : (
-                            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center p-1 shadow-lg shadow-blue-500/20">
-                               <Building2 size={32} className="text-white" />
-                            </div>
-                         )}
+              <div id="printable-accounts-receipt" className="flex-grow flex flex-col p-4 md:p-8">
+                {/* Receipt Header Image */}
+                <div className="mb-4">
+                  {businessProfile.receiptHeaderUrl ? (
+                    <img src={businessProfile.receiptHeaderUrl} alt="Header" className="w-full h-auto mx-auto" />
+                  ) : (
+                    <div className="flex flex-col items-center border-b-[1.5px] border-black pb-4 text-center">
+                      <p className="text-[10px] font-bold text-gray-800">An ISO 9001 : 2015 Certified Institute</p>
+                      <p className="text-[11px] font-black text-emerald-700">बस्ती मंडल का नं. 1 कंप्यूटर ट्रेनिंग इंस्टिट्यूट</p>
+                      <h1 className="text-4xl font-black text-red-600 tracking-tight uppercase leading-none mt-1">{businessProfile.name}</h1>
+                      <div className="bg-indigo-900/5 px-4 py-1 rounded text-[8px] font-bold text-indigo-900 border border-indigo-900/10 mt-1">
+                         [ RUN UNDER : SOFTDEV TALLY GURU PRASHIKSHAN SANSTHAN SOCIETY ] [ REG No. : G-58913 / 1442 ]
                       </div>
-                      <div className="flex justify-between items-start">
-                         <div>
-                            <h2 className="text-2xl font-black text-[#141414] tracking-tighter uppercase leading-none">{businessProfile.name}</h2>
-                            <p className="text-[10px] text-[#888888] font-bold uppercase tracking-widest mt-1">{businessProfile.legalName}</p>
-                         </div>
-                         <div className="text-right">
-                            <div className="inline-block px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] mb-4">Official Receipt</div>
-                            <p className="text-[10px] font-black text-[#888888] uppercase tracking-widest leading-none">Receipt No</p>
-                            <p className="text-xl font-black text-[#141414] mt-1">#{selectedReceipt.id.toUpperCase()}</p>
-                         </div>
-                      </div>
+                      <p className="text-[9px] font-black text-blue-800 mt-1">(A Complete Computer Education Institute) (An Authorised Tally Education Partner)</p>
+                      <p className="text-[9px] font-bold text-red-600 uppercase">Head Office : {businessProfile.address} - {businessProfile.pincode || '272001'}</p>
+                      <p className="text-[9px] font-black text-[#141414]">Website : {businessProfile.website}  Phone : {businessProfile.phone}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-emerald-600 p-2 text-center border-y-2 border-black mb-8 text-white">
+                  <h2 className="text-sm font-black uppercase tracking-widest underline decoration-2 underline-offset-4">OFFICIAL RECEIPT</h2>
+                </div>
+
+                <div className="flex justify-between items-start mb-8">
+                   <div>
+                      <h2 className="text-xl font-black text-[#141414] tracking-tighter uppercase leading-none">{businessProfile.name}</h2>
+                      <p className="text-[10px] text-[#888888] font-bold uppercase tracking-widest mt-1">{businessProfile.legalName}</p>
+                   </div>
+                   <div className="text-right">
+                      <p className="text-[10px] font-black text-[#888888] uppercase tracking-widest leading-none">Receipt No</p>
+                      <p className="text-xl font-black text-[#141414] mt-1">#{selectedReceipt.id.toUpperCase()}</p>
                    </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-12 mb-12 border-t border-gray-100 pt-12">
+                <div className="grid grid-cols-2 gap-12 mb-8 border-t border-gray-100 pt-8">
                    <div>
                       <p className="text-[10px] font-black text-[#888888] uppercase tracking-widest mb-2">Issued To</p>
                       <p className="text-lg font-black text-[#141414] leading-tight">{selectedReceipt.description.includes(':') ? selectedReceipt.description.split(': ')[1] : 'General Recipient'}</p>
                       <p className="text-[10px] text-[#888888] font-bold mt-1">Authorized for Educational Records</p>
                    </div>
-                     <div className="text-right">
-                        <p className="text-[10px] font-black text-[#888888] uppercase tracking-widest mb-2">Transaction Details</p>
-                        <p className="text-sm font-black text-[#141414]">{new Date(selectedReceipt.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
-                        <p className="text-[10px] text-[#888888] font-bold mt-1">Time: {new Date(selectedReceipt.date).toLocaleTimeString()}</p>
-                     </div>
+                   <div className="text-right">
+                      <p className="text-[10px] font-black text-[#888888] uppercase tracking-widest mb-2">Transaction Details</p>
+                      <p className="text-sm font-black text-[#141414]">{new Date(selectedReceipt.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                      <p className="text-[10px] text-[#888888] font-bold mt-1">Time: {new Date(selectedReceipt.date).toLocaleTimeString()}</p>
+                   </div>
+                </div>
+
+                <div className="flex-grow">
+                   <div className="w-full border rounded-2xl border-gray-100 overflow-hidden">
+                      <table className="w-full">
+                         <thead className="bg-gray-50/50">
+                            <tr className="text-[10px] font-black text-[#888888] uppercase tracking-widest text-left">
+                               <th className="px-6 py-4">Item Description</th>
+                               <th className="px-6 py-4">Payment Mode</th>
+                               <th className="px-6 py-4 text-right">Amount</th>
+                            </tr>
+                         </thead>
+                         <tbody className="divide-y divide-gray-50">
+                            <tr>
+                               <td className="px-6 py-4">
+                                  <p className="text-sm font-black text-[#141414]">{selectedReceipt.category}</p>
+                                  <p className="text-[10px] text-gray-400 font-medium mt-1">Institutional Service Reference</p>
+                               </td>
+                               <td className="px-6 py-4">
+                                  <span className="px-3 py-1 bg-gray-100 rounded-lg text-[9px] font-black text-[#141414] uppercase tracking-widest">{selectedReceipt.mode}</span>
+                               </td>
+                               <td className="px-6 py-4 text-right font-black text-lg text-[#141414]">
+                                  ₹{selectedReceipt.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                               </td>
+                            </tr>
+                         </tbody>
+                      </table>
+                   </div>
+                </div>
+
+                <div className="mt-8 pt-8 border-t border-dashed border-gray-200">
+                   <div className="flex justify-between items-end">
+                      <div className="space-y-4">
+                         <div className="flex items-center space-x-2">
+                            <CheckCircle size={16} className="text-emerald-500" />
+                            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Digitally Verified Document</p>
+                         </div>
+                         <div className="w-48 h-12 border-b border-[#141414]/10 relative">
+                            <p className="text-[9px] font-black text-[#888888] absolute bottom-1 uppercase tracking-widest">Authorized Signatory</p>
+                         </div>
+                      </div>
+                      <div className="text-right space-y-2">
+                         <p className="text-[10px] font-black text-[#888888] uppercase tracking-widest">Total Amount Paid</p>
+                         <p className="text-4xl font-black text-[#141414] tracking-tighter">₹{selectedReceipt.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                      </div>
+                   </div>
                 </div>
               </div>
 
-              <div className="flex-grow">
-                 <div className="w-full border rounded-2xl border-gray-100 overflow-hidden">
-                    <table className="w-full">
-                       <thead className="bg-gray-50/50">
-                          <tr className="text-[10px] font-black text-[#888888] uppercase tracking-widest text-left">
-                             <th className="px-6 py-4">Item Description</th>
-                             <th className="px-6 py-4">Payment Mode</th>
-                             <th className="px-6 py-4 text-right">Amount</th>
-                          </tr>
-                       </thead>
-                       <tbody className="divide-y divide-gray-50">
-                          <tr>
-                             <td className="px-6 py-8">
-                                <p className="text-sm font-black text-[#141414]">{selectedReceipt.category}</p>
-                                <p className="text-[10px] text-gray-400 font-medium mt-1">Institutional Service Reference</p>
-                             </td>
-                             <td className="px-6 py-8">
-                                <span className="px-3 py-1 bg-gray-100 rounded-lg text-[9px] font-black text-[#141414] uppercase tracking-widest">{selectedReceipt.mode}</span>
-                             </td>
-                             <td className="px-6 py-8 text-right font-black text-lg text-[#141414]">
-                                ₹{selectedReceipt.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                             </td>
-                          </tr>
-                       </tbody>
-                    </table>
-                 </div>
-              </div>
-
-              <div className="mt-12 pt-12 border-t border-dashed border-gray-200">
-                 <div className="flex justify-between items-end">
-                    <div className="space-y-4">
-                       <div className="flex items-center space-x-2">
-                          <CheckCircle size={16} className="text-emerald-500" />
-                          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Digitally Verified Document</p>
-                       </div>
-                       <div className="w-48 h-12 border-b border-[#141414]/10 relative">
-                          <p className="text-[9px] font-black text-[#888888] absolute bottom-1 uppercase tracking-widest">Authorized Signatory</p>
-                       </div>
-                    </div>
-                    <div className="text-right space-y-2">
-                       <p className="text-[10px] font-black text-[#888888] uppercase tracking-widest">Total Amount Paid</p>
-                       <p className="text-5xl font-black text-[#141414] tracking-tighter">₹{selectedReceipt.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
-                    </div>
-                 </div>
-              </div>
-
-              <div className="mt-16 flex space-x-4 print:hidden">
+              <div className="mt-8 flex space-x-4 print:hidden">
                  <button className="flex-1 py-4 bg-gray-50 text-[#141414] border border-gray-100 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-gray-100 transition-all flex items-center justify-center space-x-2">
                     <Download size={14} />
                     <span>Download PDF</span>

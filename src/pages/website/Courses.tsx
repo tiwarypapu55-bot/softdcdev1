@@ -10,14 +10,23 @@ import { Search, Filter, BookOpen, Clock, Award, Star, Zap } from 'lucide-react'
 import { clsx } from 'clsx';
 import { useApp } from '../../context/AppContext';
 
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 export const Courses = () => {
-  const { courses } = useApp();
-  const [filter, setFilter] = useState('ALL');
+  const { courses, courseCategories } = useApp();
+  const [searchParams] = useSearchParams();
+  const initialCategory = searchParams.get('category') || 'ALL';
+  
+  const [filter, setFilter] = useState(initialCategory);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const categories = ['ALL', ...Array.from(new Set(courses.map(c => c.category)))];
+  // Handle parameter change (e.g. from navbar links)
+  React.useEffect(() => {
+    const category = searchParams.get('category');
+    if (category) setFilter(category);
+  }, [searchParams]);
+
+  const categories = ['ALL', ...courseCategories.map(c => c.name)];
 
   const filtered = courses
     .filter(c => filter === 'ALL' || c.category === filter)
@@ -34,7 +43,11 @@ export const Courses = () => {
            <div className="max-w-2xl space-y-4">
               <p className="text-xs font-black text-blue-600 uppercase tracking-widest">Knowledge Hub</p>
               <h1 className="text-5xl font-black text-[#141414] tracking-tight uppercase leading-none">Elite Professional <br/> Catalog</h1>
-              <p className="text-slate-600 font-medium leading-relaxed">Choose from our curated selection of industry-grade courses designed to make you an immediate asset to any organization.</p>
+              <p className="text-slate-600 font-medium leading-relaxed">
+                {filter !== 'ALL' 
+                  ? courseCategories.find(c => c.name === filter)?.description || 'Choose from our curated selection of industry-grade courses.'
+                  : 'Choose from our curated selection of industry-grade courses designed to make you an immediate asset to any organization.'}
+              </p>
            </div>
         </div>
       </section>

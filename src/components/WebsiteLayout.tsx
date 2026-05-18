@@ -13,14 +13,22 @@ import { clsx } from 'clsx';
 const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/ais-dev-pzzj54zbvfrllp25htfrww.appspot.com/o/softdev_logo.png?alt=media&token=48c0b58e-7e9b-46a2-97b7-54324f331777";
 
 export const WebsiteLayout = ({ children }: { children: React.ReactNode }) => {
-  const { businessProfile } = useApp();
+  const { businessProfile, courseCategories, courses } = useApp();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const location = useLocation();
 
   const navLinks = [
     { name: 'HOME', path: '/' },
     { name: 'ABOUT US', path: '/about' },
-    { name: 'COURSES', path: '/courses', hasSub: true },
+    { 
+      name: 'COURSES', 
+      path: '/courses', 
+      hasSub: true,
+      subLinks: courseCategories.map(cat => ({
+        name: cat.name,
+        path: `/courses?category=${encodeURIComponent(cat.name)}`
+      })).slice(0, 6)
+    },
     { name: 'GALLERY', path: '/gallery', hasSub: true },
     { name: 'FRANCHISE & COLLABORATION', path: '/franchise-info', hasSub: true },
     { name: 'CONTACT US', path: '/contact' },
@@ -247,10 +255,19 @@ export const WebsiteLayout = ({ children }: { children: React.ReactNode }) => {
           <div>
              <h4 className="text-[11px] font-black uppercase tracking-widest mb-8 text-yellow-200">Elite Courses</h4>
              <ul className="space-y-4 text-sm font-bold text-white/70">
-                <li>Tally Prime with GST</li>
-                <li>Advanced Excel</li>
-                <li>Office Automation</li>
-                <li>Data Analytics</li>
+                {courses.slice(0, 4).map(course => (
+                  <li key={course.id}>
+                    <Link to={`/courses/${course.id}`} className="hover:text-white transition-colors">
+                      {course.title}
+                    </Link>
+                  </li>
+                ))}
+                {courses.length === 0 && (
+                  <>
+                    <li>Tally Prime with GST</li>
+                    <li>Advanced Excel</li>
+                  </>
+                )}
              </ul>
           </div>
 

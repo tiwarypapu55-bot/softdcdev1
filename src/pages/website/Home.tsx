@@ -136,7 +136,7 @@ export const WebsiteHome = () => {
               <div className="relative">
                  <div className="absolute inset-0 bg-blue-600/10 blur-3xl rounded-full scale-150" />
                  <img 
-                    src="/softdev_banner_2.png" 
+                    src={businessProfile.featuredCoursesBannerUrl || "/softdev_banner_2.png"}
                     alt="Courses Banner" 
                     className="w-full relative z-10 rounded-3xl shadow-2xl transform group-hover:scale-105 transition-transform duration-700" 
                  />
@@ -484,7 +484,7 @@ export const WebsiteHome = () => {
            <div className="bg-[#141414] rounded-[5rem] overflow-hidden flex flex-col lg:flex-row shadow-2xl">
               <div className="lg:w-1/2 h-[400px] lg:h-auto">
                  <img 
-                   src="/softdev_banner_3.png" 
+                   src={businessProfile.successStoriesBannerUrl || "/softdev_banner_3.png"} 
                    alt="Success Stories" 
                    className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700"
                  />

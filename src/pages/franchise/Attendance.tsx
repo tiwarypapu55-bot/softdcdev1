@@ -59,7 +59,7 @@ export const Attendance = () => {
           </div>
           <button className="px-6 py-3 bg-[#141414] text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-black/10 hover:bg-blue-600 transition-all flex items-center space-x-2">
              <Download size={14} />
-             <span>Export Report</span>
+             <span>Export Data</span>
           </button>
         </div>
       </div>
@@ -192,22 +192,10 @@ export const Attendance = () => {
           <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-xl space-y-6">
              <h3 className="text-sm font-black text-[#141414] uppercase tracking-widest">Recent Logs</h3>
              <div className="space-y-4">
-                {[
-                  { name: 'Rahul Kumar', time: '09:05 AM', status: 'PRESENT' },
-                  { name: 'Anjali Sharma', time: '09:15 AM', status: 'LATE' },
-                  { name: 'Vikram Singh', time: '09:30 AM', status: 'PRESENT' },
-                ].map((log, i) => (
-                  <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                     <div>
-                        <p className="text-[11px] font-black text-[#141414] uppercase tracking-tight">{log.name}</p>
-                        <p className="text-[9px] font-bold text-[#888888] uppercase tracking-widest">{log.time}</p>
-                     </div>
-                     <span className={clsx(
-                       "text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest",
-                       log.status === 'PRESENT' ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
-                     )}>{log.status}</span>
-                  </div>
-                ))}
+                <div className="py-10 text-center space-y-3 opacity-40">
+                   <Clock size={32} className="mx-auto text-gray-300" />
+                   <p className="text-[10px] font-black text-[#888888] uppercase tracking-widest">No Activity Yet Today</p>
+                </div>
              </div>
           </div>
         </div>

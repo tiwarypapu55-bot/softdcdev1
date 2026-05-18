@@ -310,8 +310,11 @@ export const AdminDashboard = () => {
                  </div>
               </div>
 
-              <button className="w-full mt-10 py-4 bg-white text-black text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-blue-400 hover:text-white transition-all shadow-xl">
-                 Performance Report
+              <button 
+                onClick={() => navigate('/admin/business')}
+                className="w-full mt-10 py-4 bg-white text-black text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-blue-400 hover:text-white transition-all shadow-xl"
+              >
+                 System Audit Report
               </button>
            </div>
         </div>

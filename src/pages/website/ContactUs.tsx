@@ -15,8 +15,13 @@ export const ContactUs = () => {
 
   return (
     <WebsiteLayout>
-      <section className="bg-background py-24 border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="bg-background py-24 border-b border-gray-100 relative overflow-hidden">
+        {businessProfile.contactUsUrl && (
+          <div className="absolute inset-0 z-0">
+             <img src={businessProfile.contactUsUrl} alt="Contact" className="w-full h-full object-cover opacity-5" />
+          </div>
+        )}
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
            <div className="max-w-2xl space-y-4">
               <p className="text-xs font-black text-blue-600 uppercase tracking-widest">Connect With Us</p>
               <h1 className="text-5xl font-black text-[#141414] tracking-tight uppercase leading-none">Let's Build Your <br/> Future Together</h1>
