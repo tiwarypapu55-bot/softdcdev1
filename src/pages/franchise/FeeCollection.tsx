@@ -630,7 +630,7 @@ export const FeeCollection = () => {
 
                      <div className="bg-blue-600 p-2 text-center border-y-2 border-black mb-8 text-white">
                         <h2 className="text-sm font-black uppercase tracking-widest underline decoration-2 underline-offset-4">
-                          {receiptType === 'SINGLE' ? 'FEE RECEIPT' : 'COURSE FEE SUMMARY'}
+                          {receiptType === 'SINGLE' ? 'FEE RECEIPT' : 'STUDENT FEE STATEMENT'}
                         </h2>
                      </div>
 
