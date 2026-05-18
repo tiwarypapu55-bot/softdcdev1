@@ -845,7 +845,7 @@ export const FeeCollection = () => {
                         <div className="bg-blue-600 text-white px-4 py-2 flex items-center mb-2">
                            <FileText size={14} className="mr-2" />
                            <span className="text-[10px] font-black uppercase tracking-widest">
-                              COURSE FEE SUMMARY
+                              STUDENT FEE STATEMENT
                            </span>
                         </div>
                         <table className="w-full border-t-[1.5px] border-l-[1.5px] border-black text-center text-[9px]">

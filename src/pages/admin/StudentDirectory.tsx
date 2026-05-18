@@ -34,7 +34,7 @@ import { Student } from '../../types';
 import { useNavigate } from 'react-router-dom';
 
 export const StudentDirectory = () => {
-  const { students, franchises, courses, deleteStudent, currentUser, franchiseFees, addWalletTransaction, updateStudent } = useApp();
+  const { students, franchises, courses, deleteStudent, currentUser, franchiseFees, addWalletTransaction, updateStudent, businessProfile } = useApp();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBranch, setFilterBranch] = useState(currentUser?.role === 'FRANCHISE' ? currentUser.franchiseId : 'ALL');
@@ -70,7 +70,6 @@ export const StudentDirectory = () => {
   const handleUpdate = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingStudent) {
-      const { updateStudent } = useApp(); // Get it from context
       updateStudent(editingStudent.id, formData);
       setEditingStudent(null);
     }

@@ -459,8 +459,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCourseCategories(prev => [...prev, cat]);
     }
   };
-  const updateCourseCategory = (id: string, updates: Partial<CourseCategory>) =>
+  const updateCourseCategory = (id: string, updates: Partial<CourseCategory>) => {
+    const oldCategory = courseCategories.find(c => c.id === id);
     setCourseCategories(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+
+    if (oldCategory && updates.name && updates.name !== oldCategory.name) {
+      setCourses(prev => prev.map(course => 
+        course.category === oldCategory.name ? { ...course, category: updates.name! } : course
+      ));
+    }
+  };
   const deleteCourseCategory = (id: string) => {
     if (!id) return;
     const categoryToDelete = courseCategories.find(c => c.id === id);

@@ -27,7 +27,7 @@ import { clsx } from 'clsx';
 import { Student, FeePayment } from '../../types';
 
 export const StudentLedger = () => {
-  const { students, feePayments, franchises, courses, currentUser } = useApp();
+  const { students, feePayments, franchises, courses, currentUser, businessProfile } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBranch, setFilterBranch] = useState(currentUser?.role === 'FRANCHISE' ? currentUser.franchiseId : 'ALL');
   const [expandedStudent, setExpandedStudent] = useState<string | null>(null);
