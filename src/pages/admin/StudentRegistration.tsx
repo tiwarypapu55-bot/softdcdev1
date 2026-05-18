@@ -22,7 +22,9 @@ import {
   Mail,
   Award,
   Printer,
-  RefreshCcw
+  RefreshCcw,
+  Upload,
+  MessageCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx } from 'clsx';
@@ -90,7 +92,7 @@ const InputField = ({ label, required, type = "text", value, onChange, placehold
 );
 
 export const StudentRegistration = () => {
-  const { franchises, courses, addStudent, currentUser, businessProfile, feeStructures, franchiseFees, addWalletTransaction } = useApp();
+  const { franchises, courses, addStudent, currentUser, businessProfile, feeStructures, franchiseFees, addWalletTransaction, courseCategories } = useApp();
   const location = useLocation();
   const [isSuccess, setIsSuccess] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
@@ -141,9 +143,24 @@ export const StudentRegistration = () => {
     feeStatus: 'PENDING',
     kycStatus: 'PENDING',
     kycDocs: [],
+    documents: [
+      { id: 'doc-1', type: 'AADHAR', name: 'Aadhar / ID Card', url: '' },
+      { id: 'doc-2', type: 'QUALIFICATION', name: 'Qualification Document', url: '' },
+      { id: 'doc-3', type: 'PHOTO', name: 'Profile Photo', url: '' },
+      { id: 'doc-4', type: 'SIGNATURE', name: 'Student Signature', url: '' },
+      { id: 'doc-5', type: 'ADDRESS_PROOF', name: 'Address Proof', url: '' },
+      { id: 'doc-6', type: 'OTHER', name: 'Other Document', url: '' },
+    ],
     totalFees: 0,
     paidAmount: 0
   });
+
+  const handleDocumentUpload = (id: string, url: string) => {
+    setFormData(prev => ({
+      ...prev,
+      documents: prev.documents?.map(doc => doc.id === id ? { ...doc, url } : doc)
+    }));
+  };
 
   useEffect(() => {
     if (location.state) {
@@ -307,14 +324,28 @@ export const StudentRegistration = () => {
                   <CheckCircle2 size={18} className="animate-bounce" />
                   <span className="text-sm font-black uppercase tracking-widest text-[10px]">Registered Successfully!</span>
                 </div>
-                <button 
-                  type="button"
-                  onClick={() => setShowPrintModal(true)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all active:scale-95"
-                >
-                  <Printer size={14} />
-                  <span>Print</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button 
+                    type="button"
+                    onClick={() => {
+                       const message = `*REGISTRATION SUCCESSFUL - ${businessProfile.name}*\n\nHello *${lastStudent.name}* (ID: ${lastStudent.admissionNo}), your admission to *${lastStudent.course}* has been confirmed at *${lastStudent.studyCenter}*.\n\nEnrollment No: ${lastStudent.enrollmentNo}\nDate: ${lastStudent.admissionDate}\n\nWelcome to STG Institute!`;
+                       const encoded = encodeURIComponent(message);
+                       window.open(`https://wa.me/91${lastStudent.contact.replace(/\D/g, '')}?text=${encoded}`, '_blank');
+                    }}
+                    className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all active:scale-95"
+                  >
+                    <MessageCircle size={14} />
+                    <span>WhatsApp</span>
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setShowPrintModal(true)}
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all active:scale-95"
+                  >
+                    <Printer size={14} />
+                    <span>Print</span>
+                  </button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -350,7 +381,7 @@ export const StudentRegistration = () => {
             label="Course Category" 
             value={formData.courseCategory}
             onChange={(val: string) => setFormData({...formData, courseCategory: val})}
-            placeholder="Select Course Category"
+            options={courseCategories.map(c => c.name)}
           />
           <InputField 
             label="Course Name" 
@@ -500,53 +531,73 @@ export const StudentRegistration = () => {
           />
         </Section>
 
-        {/* Profile Photo */}
-        <div className="bg-white rounded-xl border border-gray-100 p-8 shadow-sm">
-          <div className="flex items-center space-x-3 pb-6 border-b border-gray-50 mb-6">
-            <div className="w-1.5 h-6 rounded-full bg-blue-600 shrink-0" />
-            <div className="flex items-center space-x-2 text-blue-600">
-              <Camera size={20} className="stroke-[2.5px]" />
-              <h2 className="text-base font-bold tracking-tight">Profile Photo</h2>
-            </div>
+        {/* Document & KYC Upload */}
+        <section className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-8 py-6 bg-gray-50/50 border-b border-gray-100 flex items-center space-x-3">
+            <Camera className="text-blue-600" size={20} />
+            <h2 className="text-xs font-black uppercase tracking-widest text-[#141414]">Document & KYC Upload</h2>
           </div>
-          <div className="flex flex-col md:flex-row items-center space-y-6 md:space-y-0 md:space-x-8">
-            <div 
-              className="w-40 h-40 bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center text-gray-400 group cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-all relative overflow-hidden"
-              onClick={() => document.getElementById('student-photo-input')?.click()}
-            >
-              {formData.photoUrl ? (
-                <img src={formData.photoUrl} alt="Preview" className="w-full h-full object-cover" />
-              ) : (
-                <>
-                  <Camera size={32} className="mb-2 group-hover:scale-110 transition-transform" />
-                  <span className="text-[10px] font-black uppercase text-center px-4">Click to upload</span>
-                </>
-              )}
-              <input 
-                id="student-photo-input"
-                type="file" 
-                className="hidden" 
-                accept="image/*"
-                onChange={handlePhotoUpload}
-              />
-            </div>
-            <div className="text-left">
-              <p className="text-sm font-bold text-gray-900 mb-1">
-                {formData.photoUrl ? 'Photo uploaded successfully' : 'Click on image to upload photo'}
-              </p>
-              <p className="text-xs text-gray-400 leading-relaxed font-medium">Accepted formats: JPG, PNG, WEBP.<br/>Max size: 2MB. Recommendation: 400x400px.</p>
-              {formData.photoUrl && (
-                <button 
-                  type="button"
-                  onClick={() => setFormData({...formData, photoUrl: ''})}
-                  className="mt-2 text-[10px] font-black text-red-500 uppercase tracking-widest hover:underline"
+          <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {formData.documents?.map((doc) => (
+              <div key={doc.id} className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black text-[#888888] uppercase tracking-widest ml-1">{doc.name}</label>
+                  {doc.url && (
+                    <button 
+                      type="button"
+                      onClick={() => handleDocumentUpload(doc.id, '')}
+                      className="text-[9px] font-black text-red-500 uppercase tracking-widest hover:underline"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <div 
+                  onClick={() => document.getElementById(`doc-input-${doc.id}`)?.click()}
+                  className={clsx(
+                    "w-full aspect-video bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-gray-400 group cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-all relative overflow-hidden",
+                    doc.url && "border-emerald-200 bg-emerald-50/30"
+                  )}
                 >
-                  Remove Photo
-                </button>
-              )}
-            </div>
+                  {doc.url ? (
+                    <img src={doc.url} alt="Preview" className="w-full h-full object-contain" />
+                  ) : (
+                    <>
+                      <Upload size={24} className="mb-2 group-hover:scale-110 transition-transform" />
+                      <span className="text-[10px] font-black uppercase text-center px-4">Click to upload</span>
+                    </>
+                  )}
+                  <input 
+                    id={`doc-input-${doc.id}`}
+                    type="file" 
+                    className="hidden" 
+                    accept="image/*,application/pdf"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = async () => {
+                          let finalUrl = reader.result as string;
+                          if (file.type.startsWith('image/')) {
+                            finalUrl = await compressImage(finalUrl, 800, 0.7);
+                          }
+                          handleDocumentUpload(doc.id, finalUrl);
+                          if (doc.type === 'PHOTO') {
+                            setFormData(prev => ({ ...prev, photoUrl: finalUrl }));
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                </div>
+                {doc.type === 'PHOTO' && !formData.photoUrl && (
+                  <p className="text-[9px] text-amber-600 font-bold uppercase tracking-tight">Required for ID generation</p>
+                )}
+              </div>
+            ))}
           </div>
-        </div>
+        </section>
 
         {/* Qualification Details */}
         <Section title="Qualification Details" icon={Award} variant="blue">

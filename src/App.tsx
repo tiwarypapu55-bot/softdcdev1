@@ -30,6 +30,7 @@ import { FeeCollection } from './pages/admin/FeeCollection';
 import { FranchiseFeeMaster } from './pages/admin/FranchiseFeeMaster';
 import { Accounts } from './pages/admin/Accounts';
 import { StudentDirectory } from './pages/admin/StudentDirectory';
+import { StudentDetail } from './pages/admin/StudentDetail';
 import { StudentLedger } from './pages/admin/StudentLedger';
 import { Announcements } from './pages/admin/Announcements';
 import { DocumentVerification, CertificateStudio, CertificateTemplates, CreateCertificateTemplate } from './pages/admin/SupportModules';
@@ -192,6 +193,11 @@ export default function App() {
                   <StudentDirectory />
                 </ProtectedRoute>
               } />
+              <Route path={`/${pathPrefix}/students/:id`} element={
+                <ProtectedRoute roles={['ADMIN', 'ADMINISTRATOR']}>
+                  <StudentDetail />
+                </ProtectedRoute>
+              } />
               <Route path={`/${pathPrefix}/ledger`} element={
                 <ProtectedRoute roles={['ADMIN', 'ADMINISTRATOR']}>
                   <StudentLedger />
@@ -284,6 +290,11 @@ export default function App() {
           <Route path="/franchise/students" element={
             <ProtectedRoute roles={['FRANCHISE']}>
               <StudentDirectory />
+            </ProtectedRoute>
+          } />
+          <Route path="/franchise/students/:id" element={
+            <ProtectedRoute roles={['FRANCHISE']}>
+              <StudentDetail />
             </ProtectedRoute>
           } />
           <Route path="/franchise/ledger" element={

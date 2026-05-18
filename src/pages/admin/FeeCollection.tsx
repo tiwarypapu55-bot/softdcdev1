@@ -42,11 +42,13 @@ export const FeeCollection = () => {
   const totalPayable = paymentData.heads.reduce((acc, h) => acc + (h.amount + h.penalty - h.discount), 0);
   const totalPaidInModes = paymentData.paymentModes.reduce((acc, m) => acc + m.amount, 0);
 
-  const filteredStudents = (searchTerm.length > 2 || filterCourse !== 'ALL' || filterBranch !== 'ALL')
+  const filteredStudents = (searchTerm.length > 0 || filterCourse !== 'ALL' || filterBranch !== 'ALL')
     ? students.filter(s => {
+        const franchise = franchises.find(f => f.id === s.franchiseId);
         const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                              s.admissionNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             (s.enrollmentNo && s.enrollmentNo.toLowerCase().includes(searchTerm.toLowerCase()));
+                             (s.enrollmentNo && s.enrollmentNo.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                             (franchise && franchise.name.toLowerCase().includes(searchTerm.toLowerCase()));
         
         const matchesCourse = filterCourse === 'ALL' || s.course === filterCourse;
         const matchesBranch = filterBranch === 'ALL' || s.franchiseId === filterBranch;
@@ -188,6 +190,32 @@ export const FeeCollection = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
+      <style>{`
+        @media print {
+          @page {
+            size: A5 landscape;
+            margin: 0;
+          }
+          body * {
+            visibility: hidden;
+          }
+          #printable-receipt, #printable-receipt * {
+            visibility: visible;
+          }
+          #printable-receipt {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 210mm;
+            height: 148mm;
+            padding: 10mm;
+            background: white !important;
+          }
+          .print\\:hidden {
+            display: none !important;
+          }
+        }
+      `}</style>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-8">
         <div>
           <h1 className="text-3xl font-black text-[#141414] tracking-tight uppercase">Fee Collection</h1>
@@ -208,7 +236,7 @@ export const FeeCollection = () => {
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Name, Enrollment or Adm No..."
+                  placeholder="Name, Enrollment, Adm No or Branch..."
                   className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold text-xs"
                 />
               </div>
@@ -232,7 +260,7 @@ export const FeeCollection = () => {
                 >
                   <option value="ALL">All Courses</option>
                   {courses.map(c => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
+                    <option key={c.id} value={c.title}>{c.title}</option>
                   ))}
                 </select>
               </div>
@@ -782,40 +810,44 @@ export const FeeCollection = () => {
                           <div className="grid grid-cols-2 divide-x-2 divide-black border-2 border-black mb-8 text-[11px]">
                              <div className="divide-y-2 divide-black">
                                 <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50">Branch / Franchise</div>
-                                   <div className="px-4 flex items-center font-bold uppercase">{student?.studyCenter || businessProfile.name}</div>
+                                   <div className="px-4 flex items-center font-black bg-blue-50">STUDENT NAME</div>
+                                   <div className="px-4 flex items-center font-bold uppercase">{student.name}</div>
                                 </div>
                                 <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50">Admission Date</div>
-                                   <div className="px-4 flex items-center font-bold uppercase">{student.admissionDate}</div>
+                                   <div className="px-4 flex items-center font-black bg-blue-50">FATHER'S NAME</div>
+                                   <div className="px-4 flex items-center font-bold uppercase">{student.fatherName}</div>
+                                </div>
+                                <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
+                                   <div className="px-4 flex items-center font-black bg-blue-50">MOTHER'S NAME</div>
+                                   <div className="px-4 flex items-center font-bold uppercase">{student.motherName}</div>
                                 </div>
                                 <div className="grid grid-cols-2 divide-x-2 divide-black min-h-[2.5rem]">
-                                   <div className="px-4 py-2 flex items-center font-black bg-blue-50">Course</div>
+                                   <div className="px-4 py-2 flex items-center font-black bg-blue-50">COURSE ENROLLED</div>
                                    <div className="px-4 py-2 flex items-center font-bold uppercase">{student.course} ({student.courseDuration || 'N/A'})</div>
                                 </div>
                                 <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50">Mobile</div>
+                                   <div className="px-4 flex items-center font-black bg-blue-50">MOBILE NO</div>
                                    <div className="px-4 flex items-center font-bold">{student.contact}</div>
-                                </div>
-                                <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50">Student Name</div>
-                                   <div className="px-4 flex items-center font-bold uppercase">{student.name}</div>
                                 </div>
                              </div>
 
                              <div className="divide-y-2 divide-black">
                                 <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50">Receipt No</div>
+                                   <div className="px-4 flex items-center font-black bg-blue-50">RECEIPT NO</div>
                                    <div className="px-4 flex items-center font-bold uppercase">{showReceipt.receiptNo}</div>
                                 </div>
                                 <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50">Date / Time</div>
+                                   <div className="px-4 flex items-center font-black bg-blue-50">ENROLLMENT NO</div>
+                                   <div className="px-4 flex items-center font-bold uppercase">{student.enrollmentNo || 'N/A'}</div>
+                                </div>
+                                <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
+                                   <div className="px-4 flex items-center font-black bg-blue-50">DATE / TIME</div>
                                    <div className="px-4 flex items-center font-bold">
                                       {showReceipt.date} {showReceipt.collectionTime && `| ${showReceipt.collectionTime}`}
                                    </div>
                                 </div>
                                 <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50">Installment No</div>
+                                   <div className="px-4 flex items-center font-black bg-blue-50">INT. NUMBER</div>
                                    <div className="px-4 flex items-center font-bold uppercase">
                                       {(() => {
                                         const studentPayments = feePayments
@@ -827,12 +859,8 @@ export const FeeCollection = () => {
                                    </div>
                                 </div>
                                 <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50">Father's Name</div>
-                                   <div className="px-4 flex items-center font-bold uppercase">{student.fatherName}</div>
-                                </div>
-                                <div className="grid grid-cols-2 divide-x-2 divide-black h-10 bg-gray-50/10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50"></div>
-                                   <div className="px-4 flex items-center font-bold uppercase"></div>
+                                   <div className="px-4 flex items-center font-black bg-blue-50">ADMISSION DATE</div>
+                                   <div className="px-4 flex items-center font-bold uppercase">{student.admissionDate}</div>
                                 </div>
                              </div>
                           </div>
@@ -845,7 +873,7 @@ export const FeeCollection = () => {
                         <div className="bg-blue-600 text-white px-4 py-2 flex items-center mb-2">
                            <FileText size={14} className="mr-2" />
                            <span className="text-[10px] font-black uppercase tracking-widest">
-                              STUDENT FEE STATEMENT
+                              FEE COURSE SUMMARY
                            </span>
                         </div>
                         <table className="w-full border-t-[1.5px] border-l-[1.5px] border-black text-center text-[9px]">
@@ -853,15 +881,13 @@ export const FeeCollection = () => {
                               <tr className="bg-blue-50 divide-x-[1.5px] divide-black border-b-[1.5px] border-black font-black uppercase">
                                  <th className="py-2 min-w-[25px]">#</th>
                                  <th className="py-2 px-4 text-left">Fees Type</th>
-                                 <th className="py-2">Amount</th>
-                                 <th className="py-2">Discount</th>
-                                 <th className="py-2">Penalty</th>
-                                 <th className="py-2">Paid Amount</th>
+                                 <th className="py-2">Total Payable</th>
+                                 <th className="py-2">Disc.</th>
+                                 <th className="py-2">Pen.</th>
+                                 <th className="py-2">T.Paid</th>
                                  <th className="py-2">Balance</th>
-                                 <th className="py-2">Status</th>
+                                 <th className="py-2">Inst.No</th>
                                  <th className="py-2">Date</th>
-                                 <th className="py-2">Pay Mode</th>
-                                 <th className="py-2">Transaction ID</th>
                               </tr>
                            </thead>
                            <tbody className="divide-y-[1.5px] divide-black border-b-[1.5px] border-r-[1.5px] border-black font-bold uppercase">
@@ -875,16 +901,15 @@ export const FeeCollection = () => {
                                     <td className="py-2 text-emerald-700 font-black">₹{idx === 0 ? showReceipt.paidAmount.toFixed(2) : '0.00'}</td>
                                     <td className="py-2 text-red-600">₹{idx === 0 ? showReceipt.balance.toFixed(2) : '0.00'}</td>
                                     <td className="py-2">
-                                       <span className={clsx(
-                                          "px-2 py-0.5 rounded text-[8px] font-black uppercase text-white shadow-sm",
-                                          showReceipt.status === 'Paid' ? "bg-emerald-500" : "bg-red-500"
-                                       )}>
-                                          {showReceipt.status}
-                                       </span>
+                                       {(() => {
+                                         const studentPayments = feePayments
+                                           .filter(p => p.studentId === showReceipt.studentId)
+                                           .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                                         const instIdx = studentPayments.findIndex(p => p.id === showReceipt.id);
+                                         return instIdx !== -1 ? `${instIdx + 1}` : '--';
+                                       })()}
                                     </td>
                                     <td className="py-2">{showReceipt.date}</td>
-                                    <td className="py-2">{showReceipt.paymentMode}</td>
-                                    <td className="py-2">{showReceipt.transactionId || '--'}</td>
                                  </tr>
                               ))}
                            </tbody>
@@ -1020,7 +1045,7 @@ export const FeeCollection = () => {
       <style>{`
         @media print {
           @page {
-            size: A4;
+            size: A5 landscape;
             margin: 0;
           }
           body { 
@@ -1036,25 +1061,32 @@ export const FeeCollection = () => {
             left: 0 !important;
             top: 0 !important;
             width: 210mm !important;
-            height: 148.5mm !important; /* Half of A4 (297/2) */
+            height: 148mm !important;
             margin: 0 !important;
             padding: 5mm !important;
             display: flex !important;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
             overflow: hidden;
             box-sizing: border-box;
             background: white !important;
             z-index: 9999999;
           }
           #printable-receipt > div {
-             border: 2px solid black !important;
+             border: 1px solid black !important;
              height: 100% !important;
              overflow: hidden;
+             display: flex;
+             flex-direction: column;
           }
           #printable-receipt * { 
             visibility: visible !important; 
+            font-size: 10px !important;
           }
+          #printable-receipt h1 { font-size: 24px !important; }
+          #printable-receipt h2 { font-size: 16px !important; }
+          #printable-receipt th, #printable-receipt td { padding: 4px !important; }
+          
           .print\:hidden { display: none !important; }
           * {
             -webkit-print-color-adjust: exact !important;

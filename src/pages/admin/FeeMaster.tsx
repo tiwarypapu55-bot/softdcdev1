@@ -22,17 +22,19 @@ import {
   X,
   Save,
   Trash2,
-  Edit2
+  Edit2,
+  Layers
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx } from 'clsx';
 import { FeeStructure } from '../../types';
 
 export const FeeMaster = () => {
-  const { feeStructures, courses, addFeeStructure, updateFeeStructure, deleteFeeStructure } = useApp();
+  const { feeStructures, courses, addFeeStructure, updateFeeStructure, deleteFeeStructure, courseCategories } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
   const [sessionFilter, setSessionFilter] = useState('All');
+  const [categoryFilter, setCategoryFilter] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFee, setEditingFee] = useState<FeeStructure | null>(null);
   
@@ -94,11 +96,16 @@ export const FeeMaster = () => {
   };
 
   const filtered = feeStructures.filter(f => {
+    const course = courses.find(c => c.id === f.courseId || c.title === f.courseName);
     const matchesSearch = f.head.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           f.courseName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === 'All' || f.type === typeFilter;
     const matchesSession = sessionFilter === 'All' || f.session === sessionFilter;
-    return matchesSearch && matchesType && matchesSession;
+    const matchesCategory = categoryFilter === 'All' || 
+                           (f.courseId === 'all') ||
+                           (course && course.category === categoryFilter);
+    
+    return matchesSearch && matchesType && matchesSession && matchesCategory;
   });
 
   return (
@@ -172,6 +179,19 @@ export const FeeMaster = () => {
                </select>
             </div>
             <div className="flex items-center bg-white border border-[#F0F0F0] rounded-2xl px-4 py-2">
+               <Layers size={14} className="text-emerald-600 mr-2" />
+               <select 
+                 value={categoryFilter}
+                 onChange={(e) => setCategoryFilter(e.target.value)}
+                 className="bg-transparent border-none outline-none text-[10px] font-black uppercase tracking-widest cursor-pointer"
+               >
+                 <option value="All">All Categories</option>
+                 {courseCategories.map(cat => (
+                   <option key={cat.id} value={cat.name}>{cat.name}</option>
+                 ))}
+               </select>
+            </div>
+            <div className="flex items-center bg-white border border-[#F0F0F0] rounded-2xl px-4 py-2">
                <Calendar size={14} className="text-purple-600 mr-2" />
                <select 
                  value={sessionFilter}
@@ -194,6 +214,7 @@ export const FeeMaster = () => {
             <thead>
               <tr className="bg-gray-50/50 border-b border-[#F0F0F0]">
                  <th className="px-8 py-6 text-[9px] font-black text-[#888888] uppercase tracking-widest">Fee Head</th>
+                 <th className="px-8 py-6 text-[9px] font-black text-[#888888] uppercase tracking-widest">Category</th>
                  <th className="px-8 py-6 text-[9px] font-black text-[#888888] uppercase tracking-widest">Course</th>
                  <th className="px-8 py-6 text-[9px] font-black text-[#888888] uppercase tracking-widest">Amount</th>
                  <th className="px-8 py-6 text-[9px] font-black text-[#888888] uppercase tracking-widest">Discount</th>
@@ -213,6 +234,11 @@ export const FeeMaster = () => {
                           <span className="text-[8px] font-black text-[#888888] uppercase tracking-widest">{fee.frequency}</span>
                        </div>
                     </div>
+                  </td>
+                  <td className="px-8 py-6">
+                    <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                      {courses.find(c => c.id === fee.courseId || c.title === fee.courseName)?.category || 'General'}
+                    </span>
                   </td>
                   <td className="px-8 py-6 font-bold text-[10px] text-blue-600 uppercase tracking-tight">{fee.courseName}</td>
                   <td className="px-8 py-6 text-xs font-black text-[#141414]">₹{fee.amount.toLocaleString()}</td>

@@ -26,7 +26,8 @@ import {
   CreditCard,
   Printer,
   FileText,
-  Award
+  Award,
+  MessageCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx } from 'clsx';
@@ -109,9 +110,14 @@ export const StudentDirectory = () => {
   };
 
   const handleView = (student: Student) => {
-    setStudentToPrint(student);
-    setViewType('VIEW');
-    setShowPrintModal(true);
+    const prefix = currentUser?.role === 'FRANCHISE' ? '/franchise' : '/admin';
+    navigate(`${prefix}/students/${student.id}`);
+  };
+
+  const sendWhatsApp = (student: Student) => {
+    const message = `*HELLO ${student.name}*\n\nHow can we help you today?\n\n_SOFTDEV TALLY GURU_`;
+    const encodedMessage = encodeURIComponent(message);
+    window.open(`https://wa.me/91${student.contact.replace(/\D/g, '')}?text=${encodedMessage}`, '_blank');
   };
 
   const filteredStudents = students.filter(s => {
@@ -120,9 +126,11 @@ export const StudentDirectory = () => {
       return false;
     }
 
+    const franchise = franchises.find(f => f.id === s.franchiseId);
     const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          s.admissionNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         s.enrollmentNo.toLowerCase().includes(searchTerm.toLowerCase());
+                         (s.enrollmentNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (franchise && franchise.name.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesBranch = filterBranch === 'ALL' || s.franchiseId === filterBranch;
     const matchesCourse = filterCourse === 'ALL' || s.course === filterCourse;
@@ -275,6 +283,13 @@ export const StudentDirectory = () => {
                   </td>
                   <td className="px-6 py-5">
                      <div className="flex items-center space-x-1">
+                        <button 
+                           onClick={() => sendWhatsApp(student)}
+                           className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                           title="Send WhatsApp Message"
+                        >
+                           <MessageCircle size={14} />
+                        </button>
                         {currentUser?.role === 'FRANCHISE' && (
                            <button 
                              onClick={() => student.certificateStatus === 'APPLIED' || student.certificateStatus === 'ISSUED' ? alert('Certificate already applied or issued for this student.') : handleApplyCertificate(student)}
@@ -297,6 +312,13 @@ export const StudentDirectory = () => {
                               <CreditCard size={14} />
                            </button>
                         )}
+                        <button 
+                           onClick={() => sendWhatsApp(student)}
+                           className="p-2 text-[#25D366] hover:bg-[#25D366] hover:text-white rounded-lg transition-all"
+                           title="Send WhatsApp Message"
+                        >
+                           <MessageCircle size={14} />
+                        </button>
                         <button 
                            onClick={() => handleView(student)}
                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
@@ -493,7 +515,9 @@ export const StudentDirectory = () => {
                        <div className="flex flex-col items-center">
                          <p className="text-[10px] font-bold text-gray-800">An ISO 9001 : 2015 Certified Institute</p>
                          <p className="text-[11px] font-black text-emerald-700">बस्ती मंडल का नं. 1 कंप्यूटर ट्रेनिंग इंस्टिट्यूट</p>
-                         <h1 className="text-4xl font-black text-red-600 tracking-tight uppercase leading-none mt-1">{franchises.find(f => f.id === currentUser?.franchiseId)?.name || businessProfile.name || "SOFTDEV TALLY GURU"}</h1>
+                                                   <h1 className="text-4xl font-black text-red-600 tracking-tight uppercase leading-none mt-1">
+                            {franchises.find(f => f.id === studentToPrint.franchiseId)?.name || businessProfile.name || "SOFTDEV TALLY GURU"}
+                          </h1>
                          <div className="bg-indigo-900/5 px-4 py-1 rounded text-[8px] font-bold text-indigo-900 border border-indigo-900/10 mt-1">
                              [ RUN UNDER : SOFTDEV TALLY GURU PRASHIKSHAN SANSTHAN SOCIETY ] [ REG No. : G-58913 / 1442 ]
                          </div>

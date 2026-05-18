@@ -11,7 +11,8 @@ import {
   Clock, 
   MessageSquare,
   ArrowUpRight,
-  UserPlus
+  UserPlus,
+  MessageCircle
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -63,6 +64,12 @@ export const AdmissionEnquiries = () => {
         convertedFromInquiryId: enquiry.id
       }
     });
+  };
+
+  const sendWhatsApp = (enquiry: AdmissionEnquiry) => {
+    const message = `*HELLO ${enquiry.name}*\n\nThank you for your enquiry at *SOFTDEV TALLY GURU* regarding *${enquiry.course}*.\n\nHow can we help you today?`;
+    const encodedMessage = encodeURIComponent(message);
+    window.open(`https://wa.me/91${enquiry.phone.replace(/\D/g, '')}?text=${encodedMessage}`, '_blank');
   };
 
   return (
@@ -140,6 +147,16 @@ export const AdmissionEnquiries = () => {
                       </div>
                    </div>
                    <div className="flex items-center space-x-4">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          sendWhatsApp(enquiry);
+                        }}
+                        className="p-3 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                        title="WhatsApp Lead"
+                      >
+                        <MessageCircle size={18} />
+                      </button>
                       <button className="p-3 bg-gray-50 text-gray-400 rounded-xl group-hover:bg-blue-50 group-hover:text-blue-600 transition-all">
                          <ArrowUpRight size={18} />
                       </button>

@@ -93,6 +93,18 @@ export const BusinessProfile = () => {
     }
   };
 
+  const handleReceiptHeaderUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const compressed = await compressImage(reader.result as string, 1200, 0.6, 'image/jpeg');
+        setFormData(prev => ({ ...prev, receiptHeaderUrl: compressed }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -408,36 +420,36 @@ export const BusinessProfile = () => {
                    <h4 className="text-sm font-black text-[#141414] uppercase tracking-tight">Receipt Header Image</h4>
                    <p className="text-xs text-[#888888] font-medium leading-relaxed">This image will appear at the very top of all fee receipts. Best if pre-designed with logo & address.</p>
                 </div>
-                <button 
+                 <button 
                   type="button"
-                  onClick={() => headerInputRef.current?.click()}
+                  onClick={() => receiptHeaderInputRef.current?.click()}
                   className="px-6 py-2 bg-purple-600 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-purple-700 transition-all shadow-lg shadow-purple-500/20"
                 >
-                  {formData.headerImageUrl ? 'Replace Header' : 'Upload Header'}
+                  {formData.receiptHeaderUrl ? 'Replace Header' : 'Upload Header'}
                 </button>
                 <input 
                   type="file" 
-                  ref={headerInputRef} 
-                  onChange={handleHeaderUpload} 
+                  ref={receiptHeaderInputRef} 
+                  onChange={handleReceiptHeaderUpload} 
                   className="hidden" 
                   accept="image/*"
                 />
               </div>
 
-              {formData.headerImageUrl ? (
+              {formData.receiptHeaderUrl ? (
                 <div className="relative group rounded-2xl overflow-hidden border border-gray-100 bg-gray-50">
-                  <img src={formData.headerImageUrl} alt="Header Preview" className="w-full h-auto max-h-48 object-contain mx-auto" />
+                  <img src={formData.receiptHeaderUrl} alt="Header Preview" className="w-full h-auto max-h-48 object-contain mx-auto" />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity space-x-4">
                     <button 
-                      type="button"
-                      onClick={() => headerInputRef.current?.click()}
+                      type="button" 
+                      onClick={() => receiptHeaderInputRef.current?.click()}
                       className="p-3 bg-white text-[#141414] rounded-full shadow-xl hover:scale-110 transition-transform"
                     >
                       <Upload size={20} />
                     </button>
                     <button 
                       type="button"
-                      onClick={() => setFormData({ ...formData, headerImageUrl: '' })}
+                      onClick={() => setFormData({ ...formData, receiptHeaderUrl: '' })}
                       className="p-3 bg-red-600 text-white rounded-full shadow-xl hover:scale-110 transition-transform"
                     >
                       <X size={20} />
@@ -446,7 +458,7 @@ export const BusinessProfile = () => {
                 </div>
               ) : (
                 <div 
-                  onClick={() => headerInputRef.current?.click()}
+                  onClick={() => receiptHeaderInputRef.current?.click()}
                   className="w-full h-32 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-gray-400 hover:border-blue-600 hover:text-blue-600 transition-all cursor-pointer"
                 >
                   <ImageIcon size={32} />

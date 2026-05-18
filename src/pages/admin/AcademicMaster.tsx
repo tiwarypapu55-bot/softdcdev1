@@ -17,7 +17,8 @@ import {
   CheckCircle2,
   ListPlus,
   X,
-  Star
+  Star,
+  Search
 } from 'lucide-react';
 import { AcademicSession, CourseCategory, Program } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -31,12 +32,12 @@ export const AcademicMaster = () => {
   const [activeTab, setActiveTab] = useState<TabType>('SESSION');
 
   const tabs = [
-    { id: 'SESSION', name: 'Academic Session', icon: Calendar },
-    { id: 'CATEGORY', name: 'Category', icon: Layers },
-    { id: 'COURSE', name: 'Course', icon: BookOpen },
-    { id: 'SUBJECT', name: 'Subject', icon: Book },
-    { id: 'PROGRAM', name: 'Add Program', icon: ListPlus },
-    { id: 'SETTING', name: 'Course Setting', icon: Settings },
+    { id: 'SESSION', name: 'Sessions', icon: Calendar },
+    { id: 'CATEGORY', name: 'Course Categories', icon: Layers },
+    { id: 'COURSE', name: 'Course Master', icon: BookOpen },
+    { id: 'SUBJECT', name: 'Subject Matrix', icon: Book },
+    { id: 'PROGRAM', name: 'Combo Programs', icon: ListPlus },
+    { id: 'SETTING', name: 'Masters Setting', icon: Settings },
   ];
 
   return (
@@ -308,6 +309,7 @@ const SessionManager = ({ isViewOnly }: { isViewOnly: boolean }) => {
 const CategoryManager = ({ isViewOnly }: { isViewOnly: boolean }) => {
   const { courseCategories, addCourseCategory, deleteCourseCategory, updateCourseCategory, courses } = useApp();
   const [showModal, setShowModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [editingCat, setEditingCat] = useState<CourseCategory | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -361,22 +363,39 @@ const CategoryManager = ({ isViewOnly }: { isViewOnly: boolean }) => {
     setShowModal(false);
   };
 
+  const filtered = courseCategories.filter(cat => 
+    cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (cat.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h3 className="text-lg font-black text-[#141414]">Course Categories</h3>
-        {!isViewOnly && (
-          <button 
-            onClick={() => handleOpen()}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white text-[10px] font-bold rounded-lg uppercase tracking-widest shadow-lg shadow-blue-100"
-          >
-            <Plus size={14} />
-            <span>New Category</span>
-          </button>
-        )}
+        <div className="flex items-center space-x-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+            <input 
+              type="text" 
+              placeholder="Search category..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-600 shadow-sm"
+            />
+          </div>
+          {!isViewOnly && (
+            <button 
+              onClick={() => handleOpen()}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white text-[10px] font-bold rounded-lg uppercase tracking-widest shadow-lg shadow-blue-100 whitespace-nowrap"
+            >
+              <Plus size={14} />
+              <span>New Category</span>
+            </button>
+          )}
+        </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {courseCategories.map((cat, idx) => (
+        {filtered.map((cat, idx) => (
           <div key={cat.id || `cat-${idx}`} className="bg-[#FBFBFB] border border-[#F0F0F0] rounded-2xl overflow-hidden group">
             {cat.bannerUrl ? (
               <img src={cat.bannerUrl} alt={cat.name} className="w-full h-24 object-cover" />
@@ -418,7 +437,7 @@ const CategoryManager = ({ isViewOnly }: { isViewOnly: boolean }) => {
               </div>
               <p className="text-sm font-black text-[#141414]">{cat.name}</p>
               <p className="text-[10px] text-[#888888] mt-1 font-bold">
-                {courses.filter(c => c.category === cat.name).length} Courses Included
+                {courses.filter(c => c.category?.trim().toLowerCase() === cat.name?.trim().toLowerCase()).length} Courses Included
               </p>
             </div>
           </div>
@@ -510,6 +529,7 @@ const CategoryManager = ({ isViewOnly }: { isViewOnly: boolean }) => {
 const CourseManager = ({ isViewOnly }: { isViewOnly: boolean }) => {
   const { courses, addCourse, updateCourse, deleteCourse, courseCategories } = useApp();
   const [showModal, setShowModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [editingCourse, setEditingCourse] = useState<any>(null);
   const [formData, setFormData] = useState({
     title: '',
@@ -566,19 +586,36 @@ const CourseManager = ({ isViewOnly }: { isViewOnly: boolean }) => {
     setShowModal(false);
   };
 
+  const filtered = courses.filter(course => 
+    course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    course.category.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h3 className="text-lg font-black text-[#141414]">Academic Courses</h3>
-        {!isViewOnly && (
-          <button 
-            onClick={() => handleOpen()}
-            className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 text-white text-[10px] font-bold rounded-lg uppercase tracking-widest shadow-lg shadow-emerald-100"
-          >
-            <Plus size={14} />
-            <span>New Course</span>
-          </button>
-        )}
+        <div className="flex items-center space-x-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+            <input 
+              type="text" 
+              placeholder="Search course..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-600 shadow-sm"
+            />
+          </div>
+          {!isViewOnly && (
+            <button 
+              onClick={() => handleOpen()}
+              className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 text-white text-[10px] font-bold rounded-lg uppercase tracking-widest shadow-lg shadow-emerald-100 whitespace-nowrap"
+            >
+              <Plus size={14} />
+              <span>New Course</span>
+            </button>
+          )}
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left">
@@ -593,7 +630,7 @@ const CourseManager = ({ isViewOnly }: { isViewOnly: boolean }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#F0F0F0]">
-            {courses.map((course) => (
+            {filtered.map((course) => (
               <tr key={course.id} className="group">
                 <td className="py-4">
                   {course.imageUrl ? (
@@ -690,6 +727,9 @@ const CourseManager = ({ isViewOnly }: { isViewOnly: boolean }) => {
                     >
                       <option value="">Select Category</option>
                       {courseCategories.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
+                      {formData.category && !courseCategories.find(c => c.name === formData.category) && (
+                        <option value={formData.category}>{formData.category} (Current)</option>
+                      )}
                     </select>
                   </div>
                   <div className="space-y-2">

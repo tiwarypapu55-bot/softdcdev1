@@ -58,6 +58,7 @@ export const Accounts = () => {
     ? businessTransactions.filter(t => t.referenceId === myFranchiseId)
     : businessTransactions;
 
+const [ledgerSearch, setLedgerSearch] = useState('');
   const [filterType, setFilterType] = useState<'ALL' | 'INCOME' | 'EXPENSE'>('ALL');
   const [showAddModal, setShowAddModal] = useState(false);
   const [transactionType, setTransactionType] = useState<'INCOME' | 'EXPENSE'>('INCOME');
@@ -188,8 +189,14 @@ export const Accounts = () => {
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const filteredActivities = recentActivities.filter(a => {
-    if (filterType === 'ALL') return true;
-    return a.type === filterType;
+    const matchesType = filterType === 'ALL' || a.type === filterType;
+    const matchesSearch = 
+      a.description.toLowerCase().includes(ledgerSearch.toLowerCase()) ||
+      a.category.toLowerCase().includes(ledgerSearch.toLowerCase()) ||
+      a.mode.toLowerCase().includes(ledgerSearch.toLowerCase()) ||
+      a.amount.toString().includes(ledgerSearch);
+    
+    return matchesType && matchesSearch;
   });
 
   const filteredVouchers = vouchers.filter(v => 
@@ -567,6 +574,8 @@ export const Accounts = () => {
                 <input 
                   type="text" 
                   placeholder="Search ledger..." 
+                  value={ledgerSearch}
+                  onChange={(e) => setLedgerSearch(e.target.value)}
                   className="pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none text-[10px] font-black uppercase tracking-widest w-64 focus:ring-2 focus:ring-blue-600"
                 />
              </div>

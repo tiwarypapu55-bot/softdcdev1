@@ -35,8 +35,10 @@ export const StudentLedger = () => {
   const filteredStudents = students.filter(s => {
     if (currentUser?.role === 'FRANCHISE' && s.franchiseId !== currentUser.franchiseId) return false;
     
+    const franchise = franchises.find(f => f.id === s.franchiseId);
     const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         s.admissionNo.toLowerCase().includes(searchTerm.toLowerCase());
+                         s.admissionNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (franchise && franchise.name.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesBranch = filterBranch === 'ALL' || s.franchiseId === filterBranch;
     
     return matchesSearch && matchesBranch;
@@ -249,7 +251,7 @@ export const StudentLedger = () => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input 
             type="text" 
-            placeholder="Search by student name or roll no..." 
+            placeholder="Search by name, roll no or branch..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-12 pr-4 py-4 bg-white border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold"

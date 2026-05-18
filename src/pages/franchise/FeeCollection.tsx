@@ -59,7 +59,7 @@ export const FeeCollection = () => {
   // Filter students by franchise
   const franchiseStudents = students.filter(s => s.franchiseId === currentUser?.franchiseId);
 
-  const filteredStudents = (searchTerm.length > 2 || filterCourse !== 'ALL')
+  const filteredStudents = (searchTerm.length > 0 || filterCourse !== 'ALL')
     ? franchiseStudents.filter(s => {
         const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                              s.admissionNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -159,6 +159,32 @@ export const FeeCollection = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
+      <style>{`
+        @media print {
+          @page {
+            size: A5 landscape;
+            margin: 0;
+          }
+          body * {
+            visibility: hidden;
+          }
+          #printable-receipt, #printable-receipt * {
+            visibility: visible;
+          }
+          #printable-receipt {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 210mm;
+            height: 148mm;
+            padding: 10mm;
+            background: white !important;
+          }
+          .print\\:hidden {
+            display: none !important;
+          }
+        }
+      `}</style>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-8">
         <div>
           <h1 className="text-3xl font-black text-[#141414] tracking-tight uppercase">Fee Collection</h1>
@@ -191,7 +217,7 @@ export const FeeCollection = () => {
               >
                 <option value="ALL">All Courses</option>
                 {courses.map(c => (
-                  <option key={c.id} value={c.name}>{c.name}</option>
+                  <option key={c.id} value={c.title}>{c.title}</option>
                 ))}
               </select>
             </div>

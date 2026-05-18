@@ -178,6 +178,12 @@ export interface Student {
   feeStatus: 'PAID' | 'PARTIAL' | 'PENDING';
   kycStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
   kycDocs: DocumentRecord[];
+  documents?: {
+    id: string;
+    type: string;
+    url: string;
+    name: string;
+  }[];
   totalFees: number;
   paidAmount: number;
   certificateStatus?: 'NOT_APPLIED' | 'APPLIED' | 'ISSUED';
