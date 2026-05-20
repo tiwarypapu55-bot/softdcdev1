@@ -32,6 +32,63 @@
   }
 }
 
+/* Exquisite Peach Theme Overrides for #141414 dark backgrounds */
+@layer utilities {
+  .bg-\[\#141414\],
+  .bg-\[\#141414\/90\],
+  .bg-\[\#141414\/80\],
+  .bg-\[\#141414\/60\] {
+    background: radial-gradient(circle at center, #FFF5F2 0%, #FFD1BF 60%, #FBC4B2 100%) !important;
+    color: #4F2516 !important;
+    border: 1px solid rgba(251, 196, 178, 0.5) !important;
+  }
+
+  /* Text color fixes inside newly light-peach containers */
+  .bg-\[\#141414\] h1, .bg-\[\#141414\] h2, .bg-\[\#141414\] h3, .bg-\[\#141414\] h4, .bg-\[\#141414\] h5, .bg-\[\#141414\] p, .bg-\[\#141414\] span, .bg-\[\#141414\] div,
+  .bg-\[\#141414\/90\] h1, .bg-\[\#141414\/90\] h2, .bg-\[\#141414\/90\] h3, .bg-\[\#141414\/90\] p, .bg-\[\#141414\/90\] span,
+  .bg-\[\#141414\/80\] h1, .bg-\[\#141414\/80\] h2, .bg-\[\#141414\/80\] h3, .bg-\[\#141414\/80\] p, .bg-\[\#141414\/80\] span,
+  .bg-\[\#141414\/60\] h1, .bg-\[\#141414\/60\] h2, .bg-\[\#141414\/60\] h3, .bg-\[\#141414\/60\] p, .bg-\[\#141414\/60\] span {
+    color: #4F2516 !important;
+  }
+
+  .bg-\[\#141414\] .text-white, .bg-\[\#141414\] .text-slate-100, .bg-\[\#141414\] .text-gray-100 {
+    color: #4F2516 !important;
+  }
+
+  .bg-\[\#141414\] .text-white\/60,
+  .bg-\[\#141414\] .text-white\/70,
+  .bg-\[\#141414\] .text-white\/80,
+  .bg-\[\#141414\] .text-gray-400,
+  .bg-\[\#141414\] .text-slate-400 {
+    color: rgba(79, 37, 22, 0.7) !important;
+  }
+
+  /* Support for sub-cards inside custom banners */
+  .bg-\[\#141414\] .bg-white\/5,
+  .bg-\[\#141414\/90\] .bg-white\/5 {
+    background-color: rgba(255, 255, 255, 0.55) !important;
+    border-color: rgba(251, 196, 178, 0.6) !important;
+  }
+
+  .bg-\[\#141414\] .bg-white\/5 *,
+  .bg-\[\#141414\/90\] .bg-white\/5 * {
+    color: #4F2516 !important;
+  }
+
+  /* Icon support inside peach containers */
+  .bg-\[\#141414\] svg,
+  .bg-\[\#141414\/90\] svg,
+  .bg-\[\#141414\/80\] svg,
+  .bg-\[\#141414\/60\] svg {
+    stroke: #4F2516 !important;
+  }
+
+  /* Glow decorative blur rings over peach background should match */
+  .bg-\[\#141414\] .bg-blue-600\/10 {
+    background-color: rgba(255, 255, 255, 0.4) !important;
+  }
+}
+
 @media print {
   body {
     background: white !important;
