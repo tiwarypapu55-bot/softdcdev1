@@ -29,6 +29,7 @@ import { useApp } from '../../context/AppContext';
 import { Student } from '../../types';
 import { motion } from 'motion/react';
 import { clsx } from 'clsx';
+import { QRCodeSVG } from 'qrcode.react';
 
 export const DocumentVerification = () => {
   const { students, updateStudent } = useApp();
@@ -369,10 +370,11 @@ export const DocumentVerification = () => {
 
 export const CertificateStudio = () => {
   const navigate = useNavigate();
-  const { certificates, students, courses } = useApp();
+  const { certificates, students, courses, businessProfile } = useApp();
   const [selectedStudentId, setSelectedStudentId] = React.useState(students[0]?.id || '');
   const selectedStudent = students.find(s => s.id === selectedStudentId);
   const pendingCerts = students.filter(s => s.certificateStatus === 'APPLIED').length;
+  const [activeTemplate, setActiveTemplate] = React.useState('stg-official');
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
@@ -414,46 +416,189 @@ export const CertificateStudio = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
          <div className="lg:col-span-8 space-y-8">
             <div className="bg-white p-12 rounded-[3.5rem] border border-gray-100 shadow-2xl relative aspect-[1.414/1] overflow-hidden group">
-               <div className="absolute inset-0 border-[24px] border-[#DEB887] m-4"></div>
-               <div className="absolute inset-0 border-2 border-dashed border-[#DEB887]/20 m-12"></div>
-               
-               <div className="relative z-10 h-full flex flex-col items-center justify-center space-y-8 text-center">
-                  <div className="w-24 h-24 bg-gold-gradient rounded-full flex items-center justify-center opacity-40">
-                     <Award size={48} className="text-[#DEB887]" />
+               {activeTemplate === 'stg-official' ? (
+                  /* RENDERS THE HIGHLY ANTICIPATED IMAGE BRAND CERTIFICATE! */
+                  <div className="absolute inset-0 border-[4px] border-amber-500/70 p-2 bg-white relative flex flex-col justify-between h-full select-none overflow-hidden">
+                     {/* Outer navy border inset */}
+                     <div className="absolute inset-2 border-[12px] border-[#112D55] pointer-events-none rounded-sm"></div>
+                     {/* Thin gold hairline inside border list */}
+                     <div className="absolute inset-[22px] border border-amber-400/40 pointer-events-none"></div>
+
+                     {/* Secure safety background pattern */}
+                     <div className="absolute inset-[24px] bg-[radial-gradient(#112d5503_1.5px,transparent_1.5px)] [background-size:24px_24px] pointer-events-none"></div>
+                     
+                     {/* Centered Watermark Logo */}
+                     <div 
+                       className="absolute inset-[24px] bg-center bg-no-repeat bg-contain opacity-[0.06] pointer-events-none"
+                       style={{ 
+                         backgroundImage: `url(${businessProfile.logoUrl || "https://firebasestorage.googleapis.com/v0/b/ais-dev-pzzj54zbvfrllp25htfrww.appspot.com/o/softdev_logo.png?alt=media&token=48c0b58e-7e9b-46a2-97b7-54324f331777"})`,
+                         backgroundSize: '35%' 
+                       }}
+                     />
+
+                     {/* Decorative Corner Ornaments */}
+                     <div className="absolute top-[28px] left-[28px] w-10 h-10 border-t-4 border-l-4 border-amber-500/60 rounded-tl-[4px] pointer-events-none"></div>
+                     <div className="absolute top-[28px] right-[28px] w-10 h-10 border-t-4 border-r-4 border-amber-500/60 rounded-tr-[4px] pointer-events-none"></div>
+                     <div className="absolute bottom-[28px] left-[28px] w-10 h-10 border-b-4 border-l-4 border-amber-500/60 rounded-bl-[4px] pointer-events-none"></div>
+                     <div className="absolute bottom-[28px] right-[28px] w-10 h-10 border-b-4 border-r-4 border-amber-500/60 rounded-br-[4px] pointer-events-none"></div>
+
+                     <div className="text-center pt-6 px-6 space-y-1 relative z-10">
+                       {/* Top Centered Brand Logo */}
+                       <div className="flex justify-center items-center mb-1">
+                         <div className="w-14 h-14 bg-white rounded-full p-1 shadow-md border border-amber-500 flex items-center justify-center overflow-hidden">
+                           <img 
+                             src={businessProfile.logoUrl || "https://firebasestorage.googleapis.com/v0/b/ais-dev-pzzj54zbvfrllp25htfrww.appspot.com/o/softdev_logo.png?alt=media&token=48c0b58e-7e9b-46a2-97b7-54324f331777"} 
+                             alt="Softdev GURU Logo" 
+                             className="w-full h-full object-contain" 
+                             referrerPolicy="no-referrer"
+                           />
+                         </div>
+                       </div>
+
+                       <h1 className="text-2xl font-extrabold text-[#112D55] tracking-wide text-center uppercase leading-none font-sans drop-shadow-xs">
+                         {businessProfile.name || 'SOFTDEV TALLY GURU'}
+                       </h1>
+                       <p className="text-[7px] font-bold text-gray-500 tracking-wider text-center uppercase max-w-xl mx-auto leading-tight">
+                         {businessProfile.address || 'Near Mahila Degree College, Companybagh Basti (Uttar Pradesh) India - 272001'}
+                       </p>
+                       
+                       <div className="flex items-center justify-center gap-2 mt-0.5">
+                         <span className="text-[7px] font-bold bg-[#112D55]/10 text-[#112D55] px-2 py-0.5 rounded font-mono">Reg. No: {businessProfile.regNo || 'G-58913 / 1442'}</span>
+                         <span className="w-1 h-1 rounded-full bg-amber-500"></span>
+                         <span className="text-[7px] font-bold bg-[#112D55]/10 text-[#112D55] px-2 py-0.5 rounded font-mono">An ISO 9001:2015 Approved Institute</span>
+                       </div>
+
+                       <div className="relative my-2 flex items-center justify-center">
+                         <div className="h-[1px] bg-gradient-to-r from-transparent via-[#112D55]/50 to-transparent w-full absolute" />
+                         <span className="relative bg-white px-4 py-0.5 text-[8px] font-black text-amber-600 border border-amber-500/35 rounded-full uppercase tracking-[0.2em] shadow-xs">
+                           COMPUTER TRAINING INSTITUTE CERTIFICATE
+                         </span>
+                       </div>
+                     </div>
+
+                     <div className="py-1 px-8 text-center text-gray-800 relative z-10 leading-[2.2] text-[10px] max-w-2xl mx-auto font-medium">
+                       <p className="text-center font-sans">
+                         Certified that Shri/Smt &nbsp;
+                         <span className="font-extrabold text-[#112D55] border-b-[1.5px] border-dotted border-black px-2 inline-block min-w-[120px] text-center text-[11px]">
+                           {selectedStudent?.name || 'Rajat Sahu'}
+                         </span>
+                         ,&nbsp; Son/Daughter of Shri/Smt &nbsp;
+                         <span className="font-extrabold text-[#112D55] border-b-[1.5px] border-dotted border-black px-2 inline-block min-w-[120px] text-center text-[11px]">
+                           {selectedStudent?.fatherName || 'Ajay Kumar Sahu'}
+                         </span>
+                         ,&nbsp; has successfully completed the &nbsp;
+                         <span className="font-extrabold text-[#112D55] border-b-[1.5px] border-dotted border-black px-2 inline-block min-w-[80px] text-center text-[11px]">
+                           Certificate
+                         </span>
+                         &nbsp; course in &nbsp;
+                         <span className="font-extrabold text-amber-700 border-b-[1.5px] border-dotted border-black px-2 inline-block min-w-[180px] text-center text-[11px]">
+                           {selectedStudent?.course || 'Tally Prime Expert'}
+                         </span>
+                         &nbsp; of &nbsp;
+                         <span className="font-extrabold text-[#112D55] border-b-[1.5px] border-dotted border-black px-2 inline-block min-w-[50px] text-center text-[11px]">
+                           {selectedStudent?.courseDuration ? (selectedStudent.courseDuration.toLowerCase().includes('six') || selectedStudent.courseDuration.includes('6') ? 'Six' : 'Three') : 'Three'}
+                         </span>
+                         &nbsp; months duration from &nbsp;
+                         <span className="font-extrabold text-[#112D55] border-b-[1.5px] border-dotted border-black px-2 inline-block min-w-[80px] text-center text-[11px]">
+                           {selectedStudent?.admissionDate ? new Date(selectedStudent.admissionDate).toLocaleDateString(undefined, {month: 'short', year:'numeric'}).replace(' ', '-') : 'Apr-2026'}
+                         </span>
+                         &nbsp; to &nbsp;
+                         <span className="font-extrabold text-[#112D55] border-b-[1.5px] border-dotted border-black px-2 inline-block min-w-[80px] text-center text-[11px]">
+                           Oct-2026
+                         </span>
+                         &nbsp; with grade &nbsp;
+                         <span className="font-extrabold text-[#112D55] border-b-[1.5px] border-dotted border-black px-2 inline-block min-w-[40px] text-center text-[11px]">
+                           A
+                         </span>
+                         .
+                       </p>
+                     </div>
+
+                     <div className="flex justify-between items-end relative z-10 pb-4 px-8">
+                       {/* Left QR Code Container */}
+                       <div className="space-y-1 flex flex-col items-center">
+                         <div className="p-1 bg-white border border-gray-100 rounded-lg shadow-md scale-95">
+                           <QRCodeSVG 
+                             value={`${window.location.origin}/verify/STG-PREVIEW`} 
+                             size={56} 
+                           />
+                         </div>
+                         <span className="text-[6px] font-black tracking-widest text-[#112D55] uppercase">Verify Credential</span>
+                       </div>
+
+                       {/* Center Gold Stamp Seal */}
+                       <div className="flex flex-col items-center justify-center relative translate-y-1 scale-90">
+                         <div className="w-14 h-14 bg-gradient-to-tr from-amber-600 via-yellow-400 to-amber-500 rounded-full flex items-center justify-center shadow-md relative border-2 border-double border-amber-100">
+                           <div className="absolute inset-[2px] rounded-full border border-dashed border-white/50 flex flex-col items-center justify-center text-center">
+                             <span className="text-[5px] font-black tracking-tight text-amber-950 uppercase leading-none">STG</span>
+                             <span className="text-[4px] font-black tracking-widest text-white uppercase mt-0.5">SECURE</span>
+                           </div>
+                         </div>
+                       </div>
+
+                       {/* Right Authorized Signatory with handwritten signature fallback */}
+                       <div className="text-right space-y-1 relative min-w-[140px]">
+                         <div className="h-8 flex flex-col justify-end items-end relative overflow-visible">
+                           {businessProfile.signatureUrl ? (
+                             <img 
+                               src={businessProfile.signatureUrl} 
+                               alt="Director Signature" 
+                               className="h-8 object-contain mix-blend-multiply drop-shadow-xs z-10"
+                               referrerPolicy="no-referrer"
+                             />
+                           ) : (
+                             <span className="font-serif italic text-blue-700 text-sm tracking-wide z-10 translate-y-1 rotate-[-5deg] select-none opacity-90 block">
+                               {businessProfile.directorName || 'Director'}
+                             </span>
+                           )}
+                           {/* Signature line alignment */}
+                           <div className="w-28 h-[1px] bg-[#112D55]/50 mt-1" />
+                         </div>
+                         <p className="text-[7px] font-bold text-gray-500 uppercase tracking-widest leading-none mr-1">Authorized Signatory</p>
+                         <p className="text-[8px] font-black text-gray-800 uppercase tracking-widest leading-none mr-1">{businessProfile.name || 'SOFTDEV TALLY GURU'}</p>
+                       </div>
+                     </div>
                   </div>
-                  
-                  <div className="space-y-2">
-                     <h2 className="text-[12px] font-serif font-bold uppercase tracking-[0.4em] text-[#DEB887]">Certificate of Completion</h2>
-                     <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Proudly Presented To</p>
+               ) : (
+                  /* Classic Gold Template */
+                  <div className="relative z-10 h-full flex flex-col items-center justify-center space-y-8 text-center">
+                     <div className="w-24 h-24 bg-gold-gradient rounded-full flex items-center justify-center opacity-40">
+                        <Award size={48} className="text-[#DEB887]" />
+                     </div>
+                     
+                     <div className="space-y-2">
+                        <h2 className="text-[12px] font-serif font-bold uppercase tracking-[0.4em] text-[#DEB887]">Certificate of Completion</h2>
+                        <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Proudly Presented To</p>
+                     </div>
+                     
+                     <h3 className="text-4xl font-serif italic text-gray-900 border-b border-gray-200 pb-2 min-w-[300px]">
+                       {selectedStudent?.name || 'Candidate Name'}
+                     </h3>
+                     
+                     <div className="max-w-md space-y-2">
+                        <p className="text-[10px] font-medium text-gray-500 leading-relaxed uppercase tracking-tighter">
+                           for successfully completing the advanced certification program in
+                        </p>
+                        <p className="text-lg font-black text-[#141414] uppercase tracking-tight italic bg-blue-50 px-4 py-1 rounded inline-block">
+                           {selectedStudent?.course || 'Selected Course Curriculum'}
+                        </p>
+                     </div>
+                     
+                     <div className="absolute bottom-20 left-20 text-left">
+                        <div className="w-32 h-[1px] bg-gray-300 mb-2"></div>
+                        <p className="text-[8px] font-black uppercase tracking-widest text-gray-400">Date Issued</p>
+                        <p className="text-[10px] font-bold text-gray-700 uppercase tracking-tighter">
+                          {selectedStudent?.admissionDate ? new Date(selectedStudent.admissionDate).toLocaleDateString() : 'Issued Date'}
+                        </p>
+                     </div>
+                     
+                     <div className="absolute bottom-20 right-20 text-right">
+                        <div className="w-32 h-[1px] bg-gray-300 mb-2"></div>
+                        <p className="text-[8px] font-black uppercase tracking-widest text-gray-400">Authorized Director</p>
+                        <p className="text-[10px] font-bold text-gray-700 uppercase tracking-tighter italic font-serif">Director, STG Institute</p>
+                     </div>
                   </div>
-                  
-                  <h3 className="text-4xl font-serif italic text-gray-900 border-b border-gray-200 pb-2 min-w-[300px]">
-                    {selectedStudent?.name || 'Candidate Name'}
-                  </h3>
-                  
-                  <div className="max-w-md space-y-2">
-                     <p className="text-[10px] font-medium text-gray-500 leading-relaxed uppercase tracking-tighter">
-                        for successfully completing the advanced certification program in
-                     </p>
-                     <p className="text-lg font-black text-[#141414] uppercase tracking-tight italic bg-blue-50 px-4 py-1 rounded inline-block">
-                        {selectedStudent?.course || 'Selected Course Curriculum'}
-                     </p>
-                  </div>
-                  
-                  <div className="absolute bottom-20 left-20 text-left">
-                     <div className="w-32 h-[1px] bg-gray-300 mb-2"></div>
-                     <p className="text-[8px] font-black uppercase tracking-widest text-gray-400">Date Issued</p>
-                     <p className="text-[10px] font-bold text-gray-700 uppercase tracking-tighter">
-                       {selectedStudent?.admissionDate ? new Date(selectedStudent.admissionDate).toLocaleDateString() : 'Issued Date'}
-                     </p>
-                  </div>
-                  
-                  <div className="absolute bottom-20 right-20 text-right">
-                     <div className="w-32 h-[1px] bg-gray-300 mb-2"></div>
-                     <p className="text-[8px] font-black uppercase tracking-widest text-gray-400">Authorized Director</p>
-                     <p className="text-[10px] font-bold text-gray-700 uppercase tracking-tighter italic font-serif">Director, STG Institute</p>
-                  </div>
-               </div>
+               )}
                
                <div className="absolute inset-0 bg-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <button 
@@ -475,10 +620,13 @@ export const CertificateStudio = () => {
                </div>
                <div className="space-y-4">
                   {[
-                    { id: '1', name: 'Classic Gold Edition', type: 'DIPLOMA', active: true },
-                    { id: '2', name: 'Modern Minimal Blue', type: 'CERTIFICATION', active: false },
+                    { id: 'stg-official', name: 'STG Official Blue Frame', type: 'OFFICIAL', active: activeTemplate === 'stg-official' },
+                    { id: '1', name: 'Classic Gold Edition', type: 'DIPLOMA', active: activeTemplate === '1' },
+                    { id: '2', name: 'Modern Minimal Blue', type: 'CERTIFICATION', active: activeTemplate === '2' },
                   ].map((temp, i) => (
-                    <div key={i} className={clsx(
+                    <div key={i} 
+                      onClick={() => setActiveTemplate(temp.id)}
+                      className={clsx(
                       "p-4 rounded-2xl border transition-all cursor-pointer group flex items-center justify-between",
                       temp.active ? "bg-white/10 border-blue-400" : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
                     )}>
