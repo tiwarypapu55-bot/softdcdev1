@@ -109,7 +109,7 @@ export const AdminFranchiseManagement = () => {
     }
   }, [showOnboardModal]);
 
-  const filteredFranchises = franchises.filter(f => {
+  const filteredFranchises = (franchises || []).filter(f => {
     const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          f.id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'ALL' || f.status === statusFilter;
@@ -237,12 +237,12 @@ export const AdminFranchiseManagement = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {filteredFranchises.length === 0 ? (
+        {(filteredFranchises || []).length === 0 ? (
           <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-[#E5E5E5]">
             <p className="text-[#888888] font-medium">No branches found matching your criteria.</p>
           </div>
         ) : (
-          filteredFranchises.map((f) => (
+          (filteredFranchises || []).map((f) => (
             <motion.div 
               key={f.id}
               whileHover={{ scale: 1.005 }}

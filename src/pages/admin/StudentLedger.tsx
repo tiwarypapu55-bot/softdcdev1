@@ -32,10 +32,10 @@ export const StudentLedger = () => {
   const [filterBranch, setFilterBranch] = useState(currentUser?.role === 'FRANCHISE' ? currentUser.franchiseId : 'ALL');
   const [expandedStudent, setExpandedStudent] = useState<string | null>(null);
 
-  const filteredStudents = students.filter(s => {
+  const filteredStudents = (students || []).filter(s => {
     if (currentUser?.role === 'FRANCHISE' && s.franchiseId !== currentUser.franchiseId) return false;
     
-    const franchise = franchises.find(f => f.id === s.franchiseId);
+    const franchise = (franchises || []).find(f => f.id === s.franchiseId);
     const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          s.admissionNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (franchise && franchise.name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -45,7 +45,7 @@ export const StudentLedger = () => {
   });
 
   const getStudentLedger = (student: Student) => {
-    const studentPayments = feePayments.filter(p => p.studentId === student.id);
+    const studentPayments = (feePayments || []).filter(p => p.studentId === student.id);
     const totalPaid = studentPayments.reduce((acc, p) => acc + p.paidAmount, 0);
     const balance = (student.totalFees || 0) - totalPaid;
 
@@ -88,9 +88,9 @@ export const StudentLedger = () => {
 
   const exportMasterLedger = () => {
     const headers = ['Student ID', 'Name', 'Course', 'Branch', 'Total Fee', 'Total Paid', 'Balance', 'Status'];
-    const data = students.map(student => {
+    const data = (students || []).map(student => {
       const ledger = getStudentLedger(student);
-      const branch = franchises.find(f => f.id === student.franchiseId);
+      const branch = (franchises || []).find(f => f.id === student.franchiseId);
       return [
         student.admissionNo,
         student.name,
@@ -117,7 +117,8 @@ export const StudentLedger = () => {
   const [printStudent, setPrintStudent] = useState<Student | null>(null);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto pb-20">
+    <>
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto pb-20 print:hidden">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-black text-[#141414] tracking-tight uppercase">Detailed Student Ledger</h1>
@@ -132,14 +133,16 @@ export const StudentLedger = () => {
         </button>
       </div>
 
+      </div>
+
       <AnimatePresence>
         {printStudent && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 bg-black/60 backdrop-blur-md overflow-y-auto pt-20 pb-20">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 bg-black/60 backdrop-blur-md overflow-y-auto print:p-0 print:bg-white print:static print:overflow-visible">
             <motion.div 
                initial={{ scale: 0.95, opacity: 0 }}
                animate={{ scale: 1, opacity: 1 }}
                exit={{ scale: 0.9, opacity: 0 }}
-               className="bg-white rounded-[2rem] w-full max-w-4xl p-0 shadow-2xl relative my-auto min-h-[500px]"
+               className="bg-white rounded-[2rem] w-full max-w-4xl p-0 shadow-2xl relative my-auto min-h-[500px] print:shadow-none print:p-0 print:max-w-full print:rounded-none"
             >
                <div className="p-6 border-b border-gray-100 flex items-center justify-between z-10 print:hidden">
                   <h3 className="text-xs font-black text-[#141414] uppercase tracking-widest">Statement of Account</h3>
@@ -177,7 +180,7 @@ export const StudentLedger = () => {
                         <div className="flex text-[11px]"><span className="w-24 font-black uppercase">Course:</span> <span className="font-bold uppercase flex-1">{printStudent.course} ({printStudent.courseDuration || 'N/A'})</span></div>
                       </div>
                       <div className="space-y-2">
-                        <div className="flex text-[11px]"><span className="w-24 font-black uppercase text-right md:text-left">Franchise:</span> <span className="font-bold uppercase flex-1 text-right md:text-left">{franchises.find(f => f.id === printStudent.franchiseId)?.name || 'N/A'}</span></div>
+                        <div className="flex text-[11px]"><span className="w-24 font-black uppercase text-right md:text-left">Franchise:</span> <span className="font-bold uppercase flex-1 text-right md:text-left">{(franchises || []).find(f => f.id === printStudent.franchiseId)?.name || 'N/A'}</span></div>
                         <div className="flex text-[11px]"><span className="w-24 font-black uppercase text-right md:text-left">Contact:</span> <span className="font-bold uppercase flex-1 text-right md:text-left">{printStudent.contact}</span></div>
                         <div className="flex text-[11px]"><span className="w-24 font-black uppercase text-right md:text-left">Date:</span> <span className="font-bold uppercase flex-1 text-right md:text-left">{printStudent.admissionDate}</span></div>
                       </div>
@@ -195,7 +198,7 @@ export const StudentLedger = () => {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-300">
-                          {getStudentLedger(printStudent).transactions.map((tx, idx) => (
+                          {(getStudentLedger(printStudent).transactions || []).map((tx, idx) => (
                             <tr key={idx} className="divide-x divide-gray-300">
                               <td className="p-3 font-bold whitespace-nowrap">{tx.date}</td>
                               <td className="p-3 font-bold uppercase">{tx.description}</td>
@@ -238,12 +241,31 @@ export const StudentLedger = () => {
 
       <style>{`
         @media print {
-          body * { visibility: hidden !important; }
-          #printable-ledger, #printable-ledger * { visibility: visible !important; }
-          #printable-ledger { position: fixed !important; left: 0 !important; top: 0 !important; width: 100% !important; margin: 0 !important; padding: 2cm !important; background: white !important; z-index: 9999; }
-          .print\:hidden { display: none !important; }
+          @page {
+            size: A4 portrait;
+            margin: 10mm;
+          }
+          body {
+            background: white !important;
+            color: black !important;
+          }
+          #printable-ledger {
+            background: white !important;
+            border: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
         }
       `}</style>
+
+      <div className="space-y-8 print:hidden">
 
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -265,7 +287,7 @@ export const StudentLedger = () => {
             className="w-full p-4 bg-white border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold appearance-none disabled:bg-gray-100 disabled:text-gray-400 text-[10px] uppercase tracking-widest"
           >
             <option value="ALL">All Branches</option>
-            {franchises.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+            {(franchises || []).map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
           </select>
         </div>
         <div className="bg-blue-600 p-4 rounded-2xl flex items-center justify-between text-white">
@@ -298,9 +320,9 @@ export const StudentLedger = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {filteredStudents.map(student => {
+            {(filteredStudents || []).map(student => {
               const ledger = getStudentLedger(student);
-              const branch = franchises.find(f => f.id === student.franchiseId);
+              const branch = (franchises || []).find(f => f.id === student.franchiseId);
               const isExpanded = expandedStudent === student.id;
 
               return (
@@ -390,7 +412,7 @@ export const StudentLedger = () => {
                                             </tr>
                                          </thead>
                                          <tbody className="divide-y divide-gray-50">
-                                            {ledger.transactions.map((tx, idx) => (
+                                            {(ledger.transactions || []).map((tx, idx) => (
                                                <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
                                                   <td className="px-6 py-4 text-[10px] font-bold text-[#141414] whitespace-nowrap">
                                                      <div className="flex items-center space-x-2">
@@ -460,6 +482,7 @@ export const StudentLedger = () => {
           </tbody>
         </table>
       </div>
-    </div>
+      </div>
+    </>
   );
 };

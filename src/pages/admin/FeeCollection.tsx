@@ -32,6 +32,7 @@ export const FeeCollection = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showReceipt, setShowReceipt] = useState<FeePayment | null>(null);
   const [receiptType, setReceiptType] = useState<'SINGLE' | 'HISTORY'>('SINGLE');
+  const [printPaperSize, setPrintPaperSize] = useState<'A4' | 'A5'>('A5');
   
   const [paymentData, setPaymentData] = useState({
     heads: [{ type: 'Course Fee', amount: 0, discount: 0, penalty: 0 }],
@@ -43,8 +44,8 @@ export const FeeCollection = () => {
   const totalPaidInModes = paymentData.paymentModes.reduce((acc, m) => acc + m.amount, 0);
 
   const filteredStudents = (searchTerm.length > 0 || filterCourse !== 'ALL' || filterBranch !== 'ALL')
-    ? students.filter(s => {
-        const franchise = franchises.find(f => f.id === s.franchiseId);
+    ? (students || []).filter(s => {
+        const franchise = (franchises || []).find(f => f.id === s.franchiseId);
         const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                              s.admissionNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
                              (s.enrollmentNo && s.enrollmentNo.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -154,7 +155,7 @@ export const FeeCollection = () => {
   };
 
   const sendWhatsAppReminder = (student: Student, type: 'DUE' | 'UPCOMING') => {
-    const totalPaid = feePayments.filter(p => p.studentId === student.id).reduce((acc, p) => acc + p.paidAmount, 0);
+    const totalPaid = (feePayments || []).filter(p => p.studentId === student.id).reduce((acc, p) => acc + p.paidAmount, 0);
     const totalDue = student.totalFees - totalPaid;
     
     let message = '';
@@ -169,7 +170,7 @@ export const FeeCollection = () => {
   };
 
   const sendWhatsAppReceipt = (payment: FeePayment, student: Student) => {
-    const totalPaid = feePayments.filter(p => p.studentId === student.id).reduce((acc, p) => acc + p.paidAmount, 0);
+    const totalPaid = (feePayments || []).filter(p => p.studentId === student.id).reduce((acc, p) => acc + p.paidAmount, 0);
     const finalBalance = student.totalFees - totalPaid;
     
     const message = `*PAYMENT SUCCESSFUL - SOFTDEV TALLY GURU*\n\nDear *${student.name}*,\nThank you for your payment of *₹${payment.paidAmount}* via *${payment.paymentMode}* ${payment.transactionId ? `(Ref: ${payment.transactionId})` : ''}.\n\n*Receipt Details:*\nReceipt No: ${payment.receiptNo}\nFee Type: ${payment.feeType}\nBalance Due: ₹${finalBalance}\n\nDownload full receipt from portal or contact office. Thank you!`;
@@ -178,44 +179,85 @@ export const FeeCollection = () => {
   };
 
   const getInstallmentNumber = (currentDate: string, studentId: string) => {
-    const studentPayments = feePayments
+    const studentPayments = (feePayments || [])
       .filter(p => p.studentId === studentId)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
-    const uniqueDates = Array.from(new Set(studentPayments.map(p => p.date)));
+    const uniqueDates = Array.from(new Set((studentPayments || []).map(p => p.date)));
     const dateIndex = uniqueDates.indexOf(currentDate);
     
     return dateIndex !== -1 ? `Installment ${dateIndex + 1}` : 'N/A';
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
-      <style>{`
-        @media print {
-          @page {
-            size: A5 portrait;
-            margin: 0;
+    <>
+      <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20 print:hidden">
+        <style>{`
+          @media print {
+            @page {
+              size: ${printPaperSize === 'A5' && receiptType === 'SINGLE' ? 'A5 landscape' : 'A4 portrait'};
+              margin: 5mm;
+            }
+            body {
+              visibility: hidden !important;
+              background: white !important;
+              color: black !important;
+            }
+            #printable-receipt, #printable-receipt * {
+               visibility: visible !important;
+            }
+            #printable-receipt {
+              visibility: visible !important;
+              position: absolute !important;
+              left: 0 !important;
+              top: 0 !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              border: 0 !important;
+              box-shadow: none !important;
+              background: white !important;
+            }
+            #printable-receipt .bg-white {
+              border: 0 !important;
+              box-shadow: none !important;
+              padding: 4mm !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              margin: 0 !important;
+            }
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            ${printPaperSize === 'A5' && receiptType === 'SINGLE' ? `
+              #printable-receipt * {
+                font-size: 8px !important;
+                line-height: 1.15 !important;
+              }
+              #printable-receipt .h-10 {
+                height: 1.75rem !important;
+              }
+              #printable-receipt td, #printable-receipt th {
+                padding-top: 5px !important;
+                padding-bottom: 5px !important;
+              }
+              #printable-receipt .mb-8 {
+                margin-bottom: 0.75rem !important;
+              }
+              #printable-receipt .mb-6 {
+                margin-bottom: 0.5rem !important;
+              }
+              #printable-receipt .p-8 {
+                padding: 10px !important;
+               }
+              #printable-receipt .p-4 {
+                padding: 8px !important;
+              }
+            ` : ''}
           }
-          body * {
-            visibility: hidden;
-          }
-          #printable-receipt, #printable-receipt * {
-            visibility: visible;
-          }
-          #printable-receipt {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 148mm;
-            height: 210mm;
-            padding: 5mm;
-            background: white !important;
-          }
-          .print\\:hidden {
-            display: none !important;
-          }
-        }
-      `}</style>
+        `}</style>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-8">
         <div>
           <h1 className="text-3xl font-black text-[#141414] tracking-tight uppercase">Fee Collection</h1>
@@ -247,7 +289,7 @@ export const FeeCollection = () => {
                   className="w-full p-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold text-[8px] uppercase tracking-widest appearance-none cursor-pointer"
                 >
                   <option value="ALL">All Branches</option>
-                  {franchises.map(f => (
+                  {(franchises || []).map(f => (
                     <option key={f.id} value={f.id}>{f.name}</option>
                   ))}
                 </select>
@@ -258,7 +300,7 @@ export const FeeCollection = () => {
                   className="w-full p-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold text-[8px] uppercase tracking-widest appearance-none cursor-pointer"
                 >
                   <option value="ALL">All Courses</option>
-                  {courses.map(c => (
+                  {(courses || []).map(c => (
                     <option key={c.id} value={c.title}>{c.title}</option>
                   ))}
                 </select>
@@ -273,8 +315,8 @@ export const FeeCollection = () => {
                   exit={{ opacity: 0, y: -10 }}
                   className="bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden"
                 >
-                  {filteredStudents.length > 0 ? (
-                    filteredStudents.map(s => (
+                  {(filteredStudents || []).length > 0 ? (
+                    (filteredStudents || []).map(s => (
                       <button 
                         key={s.id}
                         onClick={() => handleSelectStudent(s)}
@@ -291,7 +333,7 @@ export const FeeCollection = () => {
                           onClick={(e) => {
                             e.stopPropagation();
                             handleSelectStudent(s);
-                            const studentPayments = feePayments.filter(p => p.studentId === s.id);
+                            const studentPayments = (feePayments || []).filter(p => p.studentId === s.id);
                             if (studentPayments.length > 0) {
                               setReceiptType('HISTORY');
                               setShowReceipt(studentPayments[studentPayments.length - 1]);
@@ -335,7 +377,7 @@ export const FeeCollection = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 bg-white/5 rounded-2xl">
                     <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Course</p>
-                    <p className="text-[11px] font-bold text-white truncate">{selectedStudent.course}</p>
+                    <p className="text-[11px] font-bold text-white truncate">{selectedStudent.course} ({selectedStudent.courseDuration || "N/A"})</p>
                   </div>
                   <div className="p-3 bg-white/5 rounded-2xl">
                     <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Admission Date</p>
@@ -353,7 +395,7 @@ export const FeeCollection = () => {
                     </button>
                     <button 
                       onClick={() => {
-                        const studentPayments = feePayments.filter(p => p.studentId === selectedStudent.id);
+                        const studentPayments = (feePayments || []).filter(p => p.studentId === selectedStudent.id);
                         if (studentPayments.length > 0) {
                           setReceiptType('HISTORY');
                           setShowReceipt(studentPayments[studentPayments.length - 1]);
@@ -412,8 +454,8 @@ export const FeeCollection = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {feePayments.filter(p => !selectedStudent || p.studentId === selectedStudent.id).slice().reverse().map(payment => {
-                    const student = students.find(s => s.id === payment.studentId);
+                  {(feePayments || []).filter(p => !selectedStudent || p.studentId === selectedStudent.id).slice().reverse().map(payment => {
+                    const student = (students || []).find(s => s.id === payment.studentId);
                     return (
                       <tr key={payment.id} className="hover:bg-blue-50/20 transition-colors group">
                         <td className="px-8 py-6">
@@ -480,6 +522,7 @@ export const FeeCollection = () => {
           </div>
         </div>
       </div>
+      </div>
 
       {/* Payment Modal */}
       <AnimatePresence>
@@ -527,7 +570,7 @@ export const FeeCollection = () => {
                             className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-blue-600 font-bold text-[10px] appearance-none"
                           >
                             <option value="Course Fee">Course Fee</option>
-                            {feeStructures.map(f => <option key={f.id} value={f.head}>{f.head}</option>)}
+                            {(feeStructures || []).map(f => <option key={f.id} value={f.head}>{f.head}</option>)}
                             <option value="Admission Fee">Admission Fee</option>
                             <option value="Monthly Fee">Monthly Fee</option>
                             <option value="Exam Fee">Exam Fee</option>
@@ -727,16 +770,16 @@ export const FeeCollection = () => {
 
       <AnimatePresence>
         {showReceipt && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-10 bg-black/60 backdrop-blur-md overflow-y-auto">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-10 bg-black/60 backdrop-blur-md overflow-y-auto print:p-0 print:bg-white print:static print:overflow-visible">
             <motion.div 
                initial={{ scale: 0.95, opacity: 0 }}
                animate={{ scale: 1, opacity: 1 }}
                exit={{ scale: 0.9, opacity: 0 }}
-               className="bg-white rounded-[2rem] w-full max-w-4xl p-0 shadow-2xl relative my-auto min-h-max"
+               className="bg-white rounded-[2rem] w-full max-w-4xl p-0 shadow-2xl relative my-auto min-h-max print:shadow-none print:p-0 print:max-w-full print:rounded-none"
             >
-                <div className="p-6 bg-white border-b border-gray-100 flex items-center justify-between z-10 rounded-t-[2rem]">
+                <div className="p-6 bg-white border-b border-gray-100 flex items-center justify-between z-10 rounded-t-[2rem] print:hidden">
                    <h3 className="text-sm font-black text-[#141414] uppercase tracking-widest">
-                     {receiptType === 'SINGLE' ? 'Fee Receipt Preview' : 'Course Fee Summary Preview'}
+                     {receiptType === 'SINGLE' ? 'Fee Receipt Preview' : 'Student Fee Statement Preview'}
                    </h3>
                    <div className="flex items-center space-x-3">
                     <button 
@@ -748,27 +791,58 @@ export const FeeCollection = () => {
                   </div>
                </div>
 
-               <div className="p-8 relative bg-gray-50/50" id="printable-receipt">
-                  <div className="flex justify-end space-x-4 mb-6 print:hidden">
-                    <button 
-                      onClick={() => {
-                        const student = students.find(s => s.id === showReceipt.studentId);
-                        if (student) sendWhatsAppReceipt(showReceipt, student);
-                      }}
-                      className="flex items-center space-x-2 px-6 py-4 bg-white border border-gray-200 text-[#141414] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all shadow-sm active:scale-95"
-                    >
-                      <Download size={16} />
-                      <span>Download PDF</span>
-                    </button>
-                    <button 
-                      onClick={() => window.print()}
-                      className="flex items-center space-x-2 px-8 py-4 bg-[#141414] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 transition-all shadow-xl shadow-black/20 active:scale-95"
-                    >
-                      <span>Print Official Copy</span>
-                    </button>
+               <div className="p-8 relative bg-gray-50/50 print:bg-white print:p-0" id="printable-receipt">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 print:hidden">
+                    {receiptType === 'SINGLE' && (
+                      <div className="flex items-center space-x-2 bg-gray-100 p-1.5 rounded-2xl border border-gray-250">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-3">Paper Size:</span>
+                        <button
+                          type="button"
+                          onClick={() => setPrintPaperSize('A5')}
+                          className={clsx(
+                            "px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all",
+                            printPaperSize === 'A5' ? "bg-blue-600 text-white shadow-md shadow-blue-500/20" : "text-gray-600 hover:bg-gray-200"
+                          )}
+                        >
+                          A5 Landscape
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPrintPaperSize('A4')}
+                          className={clsx(
+                            "px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all",
+                            printPaperSize === 'A4' ? "bg-blue-600 text-white shadow-md shadow-blue-500/20" : "text-gray-600 hover:bg-gray-200"
+                          )}
+                        >
+                          A4 Portrait
+                        </button>
+                      </div>
+                    )}
+                    <div className="flex items-center space-x-3 ml-auto">
+                      <button 
+                        onClick={() => {
+                          const student = students.find(s => s.id === showReceipt.studentId);
+                          if (student) sendWhatsAppReceipt(showReceipt, student);
+                        }}
+                        className="flex items-center space-x-2 px-6 py-4 bg-white border border-gray-200 text-[#141414] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all shadow-sm active:scale-95"
+                      >
+                        <MessageCircle size={16} className="text-emerald-600" />
+                        <span>Send on WhatsApp</span>
+                      </button>
+                      <button 
+                        onClick={() => {
+                          window.print();
+                        }}
+                        type="button"
+                        className="flex items-center space-x-2 px-8 py-4 bg-[#141414] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 transition-all shadow-xl shadow-black/20 active:scale-95"
+                      >
+                        <Printer size={16} />
+                        <span>Print Official Copy</span>
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="bg-white relative shadow-sm border border-gray-200 p-8 max-w-[148mm] mx-auto print:border-0 print:shadow-none print:p-4">
+                  <div className="bg-white relative shadow-sm border border-gray-200 p-8 max-w-[210mm] mx-auto print:border-0 print:shadow-none print:p-4">
                      {/* Watermark Logo */}
                      <div className="absolute inset-0 z-0 opacity-[0.03] flex items-center justify-center pointer-events-none overflow-hidden grayscale">
                         {businessProfile.receiptHeaderUrl ? (
@@ -795,6 +869,15 @@ export const FeeCollection = () => {
                            )}
                         </div>
 
+                        <div className="flex items-center justify-center mb-6">
+                           <span className={clsx(
+                             "px-8 py-2 border-2 rounded-full font-black text-xs uppercase tracking-[0.2em] shadow-sm",
+                             receiptType === 'SINGLE' ? "border-blue-600 text-blue-600" : "border-emerald-600 text-emerald-600"
+                           )}>
+                              {receiptType === 'SINGLE' ? 'FEE RECEIPT' : 'STUDENT FEE STATEMENT'}
+                           </span>
+                        </div>
+
                         {(() => {
                            const student = students.find(s => s.id === showReceipt.studentId);
                            if (!student) return null;
@@ -812,7 +895,7 @@ export const FeeCollection = () => {
                                  </div>
                                  <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
                                    <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Course</div>
-                                   <div className="px-4 flex items-center font-black truncate text-[10px] text-red-600">{student.course} ({student.courseDuration || 'N/A'})</div>
+                                   <div className="px-4 flex items-center font-black text-[10px] text-red-600 leading-tight">{student.course} ({student.courseDuration || 'N/A'})</div>
                                  </div>
                                  <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
                                    <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Mobile</div>
@@ -821,6 +904,14 @@ export const FeeCollection = () => {
                                  <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
                                    <div className="px-4 flex items-center font-black bg-blue-50 text-blue-600 text-[10px]">Student Name</div>
                                    <div className="px-4 flex items-center font-black uppercase text-blue-600 text-[10px]">{student.name}</div>
+                                  </div>
+                                  <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
+                                    <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Payment Mode</div>
+                                    <div className="px-4 flex items-center font-black uppercase text-emerald-600 truncate text-[10px]">
+                                      {showReceipt.paymentModes && showReceipt.paymentModes.length > 0 
+                                        ? showReceipt.paymentModes.map(m => m.mode).join(' + ')
+                                        : showReceipt.paymentMode || 'N/A'}
+                                    </div>
                                  </div>
                                </div>
 
@@ -846,81 +937,172 @@ export const FeeCollection = () => {
                                  <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
                                    <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Total Course Fee</div>
                                    <div className="px-4 flex items-center font-bold uppercase text-[10px]">₹{student.totalFees || '--'}</div>
+                                  </div>
+                                  <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
+                                    <div className="px-4 flex items-center font-black bg-blue-50 text-blue-600 text-[10px]">INSTALLMENT</div>
+                                    <div className="px-4 flex items-center font-black uppercase text-blue-600 text-[10px]">
+                                      {getInstallmentNumber(showReceipt.date, showReceipt.studentId)}
+                                    </div>
                                  </div>
                                </div>
                              </div>
                            );
                         })()}
+
+                        {/* Course Fee Summary Section */}
+                        <div className="mb-6">
+                           <div className="bg-[#141414] text-white px-4 py-2 flex items-center mb-2">
+                              <FileText size={14} className="mr-2" />
+                              <span className="text-[10px] font-black uppercase tracking-widest">
+                                 Course Fee Summary
+                              </span>
+                           </div>
+                           <table className="w-full border-t-[1.5px] border-l-[1.5px] border-black text-center text-[9px] mb-6 overflow-hidden">
+                              <thead>
+                                 <tr className="bg-gray-100 divide-x-[1.5px] divide-black border-b-[1.5px] border-black font-black uppercase text-[#141414]">
+                                    <th className="py-2.5 w-10">#</th>
+                                    <th className="py-2.5 px-4 text-left">Fees Type</th>
+                                    <th className="py-2.5">Amount</th>
+                                    <th className="py-2.5">Discount</th>
+                                    <th className="py-2.5">Penalty</th>
+                                    <th className="py-2.5">Paid</th>
+                                    <th className="py-2.5">Balance</th>
+                                    <th className="py-2.5">Status</th>
+                                 </tr>
+                              </thead>
+                              <tbody className="divide-y-[1.5px] divide-black border-b-[1.5px] border-r-[1.5px] border-black font-bold uppercase text-gray-900">
+                                 {(() => {
+                                   const student = students.find(s => s.id === showReceipt.studentId);
+                                   if (!student) return null;
+                                   
+                                   const studentPayments = feePayments.filter(p => p.studentId === student.id);
+                                   const summary: Record<string, { amount: number, discount: number, penalty: number, paid: number }> = {};
+                                   
+                                   summary['Course Fee'] = {
+                                     amount: student.totalFees || 0,
+                                     discount: (student as any).discount || 0,
+                                     penalty: 0,
+                                     paid: 0
+                                   };
+
+                                   studentPayments.forEach(p => {
+                                     const heads = p.heads || [{ type: p.feeType, amount: p.amount, discount: p.discount, penalty: p.penalty }];
+                                     heads.forEach(h => {
+                                       if (!summary[h.type]) {
+                                          summary[h.type] = { amount: h.amount, discount: h.discount, penalty: h.penalty, paid: 0 };
+                                       }
+                                     });
+                                   });
+
+                                   studentPayments.forEach(p => {
+                                      const heads = p.heads || [{ type: p.feeType, amount: p.amount, discount: p.discount, penalty: p.penalty }];
+                                      heads.forEach(h => {
+                                         if (summary[h.type]) {
+                                            summary[h.type].paid += p.paidAmount * (h.amount / (p.amount || 1));
+                                         }
+                                      });
+                                   });
+
+                                   return Object.entries(summary).map(([type, data], idx) => {
+                                     const balance = Math.max(0, (data.amount + data.penalty) - data.discount - data.paid);
+                                     const status = balance <= 0 ? 'Paid' : (data.paid > 0 ? 'Partial' : 'Pending');
+                                     
+                                     return (
+                                       <tr key={idx} className="divide-x-[1.5px] divide-black bg-white">
+                                          <td className="py-2.5">{idx + 1}</td>
+                                          <td className="py-2.5 px-4 text-left font-black">{type}</td>
+                                          <td className="py-2.5 font-black text-emerald-600 font-black">₹{data.amount.toFixed(2)}</td>
+                                          <td className="py-2.5 text-orange-500 font-black">₹{data.discount.toFixed(2)}</td>
+                                          <td className="py-2.5 text-red-600 font-black">₹{data.penalty.toFixed(2)}</td>
+                                          <td className="py-2.5 text-blue-600 font-black font-black">₹{data.paid.toFixed(2)}</td>
+                                          <td className="py-2.5 font-black text-[#141414]">₹{balance.toFixed(2)}</td>
+                                          <td className="py-2.5">
+                                             <span className={clsx(
+                                                "px-2 py-0.5 rounded text-[8px] font-black uppercase text-white shadow-sm",
+                                                status === 'Paid' ? "bg-emerald-500" : status === 'Partial' ? "bg-orange-500" : "bg-red-500"
+                                             )}>{status}</span>
+                                          </td>
+                                       </tr>
+                                     );
+                                   });
+                                 })()}
+                              </tbody>
+                           </table>
+                        </div>
                         
                         {receiptType === 'SINGLE' ? (
                           <>
-                             <div className="bg-blue-600 text-white px-4 py-1 flex items-center mb-0 print:bg-blue-600">
-                                <FileText size={12} className="mr-2" />
+                             <div className="bg-blue-600 text-white px-4 py-2 flex items-center mb-0 print:bg-blue-600">
+                                <FileText size={14} className="mr-2" />
                                 <span className="text-[10px] font-black uppercase tracking-widest">FEES DEPOSITED DETAILS</span>
                              </div>
 
-                             <table className="w-full border-t-[1.5px] border-l-[1.5px] border-black text-center text-[10px] mb-8">
-                                <thead className="bg-gray-100">
-                                   <tr className="divide-x-[1.5px] divide-black border-b-[1.5px] border-black">
-                                      <th className="py-2 font-black uppercase">PARTICULARS</th>
-                                      <th className="py-2 font-black uppercase">AMOUNT</th>
-                                      <th className="py-2 font-black uppercase">DISC.</th>
-                                      <th className="py-2 font-black uppercase">PEN.</th>
-                                      <th className="py-2 font-black uppercase">TOTAL</th>
+                             <table className="w-full border-t-[1.5px] border-l-[1.5px] border-black text-center text-[9px] mb-0">
+                                <thead>
+                                   <tr className="bg-gray-100 divide-x-[1.5px] divide-black border-b-[1.5px] border-black font-black uppercase text-[#141414]">
+                                      <th className="py-2.5 px-4 text-left">PARTICULARS</th>
+                                      <th className="py-2.5">AMOUNT</th>
+                                      <th className="py-2.5">DISC.</th>
+                                      <th className="py-2.5">PEN.</th>
+                                      <th className="py-2.5">TOTAL</th>
                                    </tr>
                                 </thead>
-                                <tbody className="divide-y-[1.5px] divide-black">
-                                   {showReceipt.heads.map((h, i) => (
-                                      <tr key={i} className="divide-x-[1.5px] divide-black">
-                                         <td className="py-2 font-bold uppercase">{h.type}</td>
-                                         <td className="py-2 font-bold text-blue-600">₹{h.amount.toLocaleString()}</td>
-                                         <td className="py-2 font-bold text-emerald-600">₹{h.discount.toLocaleString()}</td>
-                                         <td className="py-2 font-bold text-red-600">₹{h.penalty.toLocaleString()}</td>
-                                         <td className="py-2 font-black bg-gray-50">₹{(h.amount + h.penalty - h.discount).toLocaleString()}</td>
+                                <tbody className="divide-y-[1.5px] divide-black border-b-[1.5px] border-r-[1.5px] border-black font-bold uppercase">
+                                   {(showReceipt.heads && showReceipt.heads.length > 0 ? showReceipt.heads : [{ type: showReceipt.feeType, amount: showReceipt.amount, discount: showReceipt.discount, penalty: showReceipt.penalty }]).map((h, idx) => (
+                                      <tr key={idx} className="divide-x-[1.5px] divide-black bg-white">
+                                         <td className="py-2.5 px-4 text-left font-black">{h.type}</td>
+                                         <td className="py-2.5">₹{h.amount.toFixed(2)}</td>
+                                         <td className="py-2.5 text-orange-500">₹{h.discount.toFixed(2)}</td>
+                                         <td className="py-2.5 text-red-600">₹{h.penalty.toFixed(2)}</td>
+                                         <td className="py-2.5 font-black">₹{(h.amount + h.penalty - h.discount).toFixed(2)}</td>
                                       </tr>
                                    ))}
-                                   <tr className="divide-x-[1.5px] divide-black bg-gray-100 font-black">
-                                      <td className="py-2 uppercase">TOTAL PAID (IN WORDS: {numberToWords(showReceipt.paidAmount)})</td>
-                                      <td colSpan={4} className="py-2">₹{showReceipt.paidAmount.toLocaleString()}</td>
+                                   <tr className="bg-gray-50 border-t-[1.5px] border-black font-black divide-x-[1.5px] divide-black border-r-[1.5px] border-black text-[10px]">
+                                      <td className="py-2.5 px-4 text-left uppercase">
+                                         TOTAL PAID (IN WORDS: {numberToWords(showReceipt.paidAmount)} ONLY)
+                                      </td>
+                                      <td colSpan={4} className="py-2.5 text-[11px] font-black text-center">
+                                         ₹{showReceipt.paidAmount.toLocaleString()}
+                                      </td>
                                    </tr>
-                                </tbody>
-                             </table>
+                                 </tbody>
+                              </table>
 
-                             <div className="grid grid-cols-2 gap-8 mb-8">
-                                <div className="space-y-2">
-                                   <div className="bg-emerald-600 text-white px-4 py-1 flex items-center print:bg-emerald-600">
-                                      <Clock size={12} className="mr-2" />
+                              <div className="grid grid-cols-2 gap-4 mb-8">
+                                <div className="space-y-0">
+                                   <div className="bg-emerald-600 text-white px-4 py-2 flex items-center print:bg-emerald-600">
+                                      <Clock size={14} className="mr-2" />
                                       <span className="text-[9px] font-black uppercase tracking-widest">PAYMENT MODES</span>
                                    </div>
-                                   <div className="border border-black p-4 space-y-1">
+                                   <div className="border-[1.5px] border-black p-4 min-h-[80px] flex flex-col justify-center">
                                       {showReceipt.paymentModes?.map((m, i) => (
-                                         <div key={i} className="flex justify-between text-[10px] font-bold border-b border-gray-100 last:border-0 pb-1">
+                                         <div key={i} className="flex justify-between text-[11px] font-black border-b border-gray-100 last:border-0 pb-1">
                                             <span className="uppercase">{m.mode} {m.transactionId && `[ ${m.transactionId} ]`}</span>
                                             <span>₹{m.amount.toLocaleString()}</span>
                                          </div>
                                       )) || (
-                                         <div className="flex justify-between text-[10px] font-bold">
+                                         <div className="flex justify-between text-[11px] font-black">
                                             <span className="uppercase">{showReceipt.paymentMode}</span>
                                             <span>₹{showReceipt.paidAmount.toLocaleString()}</span>
                                          </div>
                                       )}
                                       {showReceipt.remarks && (
-                                         <div className="pt-2 text-[8px] font-bold italic border-t border-black mt-2">
+                                         <div className="pt-2 text-[8px] font-bold italic border-t border-black/10 mt-2">
                                             Note: {showReceipt.remarks}
                                          </div>
                                       )}
                                    </div>
                                 </div>
-
-                                <div className="space-y-4">
-                                   <div className="bg-red-600 text-white px-4 py-1 flex items-center print:bg-red-600">
-                                      <GraduationCap size={12} className="mr-2" />
+ 
+                                <div className="space-y-0">
+                                   <div className="bg-red-600 text-white px-4 py-2 flex items-center print:bg-red-600">
+                                      <GraduationCap size={14} className="mr-2" />
                                       <span className="text-[9px] font-black uppercase tracking-widest">FEE SUMMARY</span>
                                    </div>
-                                   <div className="border-2 border-black divide-y-2 divide-black">
-                                      <div className="flex justify-between p-3 text-[11px] font-black bg-blue-50">
-                                         <span>BALANCE DUE</span>
-                                         <span className="text-red-600">₹{showReceipt.balance.toLocaleString()}</span>
+                                   <div className="border-[1.5px] border-black p-4 min-h-[80px] flex flex-col justify-center bg-gray-50/50">
+                                      <div className="flex justify-between items-center text-[12px] font-black">
+                                         <span className="uppercase tracking-wider">BALANCE DUE</span>
+                                         <span className="text-red-600 text-lg tracking-tight">₹{showReceipt.balance.toLocaleString()}</span>
                                       </div>
                                    </div>
                                 </div>
@@ -928,52 +1110,69 @@ export const FeeCollection = () => {
                           </>
                         ) : (
                           <>
-                            <div className="flex items-center justify-center mb-6">
-                               <span className="px-8 py-2 border-2 border-emerald-600 rounded-full text-emerald-600 font-black text-xs uppercase tracking-[0.2em] shadow-sm">
-                                  FEE COURSE SUMMARY
-                               </span>
-                            </div>
+                             <div className="bg-emerald-600/5 p-3 text-center border-y border-emerald-600/20 mb-4">
+                                <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-700">
+                                   DEPOSITED FEE HISTORY
+                                </h2>
+                             </div>
 
                             <table className="w-full border-t-[1.5px] border-l-[1.5px] border-black text-center text-[9px] mb-8">
-                               <thead className="bg-[#141414] text-white">
-                                  <tr className="divide-x-[1.5px] divide-black border-b-[1.5px] border-black">
-                                     <th className="py-2 uppercase font-black">Date</th>
-                                     <th className="py-2 uppercase font-black">Receipt No</th>
-                                     <th className="py-2 uppercase font-black">Particulars</th>
-                                     <th className="py-2 uppercase font-black">Paid Amt</th>
-                                     <th className="py-2 uppercase font-black">Balance</th>
-                                  </tr>
-                               </thead>
-                               <tbody className="divide-y-[1.5px] divide-black">
-                                  {feePayments
-                                    .filter(p => p.studentId === showReceipt.studentId)
-                                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                                    .map(p => (
-                                       <tr key={p.id} className="divide-x-[1.5px] divide-black font-bold">
-                                          <td className="py-2">{p.date}</td>
-                                          <td className="py-2">{p.receiptNo}</td>
-                                          <td className="py-2 uppercase">{p.feeType}</td>
-                                          <td className="py-2 text-emerald-600">₹{p.paidAmount.toLocaleString()}</td>
-                                          <td className="py-2 text-red-600">₹{p.balance.toLocaleString()}</td>
-                                       </tr>
-                                    ))}
-                                  {(() => {
-                                      const studentPayments = feePayments.filter(p => p.studentId === showReceipt.studentId);
-                                      const totalPaid = studentPayments.reduce((acc, p) => acc + p.paidAmount, 0);
-                                      const latestBalance = studentPayments.length > 0 
-                                          ? studentPayments.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0].balance 
-                                          : 0;
+                                <thead className="bg-[#141414] text-white">
+                                   <tr className="divide-x-[1.5px] divide-black border-b-[1.5px] border-black">
+                                      <th className="py-2 uppercase font-black w-8">#</th>
+                                      <th className="py-2 uppercase font-black">Installment</th>
+                                      <th className="py-2 uppercase font-black">Receipt No.</th>
+                                      <th className="py-2 uppercase font-black">Fee Type</th>
+                                      <th className="py-2 uppercase font-black">Amount</th>
+                                      <th className="py-2 uppercase font-black">Pay Mode</th>
+                                      <th className="py-2 uppercase font-black">Date</th>
+                                   </tr>
+                                </thead>
+                                <tbody className="divide-y-[1.5px] divide-black border-b-[1.5px] border-r-[1.5px] border-black">
+                                   {(() => {
+                                      const studentPayments = (feePayments || [])
+                                        .filter(p => p.studentId === showReceipt.studentId)
+                                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
                                       
-                                      return (
-                                          <tr className="divide-x-[1.5px] divide-black bg-gray-100 font-black text-[10px]">
-                                              <td colSpan={3} className="py-3 uppercase text-right px-6">Total Deposited Fees</td>
-                                              <td className="py-3 text-emerald-600">₹{totalPaid.toLocaleString()}</td>
-                                              <td className="py-3 text-red-600">₹{latestBalance.toLocaleString()}</td>
+                                      let rowIdx = 1;
+                                      return studentPayments.flatMap((p) => {
+                                        const modes = p.paymentModes && p.paymentModes.length > 0 
+                                          ? p.paymentModes 
+                                          : [{ mode: p.paymentMode, amount: p.paidAmount }];
+                                        
+                                        return modes.map((m, mIdx) => (
+                                          <tr key={`${p.id}-${mIdx}`} className="divide-x-[1.5px] divide-black font-bold">
+                                             <td className="py-2">{rowIdx++}</td>
+                                             <td className="py-2">{getInstallmentNumber(p.date, p.studentId)}</td>
+                                             <td className="py-2">{p.receiptNo}</td>
+                                             <td className="py-2 uppercase">{p.feeType}</td>
+                                             <td className="py-2">₹{m.amount.toLocaleString()}</td>
+                                             <td className="py-2 uppercase">{m.mode}</td>
+                                             <td className="py-2">{p.date}</td>
                                           </tr>
-                                      );
-                                  })()}
-                               </tbody>
-                            </table>
+                                        ));
+                                      });
+                                   })()}
+                                   {(() => {
+                                       const studentPayments = (feePayments || []).filter(p => p.studentId === showReceipt.studentId);
+                                       const totalPaid = studentPayments.reduce((acc, p) => acc + p.paidAmount, 0);
+                                       
+                                       return (
+                                          <>
+                                            <tr className="divide-x-[1.5px] divide-black bg-gray-50 font-black text-[10px]">
+                                                <td colSpan={4} className="py-3 uppercase text-right px-6">Total Paid Fees</td>
+                                                <td colSpan={3} className="py-3 text-emerald-600 border-r-[1.5px] border-black">₹{totalPaid.toLocaleString()}</td>
+                                            </tr>
+                                            <tr className="divide-x-[1.5px] divide-black bg-gray-50 font-black text-[10px] border-t-[1.5px] border-black">
+                                                <td colSpan={7} className="py-2.5 px-4 text-left uppercase text-[9px] border-r-[1.5px] border-black">
+                                                   TOTAL PAID (IN WORDS): {numberToWords(totalPaid)} ONLY
+                                                </td>
+                                            </tr>
+                                          </>
+                                        );
+                                    })()}
+                                 </tbody>
+                             </table>
                           </>
                         )}
 
@@ -1000,6 +1199,6 @@ export const FeeCollection = () => {
           </div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 };

@@ -162,10 +162,18 @@ export const StudentRegistration = () => {
     if (isEditMode && id) {
       const studentToEdit = students.find(s => s.id === id);
       if (studentToEdit) {
+        // Sync documents with kycDocs if available to preserve approval status
+        const syncedDocs = (formData.documents || []).map(doc => {
+          const kycDoc = (studentToEdit.kycDocs || []).find(kd => kd.id === doc.id || kd.type === doc.type);
+          if (kycDoc) {
+            return { ...doc, url: kycDoc.url, status: kycDoc.status, uploadedAt: kycDoc.uploadedAt };
+          }
+          return doc;
+        });
+
         setFormData({
           ...studentToEdit,
-          // Ensure documents exist even if legacy data
-          documents: studentToEdit.documents || formData.documents
+          documents: syncedDocs
         });
       }
     }
@@ -241,7 +249,8 @@ export const StudentRegistration = () => {
       }
 
       const photoUrl = formData.documents?.find(d => d.type === 'PHOTO')?.url || '';
-      const kycDocs = (formData.documents || []).filter(d => d.url !== '').map(d => ({
+      const currentDocs = (formData.documents || []);
+      const kycDocs = currentDocs.map(d => ({
         id: d.id,
         type: d.type as any,
         name: d.name,
@@ -254,7 +263,7 @@ export const StudentRegistration = () => {
         ...formData as Student,
         id: isEditMode ? id : `s${Date.now()}`,
         photoUrl: photoUrl || (formData as Student).photoUrl,
-        kycDocs: kycDocs.length > 0 ? kycDocs : (formData as Student).kycDocs
+        kycDocs: kycDocs
       };
       
       // Artificial delay for feedback if it's too fast
@@ -343,7 +352,8 @@ export const StudentRegistration = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20 relative">
+    <>
+      <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20 relative print:hidden">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-0 bg-white/90 backdrop-blur-xl z-[40] py-4 -mx-4 px-4 rounded-b-2xl border-b border-gray-100 min-h-[80px]">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-blue-600 tracking-tight">Student Registration Form</h1>
@@ -782,6 +792,8 @@ export const StudentRegistration = () => {
         )}
       </AnimatePresence>
 
+      </div>
+
       <AnimatePresence>
         {showPrintModal && lastStudent && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:p-0 print:bg-white">
@@ -954,6 +966,6 @@ export const StudentRegistration = () => {
           </div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 };

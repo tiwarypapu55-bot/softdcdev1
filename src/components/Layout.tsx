@@ -155,7 +155,7 @@ export const Sidebar = () => {
 
   return (
     <aside className={cn(
-      "h-screen bg-[#059669] text-white transition-all duration-300 flex flex-col border-r border-[#047857] sticky top-0 shadow-2xl",
+      "h-screen bg-[#059669] text-white transition-all duration-300 flex flex-col border-r border-[#047857] sticky top-0 shadow-2xl print:hidden",
       isOpen ? "w-64" : "w-20"
     )}>
       <div className="p-6 flex items-center justify-between border-b border-white/10 bg-black/5">
@@ -292,7 +292,7 @@ export const Header = () => {
   if (!currentUser) return null;
 
   return (
-    <header className="h-16 border-b border-black/5 bg-background/80 backdrop-blur-md sticky top-0 z-40 px-8 flex items-center justify-between">
+    <header className="h-16 border-b border-black/5 bg-background/80 backdrop-blur-md sticky top-0 z-40 px-8 flex items-center justify-between print:hidden">
       <div className="flex items-center bg-[#F5F5F5] px-4 py-2 rounded-full w-96">
         <Search size={16} className="text-[#888888]" />
         <input 
@@ -331,11 +331,11 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
   if (!currentUser) return <>{children}</>;
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background print:bg-white">
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <Header />
-        <main className="flex-1 p-8 overflow-auto">
+        <main className="flex-1 p-8 overflow-auto print:p-0 print:overflow-visible">
           {children}
         </main>
       </div>

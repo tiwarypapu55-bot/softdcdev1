@@ -82,12 +82,12 @@ export const FranchiseDashboard = () => {
     setNotifications(notifications.filter(n => n.id !== id));
   };
   
-  const balance = walletTransactions
+  const balance = (walletTransactions || [])
     .filter(tx => tx.franchiseId === currentUser?.franchiseId)
     .reduce((acc, tx) => tx.type === 'CREDIT' ? acc + tx.amount : acc - tx.amount, 0);
   
-  const myStudents = students.filter(s => s.franchiseId === currentUser?.franchiseId);
-  const myCerts = certificates.filter(c => c.franchiseId === currentUser?.franchiseId);
+  const myStudents = (students || []).filter(s => s.franchiseId === currentUser?.franchiseId);
+  const myCerts = (certificates || []).filter(c => c.franchiseId === currentUser?.franchiseId);
   
   const currentFranchise = franchises.find(f => f.id === currentUser?.franchiseId);
   const isBlocked = currentFranchise?.status === 'BLOCKED';

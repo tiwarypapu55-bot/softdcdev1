@@ -51,12 +51,12 @@ export const Accounts = () => {
   const myFranchiseId = currentUser?.franchiseId;
 
   const filteredFeePayments = isFranchise 
-    ? feePayments.filter(p => students.find(s => s.id === p.studentId)?.franchiseId === myFranchiseId)
-    : feePayments;
+    ? (feePayments || []).filter(p => (students || []).find(s => s.id === p.studentId)?.franchiseId === myFranchiseId)
+    : (feePayments || []);
 
   const filteredTransactions = isFranchise
-    ? businessTransactions.filter(t => t.referenceId === myFranchiseId)
-    : businessTransactions;
+    ? (businessTransactions || []).filter(t => t.referenceId === myFranchiseId)
+    : (businessTransactions || []);
 
 const [ledgerSearch, setLedgerSearch] = useState('');
   const [filterType, setFilterType] = useState<'ALL' | 'INCOME' | 'EXPENSE'>('ALL');
@@ -168,16 +168,16 @@ const [ledgerSearch, setLedgerSearch] = useState('');
   });
 
   const recentActivities = [
-    ...filteredFeePayments.map(p => ({
+    ...(filteredFeePayments || []).map(p => ({
       id: p.id,
       date: p.date,
       type: 'INCOME',
       category: 'Student Fee',
       amount: p.paidAmount,
-      description: `Fee received from ${students.find(s => s.id === p.studentId)?.name || 'Student'}`,
+      description: `Fee received from ${(students || []).find(s => s.id === p.studentId)?.name || 'Student'}`,
       mode: p.paymentMode
     })),
-    ...filteredTransactions.map(t => ({
+    ...(filteredTransactions || []).map(t => ({
       id: t.id,
       date: t.date,
       type: t.amount >= 0 ? 'INCOME' : 'EXPENSE',
@@ -188,7 +188,7 @@ const [ledgerSearch, setLedgerSearch] = useState('');
     }))
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  const filteredActivities = recentActivities.filter(a => {
+  const filteredActivities = (recentActivities || []).filter(a => {
     const matchesType = filterType === 'ALL' || a.type === filterType;
     const matchesSearch = 
       a.description.toLowerCase().includes(ledgerSearch.toLowerCase()) ||
@@ -214,7 +214,7 @@ const [ledgerSearch, setLedgerSearch] = useState('');
     const headers = ['Date', 'Type', 'Category', 'Description', 'Mode', 'Amount'];
     const csvContent = [
       headers.join(','),
-      ...filteredActivities.map(a => [
+      ...(filteredActivities || []).map(a => [
         new Date(a.date).toLocaleString(),
         a.type,
         `"${a.category.replace(/"/g, '""')}"`,
@@ -236,7 +236,8 @@ const [ledgerSearch, setLedgerSearch] = useState('');
   };
 
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto pb-20 bg-background min-h-screen">
+    <>
+      <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto pb-20 bg-background min-h-screen print:hidden">
       {/* Header section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-gray-100 pb-10 gap-6">
         <div>
@@ -652,6 +653,7 @@ const [ledgerSearch, setLedgerSearch] = useState('');
           </table>
         </div>
       </div>
+      </div>
 
       <AnimatePresence>
         {showAddModal && (
@@ -827,15 +829,17 @@ const [ledgerSearch, setLedgerSearch] = useState('');
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
 
+      <AnimatePresence>
         {selectedReceipt && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto print:p-0 print:bg-white print:static print:overflow-visible">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="bg-white rounded-[1rem] w-full max-w-2xl p-10 shadow-2xl relative my-8"
-              style={{ minHeight: '800px', display: 'flex', flexDirection: 'column' }}
+               initial={{ opacity: 0, y: 20 }}
+               animate={{ opacity: 1, y: 0 }}
+               exit={{ opacity: 0, y: 20 }}
+               className="bg-white rounded-[1rem] w-full max-w-2xl p-10 shadow-2xl relative my-8 print:shadow-none print:p-0 print:max-w-full print:rounded-none"
+               style={{ minHeight: '800px', display: 'flex', flexDirection: 'column' }}
             >
                <button 
                 onClick={() => setSelectedReceipt(null)}
@@ -844,7 +848,7 @@ const [ledgerSearch, setLedgerSearch] = useState('');
                 <X size={20} />
               </button>
 
-              <div id="printable-accounts-receipt" className="flex-grow flex flex-col p-4 md:p-8">
+              <div id="printable-accounts-receipt" className="flex-grow flex flex-col p-4 md:p-8 print:p-0">
                 {/* Receipt Header Image */}
                 <div className="mb-4">
                   {businessProfile.receiptHeaderUrl ? (
@@ -957,30 +961,29 @@ const [ledgerSearch, setLedgerSearch] = useState('');
       </AnimatePresence>
       <style>{`
         @media print {
-          body { 
-            visibility: hidden !important; 
+          @page {
+            size: A4 portrait;
+            margin: 10mm;
+          }
+          body {
             background: white !important;
+            color: black !important;
           }
-          #printable-accounts-receipt { 
-            visibility: visible !important;
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            margin: 0 !important;
+          #printable-accounts-receipt {
+            background: white !important;
+            border: 0 !important;
             padding: 0 !important;
-            display: block !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            width: 100% !important;
+            max-width: 100% !important;
           }
-          #printable-accounts-receipt * { 
-            visibility: visible !important; 
-          }
-          .print\:hidden { display: none !important; }
           * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
         }
       `}</style>
-    </div>
+    </>
   );
 };

@@ -117,10 +117,10 @@ export const AdminDashboard = () => {
   const navigate = useNavigate();
 
   // Metrics
-  const totalStudents = students.length;
-  const totalBranches = franchises.length;
-  const activeBranches = franchises.filter(f => f.status === 'APPROVED').length;
-  const totalIncome = feePayments.reduce((sum, p) => sum + p.paidAmount, 0);
+  const totalStudents = (students || []).length;
+  const totalBranches = (franchises || []).length;
+  const activeBranches = (franchises || []).filter(f => f.status === 'APPROVED').length;
+  const totalIncome = (feePayments || []).reduce((sum, p) => sum + p.paidAmount, 0);
 
   // Dynamic Chart Data for last 6 months
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -134,12 +134,12 @@ export const AdminDashboard = () => {
     const monthLabel = months[monthIndex];
     const year = d.getFullYear();
 
-    const monthPayments = feePayments.filter(p => {
+    const monthPayments = (feePayments || []).filter(p => {
       const pDate = new Date(p.date);
       return pDate.getMonth() === monthIndex && pDate.getFullYear() === year;
     });
 
-    const monthStudents = students.filter(s => {
+    const monthStudents = (students || []).filter(s => {
       const sDate = new Date(s.admissionDate);
       return sDate.getMonth() === monthIndex && sDate.getFullYear() === year;
     });
@@ -208,7 +208,7 @@ export const AdminDashboard = () => {
         />
         <AdminStatCard 
           title="Curriculums" 
-          value={courses.length} 
+          value={(courses || []).length} 
           icon={Award} 
           trend={0} 
           gradient="bg-gradient-to-br from-amber-500 to-amber-700" 
@@ -358,8 +358,8 @@ export const AdminDashboard = () => {
            </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {franchises.length > 0 ? (
-            franchises.slice(0, 4).map(franchise => (
+          {(franchises || []).length > 0 ? (
+            (franchises || []).slice(0, 4).map(franchise => (
               <CenterCard 
                 key={franchise.id} 
                 name={franchise.name} 
@@ -389,7 +389,7 @@ export const AdminDashboard = () => {
                <button onClick={() => navigate('/admin/students')} className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline">Full Audit</button>
             </div>
             <div className="space-y-4">
-               {students.slice(0, 4).map(student => (
+               {(students || []).slice(0, 4).map(student => (
                   <div key={student.id} className="flex items-center justify-between p-5 bg-gray-50/50 rounded-2xl border border-gray-100 hover:bg-white hover:shadow-lg transition-all group">
                      <div className="flex items-center space-x-4">
                         <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center font-black text-blue-600 border border-gray-100 shadow-sm transition-transform group-hover:scale-110">
@@ -418,7 +418,7 @@ export const AdminDashboard = () => {
                <button onClick={() => navigate('/admin/enquiries')} className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline">Conversion Tool</button>
             </div>
             <div className="space-y-4">
-               {enquiries.slice(0, 4).map(enquiry => (
+               {(enquiries || []).slice(0, 4).map(enquiry => (
                   <div key={enquiry.id} className="flex items-center justify-between p-5 bg-gray-50/50 rounded-2xl border border-gray-100 hover:bg-white hover:shadow-lg transition-all group">
                      <div className="flex items-center space-x-4">
                         <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center font-black text-amber-600 border border-gray-100 shadow-sm transition-transform group-hover:scale-110">

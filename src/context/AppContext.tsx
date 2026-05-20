@@ -314,28 +314,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (savedUser) setCurrentUser(JSON.parse(savedUser));
     
     // Seed data if courses is empty (or first launch)
-    if (!savedCourses || JSON.parse(savedCourses).length === 0) {
+    const parsedCourses = savedCourses ? JSON.parse(savedCourses) : [];
+    if (!savedCourses || (Array.isArray(parsedCourses) && parsedCourses.length === 0)) {
       seedData();
     } else {
-      if (savedFranchises) setFranchises(JSON.parse(savedFranchises));
-      if (savedStudents) setStudents(JSON.parse(savedStudents));
-      if (savedEnquiries) setEnquiries(JSON.parse(savedEnquiries));
-      if (savedCourses) setCourses(JSON.parse(savedCourses));
-      if (savedFeeStructures) setFeeStructures(JSON.parse(savedFeeStructures));
-      if (savedFeePayments) setFeePayments(JSON.parse(savedFeePayments));
-      if (savedFranchiseFees) setFranchiseFees(JSON.parse(savedFranchiseFees));
-      if (savedCertificates) setCertificates(JSON.parse(savedCertificates));
-      if (savedSessions) setSessions(JSON.parse(savedSessions));
-      if (savedAnnouncements) setAnnouncements(JSON.parse(savedAnnouncements));
-      if (savedVouchers) setVouchers(JSON.parse(savedVouchers));
-      if (savedExams) setExams(JSON.parse(savedExams));
-      if (savedSubjects) setSubjects(JSON.parse(savedSubjects));
-      if (savedCategories) setCourseCategories(JSON.parse(savedCategories));
-      if (savedPrograms) setPrograms(JSON.parse(savedPrograms));
-      if (savedGlobalSettings) setGlobalCourseSettings(JSON.parse(savedGlobalSettings));
-      if (savedWalletTransactions) setWalletTransactions(JSON.parse(savedWalletTransactions));
-      if (savedBusinessTransactions) setBusinessTransactions(JSON.parse(savedBusinessTransactions));
-      if (savedBusinessProfile) setBusinessProfile(JSON.parse(savedBusinessProfile));
+      const safeParse = (val: string | null) => {
+        if (!val) return [];
+        try {
+          const parsed = JSON.parse(val);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          return [];
+        }
+      };
+
+      setFranchises(safeParse(savedFranchises));
+      setStudents(safeParse(savedStudents));
+      setEnquiries(safeParse(savedEnquiries));
+      setCourses(safeParse(savedCourses));
+      setFeeStructures(safeParse(savedFeeStructures));
+      setFeePayments(safeParse(savedFeePayments));
+      setFranchiseFees(safeParse(savedFranchiseFees));
+      setCertificates(safeParse(savedCertificates));
+      setSessions(safeParse(savedSessions));
+      setAnnouncements(safeParse(savedAnnouncements));
+      setVouchers(safeParse(savedVouchers));
+      setExams(safeParse(savedExams));
+      setSubjects(safeParse(savedSubjects));
+      setCourseCategories(safeParse(savedCategories));
+      setPrograms(safeParse(savedPrograms));
+      
+      if (savedGlobalSettings) {
+        try {
+          const parsed = JSON.parse(savedGlobalSettings);
+          setGlobalCourseSettings(prev => ({ ...prev, ...parsed }));
+        } catch (e) {}
+      }
+      
+      setWalletTransactions(safeParse(savedWalletTransactions));
+      setBusinessTransactions(safeParse(savedBusinessTransactions));
+      
+      if (savedBusinessProfile) {
+        try {
+          const parsed = JSON.parse(savedBusinessProfile);
+          setBusinessProfile(prev => ({ ...prev, ...parsed }));
+        } catch (e) {}
+      }
     }
 
     setIsLoading(false);
