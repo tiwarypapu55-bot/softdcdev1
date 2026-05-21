@@ -76,7 +76,7 @@ const InputField = ({ label, required, type = "text", value, onChange, placehold
         className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-sm transition-all appearance-none"
       >
         <option value="">-- Select {label} --</option>
-        {options.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
+        {Array.from(new Set(options || [])).map((opt: any) => <option key={opt} value={opt}>{opt}</option>)}
       </select>
     ) : (
       <input 

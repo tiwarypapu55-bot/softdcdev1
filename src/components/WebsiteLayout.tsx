@@ -24,10 +24,11 @@ export const WebsiteLayout = ({ children }: { children: React.ReactNode }) => {
       name: 'COURSES', 
       path: '/courses', 
       hasSub: true,
-      subLinks: courseCategories.map(cat => ({
-        name: cat.name,
-        path: `/courses?category=${encodeURIComponent(cat.name)}`
-      })).slice(0, 6)
+      subLinks: Array.from(new Set(courseCategories.map(cat => cat.name.trim())))
+        .map((name: any) => ({
+          name,
+          path: `/courses?category=${encodeURIComponent(name)}`
+        })).slice(0, 6)
     },
     { name: 'GALLERY', path: '/gallery', hasSub: true },
     { name: 'FRANCHISE & COLLABORATION', path: '/franchise-info', hasSub: true },

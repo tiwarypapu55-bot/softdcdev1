@@ -26,7 +26,7 @@ export const Courses = () => {
     if (category) setFilter(category);
   }, [searchParams]);
 
-  const categories = ['ALL', ...courseCategories.map(c => c.name)];
+  const categories = Array.from(new Set(['ALL', ...courseCategories.map(c => c.name.trim())]));
 
   const filtered = courses
     .filter(c => filter === 'ALL' || c.category === filter)

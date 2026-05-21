@@ -744,9 +744,11 @@ const CourseManager = ({ isViewOnly }: { isViewOnly: boolean }) => {
                       className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-600 font-bold text-sm appearance-none" 
                     >
                       <option value="">Select Category</option>
-                      {courseCategories.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
-                      {formData.category && !courseCategories.find(c => c.name === formData.category) && (
-                        <option value={formData.category}>{formData.category} (Current)</option>
+                      {Array.from(new Map<string, any>(courseCategories.map(cat => [cat.name.trim().toUpperCase(), cat])).values()).map((cat: any) => (
+                        <option key={cat.id || cat.name} value={cat.name}>{cat.name}</option>
+                      ))}
+                      {formData.category && !courseCategories.find(c => c.name.trim().toUpperCase() === formData.category.trim().toUpperCase()) && (
+                        <option key={`current-custom-${formData.category}`} value={formData.category}>{formData.category} (Current)</option>
                       )}
                     </select>
                   </div>

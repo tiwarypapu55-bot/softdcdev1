@@ -232,7 +232,9 @@ export const CourseManagement = () => {
                       className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold appearance-none"
                     >
                       <option value="">Select Category</option>
-                      {courseCategories.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
+                      {Array.from(new Map<string, any>(courseCategories.map(cat => [cat.name.trim().toUpperCase(), cat])).values()).map((cat: any) => (
+                        <option key={cat.id || cat.name} value={cat.name}>{cat.name}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="space-y-2">

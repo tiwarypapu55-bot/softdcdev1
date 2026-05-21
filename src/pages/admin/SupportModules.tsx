@@ -370,11 +370,42 @@ export const DocumentVerification = () => {
 
 export const CertificateStudio = () => {
   const navigate = useNavigate();
-  const { certificates, students, courses, businessProfile } = useApp();
+  const { certificates, students, courses, businessProfile, updateStudent, issueCertificate } = useApp();
   const [selectedStudentId, setSelectedStudentId] = React.useState(students[0]?.id || '');
   const selectedStudent = students.find(s => s.id === selectedStudentId);
   const pendingCerts = students.filter(s => s.certificateStatus === 'APPLIED').length;
   const [activeTemplate, setActiveTemplate] = React.useState('stg-official');
+
+  const [isManualMode, setIsManualMode] = React.useState(false);
+  const [manualForm, setManualForm] = React.useState({
+    studentName: '',
+    fatherName: '',
+    course: 'Tally Prime Expert',
+    duration: '3 Months',
+    fromDate: 'Apr-2026',
+    toDate: 'Oct 2026',
+    grade: 'A',
+    certificateNo: '',
+  });
+
+  const dispName = isManualMode ? manualForm.studentName : (selectedStudent?.name || '');
+  const dispFatherName = isManualMode ? manualForm.fatherName : (selectedStudent?.fatherName || '');
+  const dispCourse = isManualMode ? manualForm.course : (selectedStudent?.course || '');
+  const dispDuration = isManualMode ? manualForm.duration : (selectedStudent?.courseDuration || 'Three');
+  
+  const dispFromDate = isManualMode 
+    ? manualForm.fromDate 
+    : (selectedStudent?.admissionDate ? new Date(selectedStudent.admissionDate).toLocaleDateString(undefined, {month: 'short', year:'numeric'}).replace(' ', '-') : 'Apr-2026');
+  
+  const dispToDate = isManualMode 
+    ? manualForm.toDate 
+    : 'Oct 2026';
+    
+  const dispGrade = isManualMode ? manualForm.grade : 'A';
+  
+  const dispCertNo = isManualMode 
+    ? (manualForm.certificateNo || 'STG-PREVIEW') 
+    : (selectedStudent?.idNumber ? `STG/${new Date().getFullYear()}/${selectedStudent.idNumber.replace(/\s/g, '').slice(-4)}` : 'STG-PREVIEW');
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto">
@@ -384,11 +415,31 @@ export const CertificateStudio = () => {
             <h1 className="text-3xl font-black text-[#141414] tracking-tight uppercase italic">Certificate Studio</h1>
             <p className="text-sm text-[#888888] font-bold mt-1 uppercase tracking-widest">Designing & publishing digital credentials</p>
           </div>
-          {students.length > 0 && (
+          <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200 shadow-inner">
+            <button 
+              onClick={() => setIsManualMode(false)}
+              className={clsx(
+                "px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all",
+                !isManualMode ? "bg-[#141414] text-white shadow-sm" : "text-gray-500 hover:text-black"
+              )}
+            >
+              Database
+            </button>
+            <button 
+              onClick={() => setIsManualMode(true)}
+              className={clsx(
+                "px-3 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all",
+                isManualMode ? "bg-amber-600 text-white shadow-sm" : "text-gray-500 hover:text-black"
+              )}
+            >
+              Manual Form
+            </button>
+          </div>
+          {!isManualMode && students.length > 0 && (
             <select 
               value={selectedStudentId}
               onChange={(e) => setSelectedStudentId(e.target.value)}
-              className="px-4 py-2 bg-white border border-gray-100 rounded-xl text-[10px] font-black uppercase outline-none focus:ring-2 focus:ring-blue-600"
+              className="px-4 py-2 bg-white border border-gray-100 rounded-xl text-[10px] font-black uppercase outline-none focus:ring-2 focus:ring-blue-600 shadow-sm"
             >
               {students.slice(0, 10).map(s => (
                 <option key={s.id} value={s.id}>{s.name}</option>
@@ -480,11 +531,11 @@ export const CertificateStudio = () => {
                        <p className="text-center font-sans">
                          Certified that Shri/Smt &nbsp;
                          <span className="font-extrabold text-[#112D55] border-b-[1.5px] border-dotted border-black px-2 inline-block min-w-[120px] text-center text-[11px]">
-                           {selectedStudent?.name || 'Rajat Sahu'}
+                           {dispName || 'Rajat Sahu'}
                          </span>
                          ,&nbsp; Son/Daughter of Shri/Smt &nbsp;
                          <span className="font-extrabold text-[#112D55] border-b-[1.5px] border-dotted border-black px-2 inline-block min-w-[120px] text-center text-[11px]">
-                           {selectedStudent?.fatherName || 'Ajay Kumar Sahu'}
+                           {dispFatherName || 'Ajay Kumar Sahu'}
                          </span>
                          ,&nbsp; has successfully completed the &nbsp;
                          <span className="font-extrabold text-[#112D55] border-b-[1.5px] border-dotted border-black px-2 inline-block min-w-[80px] text-center text-[11px]">
@@ -492,22 +543,22 @@ export const CertificateStudio = () => {
                          </span>
                          &nbsp; course in &nbsp;
                          <span className="font-extrabold text-amber-700 border-b-[1.5px] border-dotted border-black px-2 inline-block min-w-[180px] text-center text-[11px]">
-                           {selectedStudent?.course || 'Tally Prime Expert'}
+                           {dispCourse || 'Tally Prime Expert'}
                          </span>
                          &nbsp; of &nbsp;
                          <span className="font-extrabold text-[#112D55] border-b-[1.5px] border-dotted border-black px-2 inline-block min-w-[50px] text-center text-[11px]">
-                           {selectedStudent?.courseDuration ? (selectedStudent.courseDuration.toLowerCase().includes('six') || selectedStudent.courseDuration.includes('6') ? 'Six' : 'Three') : 'Three'}
+                           {dispDuration}
                          </span>
                          &nbsp; months duration from &nbsp;
                          <span className="font-extrabold text-[#112D55] border-b-[1.5px] border-dotted border-black px-2 inline-block min-w-[80px] text-center text-[11px]">
-                           {selectedStudent?.admissionDate ? new Date(selectedStudent.admissionDate).toLocaleDateString(undefined, {month: 'short', year:'numeric'}).replace(' ', '-') : 'Apr-2026'}
+                           {dispFromDate}
                          </span>
                          &nbsp; to &nbsp;
                          <span className="font-extrabold text-[#112D55] border-b-[1.5px] border-dotted border-black px-2 inline-block min-w-[80px] text-center text-[11px]">
-                           Oct-2026
+                           {dispToDate}
                          </span>
                          &nbsp; with grade &nbsp;
-                         <span className="font-extrabold text-[#112D55] border-b-[1.5px] border-dotted border-black px-2 inline-block min-w-[40px] text-center text-[11px]">
+                         <span className="font-extrabold text-[#112D55] border-b-[1.5px] border-dotted border-black px-2 inline-block min-w-[40px] text-center text-[11px]">{dispGrade}</span><span className="hidden">
                            A
                          </span>
                          .
@@ -519,7 +570,7 @@ export const CertificateStudio = () => {
                        <div className="space-y-1 flex flex-col items-center">
                          <div className="p-1 bg-white border border-gray-100 rounded-lg shadow-md scale-95">
                            <QRCodeSVG 
-                             value={`${window.location.origin}/verify/STG-PREVIEW`} 
+                             value={`${window.location.origin}/verify/${dispCertNo}`} 
                              size={56} 
                            />
                          </div>
@@ -572,7 +623,7 @@ export const CertificateStudio = () => {
                      </div>
                      
                      <h3 className="text-4xl font-serif italic text-gray-900 border-b border-gray-200 pb-2 min-w-[300px]">
-                       {selectedStudent?.name || 'Candidate Name'}
+                       {dispName || 'Candidate Name'}
                      </h3>
                      
                      <div className="max-w-md space-y-2">
@@ -580,7 +631,7 @@ export const CertificateStudio = () => {
                            for successfully completing the advanced certification program in
                         </p>
                         <p className="text-lg font-black text-[#141414] uppercase tracking-tight italic bg-blue-50 px-4 py-1 rounded inline-block">
-                           {selectedStudent?.course || 'Selected Course Curriculum'}
+                           {dispCourse || 'Selected Course Curriculum'}
                         </p>
                      </div>
                      
@@ -588,7 +639,7 @@ export const CertificateStudio = () => {
                         <div className="w-32 h-[1px] bg-gray-300 mb-2"></div>
                         <p className="text-[8px] font-black uppercase tracking-widest text-gray-400">Date Issued</p>
                         <p className="text-[10px] font-bold text-gray-700 uppercase tracking-tighter">
-                          {selectedStudent?.admissionDate ? new Date(selectedStudent.admissionDate).toLocaleDateString() : 'Issued Date'}
+                          {dispFromDate}
                         </p>
                      </div>
                      
@@ -612,7 +663,112 @@ export const CertificateStudio = () => {
             </div>
          </div>
 
-         <div className="lg:col-span-4 space-y-8">
+        <div className="lg:col-span-4 space-y-8">
+          {isManualMode && (
+             <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 text-gray-800 shadow-xl space-y-4 text-left">
+                <div className="flex items-center space-x-3 border-b border-gray-105 pb-3">
+                   <FileText className="text-amber-600" size={20} />
+                   <h3 className="text-xs font-black uppercase tracking-widest italic text-gray-900">Manual Entry Data</h3>
+                </div>
+                
+                <div className="space-y-3 text-xs font-semibold">
+                   <div className="space-y-1">
+                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Candidate Name</label>
+                      <input 
+                        type="text" 
+                        value={manualForm.studentName}
+                        onChange={(e) => setManualForm({...manualForm, studentName: e.target.value})}
+                        placeholder="e.g. Rajat Sahu"
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-sans"
+                      />
+                   </div>
+
+                   <div className="space-y-1">
+                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Father's Name</label>
+                      <input 
+                        type="text" 
+                        value={manualForm.fatherName}
+                        onChange={(e) => setManualForm({...manualForm, fatherName: e.target.value})}
+                        placeholder="e.g. Ajay Kumar Sahu"
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-sans"
+                      />
+                   </div>
+
+                   <div className="space-y-1">
+                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Course Title</label>
+                      <select 
+                        value={manualForm.course}
+                        onChange={(e) => setManualForm({...manualForm, course: e.target.value})}
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-xs"
+                      >
+                         {courses.map(c => (
+                            <option key={c.id} value={c.title}>{c.title}</option>
+                         ))}
+                         {!courses.some(c => c.title === "Tally Prime Expert") && (
+                            <option value="Tally Prime Expert">Tally Prime Expert</option>
+                         )}
+                      </select>
+                   </div>
+
+                   <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Duration</label>
+                         <input 
+                           type="text" 
+                           value={manualForm.duration}
+                           onChange={(e) => setManualForm({...manualForm, duration: e.target.value})}
+                           placeholder="e.g. 6 Months"
+                           className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-xs"
+                         />
+                      </div>
+                      <div className="space-y-1">
+                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Grade</label>
+                         <input 
+                           type="text" 
+                           value={manualForm.grade}
+                           onChange={(e) => setManualForm({...manualForm, grade: e.target.value})}
+                           placeholder="e.g. A"
+                           className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 uppercase font-mono text-xs"
+                         />
+                      </div>
+                   </div>
+
+                   <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Term Start</label>
+                         <input 
+                           type="text" 
+                           value={manualForm.fromDate}
+                           onChange={(e) => setManualForm({...manualForm, fromDate: e.target.value})}
+                           placeholder="e.g. Apr 2026"
+                           className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-xs"
+                         />
+                      </div>
+                      <div className="space-y-1">
+                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Term End</label>
+                         <input 
+                           type="text" 
+                           value={manualForm.toDate}
+                           onChange={(e) => setManualForm({...manualForm, toDate: e.target.value})}
+                           placeholder="e.g. Oct 2026"
+                           className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-xs"
+                         />
+                      </div>
+                   </div>
+
+                   <div className="space-y-1">
+                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Reg/Cert No</label>
+                      <input 
+                        type="text" 
+                        value={manualForm.certificateNo}
+                        onChange={(e) => setManualForm({...manualForm, certificateNo: e.target.value})}
+                        placeholder="Auto-generated if blank"
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-mono uppercase text-xs"
+                      />
+                   </div>
+                </div>
+             </div>
+          )}
             <div className="bg-[#141414] p-8 rounded-[3rem] text-white shadow-2xl space-y-8">
                <div className="flex items-center space-x-3">
                   <Layers className="text-blue-400" size={20} />
@@ -648,10 +804,85 @@ export const CertificateStudio = () => {
 
             <div 
               onClick={() => {
-                if (pendingCerts > 0) {
-                  alert(`Automation system batch-publishing ${pendingCerts} pending certificates. This will simulate a bulk issuance.`);
+                if (isManualMode) {
+                  if (!manualForm.studentName.trim() || !manualForm.fatherName.trim()) {
+                    alert("Please fill in Candidate Name and Father's Name before publishing!");
+                    return;
+                  }
+                  const certId = `cert-man-${Date.now()}`;
+                  const finalCertNo = manualForm.certificateNo.trim() || `STG/${new Date().getFullYear()}/${Math.floor(1000 + Math.random() * 9000)}`;
+                  issueCertificate({
+                    id: certId,
+                    certificateNo: finalCertNo,
+                    studentId: `manual-st-${Date.now()}`,
+                    studentName: manualForm.studentName,
+                    course: manualForm.course,
+                    issueDate: new Date().toISOString(),
+                    status: 'ISSUED',
+                    franchiseId: 'f1',
+                    qrCodeData: `${window.location.origin}/verify/${finalCertNo}`,
+                    fatherName: manualForm.fatherName,
+                    duration: manualForm.duration,
+                    startDate: manualForm.fromDate,
+                    endDate: manualForm.toDate,
+                    grade: manualForm.grade,
+                  } as any);
+                  alert(`Successfully generated & manually published certificate ${finalCertNo} for ${manualForm.studentName}! It has been placed on the website for instant public verification.`);
+                  setManualForm({
+                    studentName: '',
+                    fatherName: '',
+                    course: manualForm.course,
+                    duration: '3 Months',
+                    fromDate: 'Apr 2026',
+                    toDate: 'Oct 2026',
+                    grade: 'A',
+                    certificateNo: '',
+                  });
+                  return;
+                }
+                const appliedStudents = students.filter(s => s.certificateStatus === 'APPLIED');
+                if (appliedStudents.length > 0) {
+                  appliedStudents.forEach(student => {
+                    updateStudent(student.id, { certificateStatus: 'ISSUED' });
+                    const certId = `cert-${Date.now()}-${student.id}`;
+                    const randNum = Math.floor(1000 + Math.random() * 9000);
+                    const suffix = student.idNumber ? student.idNumber.replace(/\s/g, '').slice(-4) : randNum;
+                    const certNo = `STG/${new Date().getFullYear()}/${suffix}`;
+                    issueCertificate({
+                      id: certId,
+                      certificateNo: certNo,
+                      studentId: student.id,
+                      studentName: student.name,
+                      course: student.course,
+                      issueDate: new Date().toISOString(),
+                      status: 'ISSUED',
+                      franchiseId: student.franchiseId || 'f1',
+                      qrCodeData: `${window.location.origin}/verify/${certNo}`
+                    });
+                  });
+                  alert(`Successfully batch-published and generated digital certificates for all ${appliedStudents.length} pending students list!`);
                 } else {
-                  alert('No pending certificate applications found.');
+                  if (selectedStudent && selectedStudent.certificateStatus !== 'ISSUED') {
+                    updateStudent(selectedStudent.id, { certificateStatus: 'ISSUED' });
+                    const certId = `cert-${Date.now()}-${selectedStudent.id}`;
+                    const randNum = Math.floor(1000 + Math.random() * 9000);
+                    const suffix = selectedStudent.idNumber ? selectedStudent.idNumber.replace(/\s/g, '').slice(-4) : randNum;
+                    const certNo = `STG/${new Date().getFullYear()}/${suffix}`;
+                    issueCertificate({
+                      id: certId,
+                      certificateNo: certNo,
+                      studentId: selectedStudent.id,
+                      studentName: selectedStudent.name,
+                      course: selectedStudent.course,
+                      issueDate: new Date().toISOString(),
+                      status: 'ISSUED',
+                      franchiseId: selectedStudent.franchiseId || 'f1',
+                      qrCodeData: `${window.location.origin}/verify/${certNo}`
+                    });
+                    alert(`Successfully published digital certificate for ${selectedStudent.name}!`);
+                  } else {
+                    alert('All student certificates are up to date! To issue a new certificate, go to Student Directory and set certificateStatus of a student.');
+                  }
                 }
               }}
               className="bg-emerald-600 p-8 rounded-[3rem] text-white shadow-2xl relative overflow-hidden group hover:scale-[1.02] transition-transform cursor-pointer"
@@ -659,8 +890,14 @@ export const CertificateStudio = () => {
                <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2"></div>
                <div className="relative z-10 flex flex-col items-center text-center space-y-4">
                   <div className="p-4 bg-white/20 backdrop-blur rounded-2xl"><Award size={32} /></div>
-                  <h3 className="text-xl font-black uppercase tracking-tight italic">Quick Publish</h3>
-                  <p className="text-emerald-100 text-xs font-medium uppercase tracking-tighter max-w-xs mx-auto">Publish and generate PDF certificates for all {pendingCerts} pending students automatically.</p>
+                  <h3 className="text-xl font-black uppercase tracking-tight italic">{isManualMode ? "Publish Manual" : "Quick Publish"}</h3>
+                  <p className="text-emerald-100 text-xs font-medium uppercase tracking-tighter max-w-xs mx-auto">
+                    {isManualMode ? "Instantly publish and generate verification registry for this manually entered certificate." : pendingCerts > 0 
+                      ? `Publish and generate PDF certificates for all ${pendingCerts} pending students automatically.`
+                      : selectedStudent && selectedStudent.certificateStatus !== 'ISSUED'
+                        ? `Publish certificate for selected candidate: ${selectedStudent.name} right now.`
+                        : "All student certificates of completion have been issued successfully!"}
+                  </p>
                   <ChevronRight className="animate-bounce-x" />
                </div>
             </div>
