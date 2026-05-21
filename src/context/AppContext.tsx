@@ -4,6 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase, supabaseAdmin } from '../lib/supabase';
 import { User, Franchise, Student, Certificate, WalletTransaction, UserRole, Course, FeeStructure, FeePayment, FranchiseFee, AdmissionEnquiry, Exam, BusinessProfile, BusinessTransaction, AcademicSession, Announcement, Voucher, CourseCategory, Program, GlobalCourseSettings, Subject } from '../types';
 
 interface AppState {
@@ -82,6 +83,63 @@ interface AppContextType extends AppState {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+// Helper functions to map snake_case from DB to camelCase for the frontend (and vice-versa)
+function isUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+function ensureUUID(id: string): string {
+  if (!id || !isUUID(id)) {
+    return generateUUID();
+  }
+  return id;
+}
+
+const snakeToCamel = (obj: any): any => {
+  if (Array.isArray(obj)) {
+    return obj.map(snakeToCamel);
+  } else if (obj !== null && typeof obj === 'object') {
+    const n: any = {};
+    Object.keys(obj).forEach((k) => {
+      if (['kyc_docs', 'documents', 'heads', 'gallery'].includes(k)) {
+        n[k.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())] = obj[k];
+      } else {
+        const camelKey = k.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        n[camelKey] = snakeToCamel(obj[k]);
+      }
+    });
+    return n;
+  }
+  return obj;
+};
+
+const camelToSnake = (obj: any): any => {
+  if (Array.isArray(obj)) {
+    return obj.map(camelToSnake);
+  } else if (obj !== null && typeof obj === 'object') {
+    const n: any = {};
+    Object.keys(obj).forEach((k) => {
+      if (['kycDocs', 'documents', 'heads', 'gallery'].includes(k)) {
+        n[k.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)] = obj[k];
+      } else {
+        const snakeKey = k.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+        n[snakeKey] = camelToSnake(obj[k]);
+      }
+    });
+    return n;
+  }
+  return obj;
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [franchises, setFranchises] = useState<Franchise[]>([]);
@@ -143,229 +201,440 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initial Seed Data
-  const seedData = () => {
-    const initialCategories: CourseCategory[] = [
-      { id: 'cat-1', name: 'Software Development', description: 'Programming and App Dev' },
-      { id: 'cat-2', name: 'Financial Accounting', description: 'Tally, GST and Business accounts' },
-      { id: 'cat-3', name: 'Cyber Security', description: 'Network protection' },
-      { id: 'cat-4', name: 'Office Automation', description: 'MS Office and Desktop operations' }
-    ];
+  // Seeds initial setup defaults directly to remote Supabase tables if they are empty
+  const seedInitialDataToSupabase = async () => {
+    try {
+      const initialCategories: CourseCategory[] = [
+        { id: 'cat-1', name: 'Software Development', description: 'Programming and App Dev' },
+        { id: 'cat-2', name: 'Financial Accounting', description: 'Tally, GST and Business accounts' },
+        { id: 'cat-3', name: 'Cyber Security', description: 'Network protection' },
+        { id: 'cat-4', name: 'Office Automation', description: 'MS Office and Desktop operations' }
+      ];
 
-    const initialCourses: Course[] = [
-      { 
-        id: 'c1', title: 'Tally Prime Expert', category: 'Financial Accounting', duration: '3 Months', 
-        description: 'Advanced Tally Prime training with real-world scenarios.', level: 'Professional', rating: 4.9,
-        imageUrl: 'https://images.unsplash.com/photo-1554224155-169641357599?w=400&h=400&fit=crop'
-      },
-      { 
-        id: 'c2', title: 'Python Fundamentals', category: 'Software Development', duration: '2 Months', 
-        description: 'Basic to advanced Python.', level: 'Intermediate', rating: 4.7,
-        imageUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&h=400&fit=crop'
-      },
-      { 
-        id: 'c3', title: 'DCA (Diploma in Computer App)', category: 'Office Automation', duration: '12 Months', 
-        description: 'One year diploma covering all basics.', level: 'Advanced', rating: 4.5,
-        imageUrl: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=400&h=400&fit=crop'
-      }
-    ];
+      const initialCourses: Course[] = [
+        { 
+          id: 'c1', title: 'Tally Prime Expert', category: 'Financial Accounting', duration: '3 Months', 
+          description: 'Advanced Tally Prime training with real-world scenarios.', level: 'Professional', rating: 4.9,
+          imageUrl: 'https://images.unsplash.com/photo-1554224155-169641357599?w=400&h=400&fit=crop'
+        },
+        { 
+          id: 'c2', title: 'Python Fundamentals', category: 'Software Development', duration: '2 Months', 
+          description: 'Basic to advanced Python.', level: 'Intermediate', rating: 4.7,
+          imageUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&h=400&fit=crop'
+        },
+        { 
+          id: 'c3', title: 'DCA (Diploma in Computer App)', category: 'Office Automation', duration: '12 Months', 
+          description: 'One year diploma covering all basics.', level: 'Advanced', rating: 4.5,
+          imageUrl: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=400&h=400&fit=crop'
+        }
+      ];
 
-    const initialSessions: AcademicSession[] = [
-      { id: 'sess-1', name: '2024-25', startDate: '2024-04-01', endDate: '2025-03-31', status: 'ACTIVE', isDefault: true },
-      { id: 'sess-2', name: '2023-24', startDate: '2023-04-01', endDate: '2024-03-31', status: 'INACTIVE', isDefault: false }
-    ];
+      const initialSessions: AcademicSession[] = [
+        { id: 'sess-1', name: '2024-25', startDate: '2024-04-01', endDate: '2025-03-31', status: 'ACTIVE', isDefault: true },
+        { id: 'sess-2', name: '2023-24', startDate: '2023-04-01', endDate: '2024-03-31', status: 'INACTIVE', isDefault: false }
+      ];
 
-    const initialFranchises: Franchise[] = [
-      {
-        id: 'f1', name: 'Basti Main Campus', ownerId: 'u2', contact: '9450455378', address: 'Gandhi Nagar, Basti',
-        walletBalance: 50000, status: 'APPROVED', revenueSharePercent: 20, createdAt: '2024-01-10T10:00:00Z',
-        licenseDocs: [], loginId: 'basti_root', password: 'password', logoUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=BC'
-      },
-      {
-        id: 'f2', name: 'Lucknow Center', ownerId: 'u3', contact: '8888888888', address: 'Hazratganj, Lucknow',
-        walletBalance: 15000, status: 'APPROVED', revenueSharePercent: 25, createdAt: '2024-02-15T12:00:00Z',
-        licenseDocs: [], loginId: 'lucknow_ct', password: 'password'
-      }
-    ];
+      const initialFranchises: Franchise[] = [
+        {
+          id: 'f1', name: 'Basti Main Campus', ownerId: 'u2', contact: '9450455378', address: 'Gandhi Nagar, Basti',
+          walletBalance: 50000, status: 'APPROVED', revenueSharePercent: 20, createdAt: new Date().toISOString(),
+          licenseDocs: [], loginId: 'basti_root', password: 'password', logoUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=BC'
+        },
+        {
+          id: 'f2', name: 'Lucknow Center', ownerId: 'u3', contact: '8888888888', address: 'Hazratganj, Lucknow',
+          walletBalance: 15000, status: 'APPROVED', revenueSharePercent: 25, createdAt: new Date().toISOString(),
+          licenseDocs: [], loginId: 'lucknow_ct', password: 'password'
+        }
+      ];
 
-    const initialStudents: Student[] = [
-      {
-        id: 's1', enrollmentNo: 'STG/2024/0001', admissionNo: 'AD-2024-101', name: 'Aryan Mishra',
-        fatherName: 'Rajesh Mishra', motherName: 'Sunita Mishra', dob: '2005-05-15', gender: 'Male',
-        contact: '9988776655', guardianContact: '9988776654', email: 'aryan@stg.in',
-        casteCategory: 'General', religion: 'Hinduism', maritalStatus: 'Single',
-        identityType: 'Aadhar', idNumber: '1234 5678 9012', apparId: 'AP-9921',
-        franchiseId: 'f1', studyCenter: 'Basti Main Campus', session: '2024-25',
-        courseCategory: 'Financial Accounting', course: 'Tally Prime Expert', courseDuration: '3 Months',
-        admissionDate: '2024-04-10', highestQualification: '12th', qualificationDetail: 'Science Stream',
-        passingYear: '2023', address: '12, Malviya Road, Basti', state: 'Uttar Pradesh', district: 'Basti',
-        pincode: '272001', remark: 'Good performance', enquirySource: 'Direct Website', verificationCode: 'V-9912',
-        feeStatus: 'PARTIAL', kycStatus: 'PENDING', kycDocs: [
-          { id: 'kd1', type: 'AADHAR', name: 'Aadhar Card', url: 'https://via.placeholder.com/800x500?text=Aadhar+Card+Preview', status: 'PENDING', uploadedAt: new Date().toISOString() },
-          { id: 'kd2', type: 'QUALIFICATION', name: '12th Marksheet', url: 'https://via.placeholder.com/800x1100?text=Marksheet+Preview', status: 'PENDING', uploadedAt: new Date().toISOString() }
-        ], 
-        documents: [
-          { id: 'doc-1', type: 'AADHAR', name: 'Aadhar / ID Card', url: 'https://via.placeholder.com/800x500?text=Aadhar+Card+Preview', status: 'PENDING', uploadedAt: new Date().toISOString() },
-          { id: 'doc-2', type: 'QUALIFICATION', name: 'Qualification Document', url: 'https://via.placeholder.com/800x1100?text=Marksheet+Preview', status: 'PENDING', uploadedAt: new Date().toISOString() },
-        ],
-        totalFees: 5000, paidAmount: 2500,
-        certificateStatus: 'NOT_APPLIED'
-      },
-      {
-        id: 's2', enrollmentNo: 'STG/2024/0002', admissionNo: 'AD-2024-102', name: 'Pragati Singh',
-        fatherName: 'Sanjay Singh', motherName: 'Anjali Singh', dob: '2006-02-20', gender: 'Female',
-        contact: '9977665544', guardianContact: '9977665543', email: 'pragati@stg.in',
-        casteCategory: 'OBC', religion: 'Hinduism', maritalStatus: 'Single',
-        identityType: 'Aadhar', idNumber: '4455 6677 8899', apparId: 'AP-9922',
-        franchiseId: 'f1', studyCenter: 'Basti Main Campus', session: '2024-25',
-        courseCategory: 'Software Development', course: 'Python Fundamentals', courseDuration: '2 Months',
-        admissionDate: '2024-05-02', highestQualification: 'B.Sc', qualificationDetail: 'Computer Science',
-        passingYear: '2024', address: 'Mohalla Azad Nagar, Basti', state: 'Uttar Pradesh', district: 'Basti',
-        pincode: '272002', remark: 'Inquisitive learner', enquirySource: 'Friend Referral', verificationCode: 'V-9913',
-        feeStatus: 'PAID', kycStatus: 'APPROVED', kycDocs: [
-          { id: 'kd3', type: 'AADHAR', name: 'Aadhar Card', url: 'https://via.placeholder.com/800x500?text=Aadhar+Card+Approved', status: 'APPROVED', uploadedAt: new Date().toISOString() }
-        ],
-        documents: [
-          { id: 'doc-1', type: 'AADHAR', name: 'Aadhar / ID Card', url: 'https://via.placeholder.com/800x500?text=Aadhar+Card+Approved', status: 'APPROVED', uploadedAt: new Date().toISOString() },
-        ],
-        totalFees: 4500, paidAmount: 4500,
-        certificateStatus: 'ISSUED'
-      }
-    ];
+      const initialStudents: Student[] = [
+        {
+          id: 's1', enrollmentNo: 'STG/2024/0001', admissionNo: 'AD-2024-101', name: 'Aryan Mishra',
+          fatherName: 'Rajesh Mishra', motherName: 'Sunita Mishra', dob: '2005-05-15', gender: 'Male',
+          contact: '9988776655', guardianContact: '9988776654', email: 'aryan@stg.in',
+          casteCategory: 'General', religion: 'Hinduism', maritalStatus: 'Single',
+          identityType: 'Aadhar', idNumber: '1234 5678 9012', apparId: 'AP-9921',
+          franchiseId: 'f1', studyCenter: 'Basti Main Campus', session: '2024-25',
+          courseCategory: 'Financial Accounting', course: 'Tally Prime Expert', courseDuration: '3 Months',
+          admissionDate: '2024-04-10', highestQualification: '12th', qualificationDetail: 'Science Stream',
+          passingYear: '2023', address: '12, Malviya Road, Basti', state: 'Uttar Pradesh', district: 'Basti',
+          pincode: '272001', remark: 'Good performance', enquirySource: 'Direct Website', verificationCode: 'V-9912',
+          feeStatus: 'PARTIAL', kycStatus: 'PENDING', kycDocs: [
+            { id: 'kd1', type: 'AADHAR', name: 'Aadhar Card', url: 'https://via.placeholder.com/800x500?text=Aadhar+Card+Preview', status: 'PENDING', uploadedAt: new Date().toISOString() },
+            { id: 'kd2', type: 'QUALIFICATION', name: '12th Marksheet', url: 'https://via.placeholder.com/800x1100?text=Marksheet+Preview', status: 'PENDING', uploadedAt: new Date().toISOString() }
+          ], 
+          documents: [
+            { id: 'doc-1', type: 'AADHAR', name: 'Aadhar / ID Card', url: 'https://via.placeholder.com/800x500?text=Aadhar+Card+Preview', status: 'PENDING', uploadedAt: new Date().toISOString() },
+            { id: 'doc-2', type: 'QUALIFICATION', name: 'Qualification Document', url: 'https://via.placeholder.com/800x1100?text=Marksheet+Preview', status: 'PENDING', uploadedAt: new Date().toISOString() },
+          ],
+          totalFees: 5000, paidAmount: 2500,
+          certificateStatus: 'NOT_APPLIED'
+        },
+        {
+          id: 's2', enrollmentNo: 'STG/2024/0002', admissionNo: 'AD-2024-102', name: 'Pragati Singh',
+          fatherName: 'Sanjay Singh', motherName: 'Anjali Singh', dob: '2006-02-20', gender: 'Female',
+          contact: '9977665544', guardianContact: '9977665543', email: 'pragati@stg.in',
+          casteCategory: 'OBC', religion: 'Hinduism', maritalStatus: 'Single',
+          identityType: 'Aadhar', idNumber: '4455 6677 8899', apparId: 'AP-9922',
+          franchiseId: 'f1', studyCenter: 'Basti Main Campus', session: '2024-25',
+          courseCategory: 'Software Development', course: 'Python Fundamentals', courseDuration: '2 Months',
+          admissionDate: '2024-05-02', highestQualification: 'B.Sc', qualificationDetail: 'Computer Science',
+          passingYear: '2024', address: 'Mohalla Azad Nagar, Basti', state: 'Uttar Pradesh', district: 'Basti',
+          pincode: '272002', remark: 'Inquisitive learner', enquirySource: 'Friend Referral', verificationCode: 'V-9913',
+          feeStatus: 'PAID', kycStatus: 'APPROVED', kycDocs: [
+            { id: 'kd3', type: 'AADHAR', name: 'Aadhar Card', url: 'https://via.placeholder.com/800x500?text=Aadhar+Card+Approved', status: 'APPROVED', uploadedAt: new Date().toISOString() }
+          ],
+          documents: [
+            { id: 'doc-1', type: 'AADHAR', name: 'Aadhar / ID Card', url: 'https://via.placeholder.com/800x500?text=Aadhar+Card+Approved', status: 'APPROVED', uploadedAt: new Date().toISOString() },
+          ],
+          totalFees: 4500, paidAmount: 4500,
+          certificateStatus: 'ISSUED'
+        }
+      ];
 
-    const initialPayments: FeePayment[] = [
-      {
-        id: 'p1', studentId: 's1', receiptNo: 'RCP-001', date: '2024-04-10', feeType: 'Admission Fee',
-        amount: 5000, discount: 0, penalty: 0, paidAmount: 2500, balance: 2500, paymentMode: 'CASH',
-        status: 'Partial', collectionTime: '10:30 AM'
-      },
-      {
-        id: 'p2', studentId: 's2', receiptNo: 'RCP-002', date: '2024-05-02', feeType: 'Full Course Fee',
-        amount: 4500, discount: 0, penalty: 0, paidAmount: 4500, balance: 0, paymentMode: 'UPI',
-        status: 'Paid', collectionTime: '11:45 AM'
-      }
-    ];
+      const initialPayments: FeePayment[] = [
+        {
+          id: 'p1', studentId: 's1', receiptNo: 'RCP-001', date: '2024-04-10', feeType: 'Admission Fee',
+          amount: 5000, discount: 0, penalty: 0, paidAmount: 2500, balance: 2500, paymentMode: 'CASH',
+          status: 'Partial', remarks: 'Partial admission fees'
+        },
+        {
+          id: 'p2', studentId: 's2', receiptNo: 'RCP-002', date: '2024-05-02', feeType: 'Full Course Fee',
+          amount: 4500, discount: 0, penalty: 0, paidAmount: 4500, balance: 0, paymentMode: 'UPI',
+          status: 'Paid', remarks: 'Paid completely'
+        }
+      ];
 
-    const initialEnquiries: AdmissionEnquiry[] = [
-      { id: 'enq-1', name: 'Rohan Gupta', email: 'rohan@gmail.com', phone: '9000000001', course: 'Tally Prime Expert', message: 'Looking for morning batch.', status: 'PENDING', createdAt: '2024-05-10T09:00:00Z' },
-      { id: 'enq-2', name: 'Sana Khan', email: 'sana@gmail.com', phone: '9000000002', course: 'Python Fundamentals', message: 'Is certificate placement guaranteed?', status: 'FOLLOWED_UP', createdAt: '2024-05-12T14:20:00Z' }
-    ];
+      const initialEnquiries: AdmissionEnquiry[] = [
+        { id: 'enq-1', name: 'Rohan Gupta', email: 'rohan@gmail.com', phone: '9000000001', course: 'Tally Prime Expert', message: 'Looking for morning batch.', status: 'PENDING', createdAt: '2024-05-10T09:00:00Z' },
+        { id: 'enq-2', name: 'Sana Khan', email: 'sana@gmail.com', phone: '9000000002', course: 'Python Fundamentals', message: 'Is certificate placement guaranteed?', status: 'FOLLOWED_UP', createdAt: '2024-05-12T14:20:00Z' }
+      ];
 
-    const initialAnnouncements: Announcement[] = [
-      { id: 'ann-1', title: 'Session 2024-25 Registrations Open!', content: 'All centers are requested to update their course slots.', target: 'ALL', date: '2024-03-20T10:00:00Z', priority: 'HIGH', status: 'PUBLISHED' },
-      { id: 'ann-2', title: 'System Maintenance', content: 'Portal will be down on Sunday night.', target: ['ADMIN', 'FRANCHISE'], date: '2024-05-14T10:00:00Z', priority: 'MEDIUM', status: 'PUBLISHED' }
-    ];
+      const initialAnnouncements: Announcement[] = [
+        { id: 'ann-1', title: 'Session 2024-25 Registrations Open!', content: 'All centers are requested to update their course slots.', target: 'ALL', date: '2024-03-20T10:00:00Z', priority: 'HIGH', status: 'PUBLISHED' },
+        { id: 'ann-2', title: 'System Maintenance', content: 'Portal will be down on Sunday night.', target: ['ADMIN', 'FRANCHISE'], date: '2024-05-14T10:00:00Z', priority: 'MEDIUM', status: 'PUBLISHED' }
+      ];
 
-    const initialFranchiseFees: FranchiseFee[] = [
-      { id: 'ff1', franchiseId: 'f1', franchiseName: 'Basti Main Campus', registrationFees: 10000, marksheetFees: 500, description: 'Standard Tier Fee' },
-      { id: 'ff2', franchiseId: 'f2', franchiseName: 'Lucknow Center', registrationFees: 15000, marksheetFees: 750, description: 'Tier 1 City' }
-    ];
+      const initialFranchiseFees = [
+        { id: 'ff1', franchiseId: 'f1', franchiseName: 'Basti Main Campus', registrationFees: 10000, marksheetFees: 500, description: 'Standard Tier Fee' },
+        { id: 'ff2', franchiseId: 'f2', franchiseName: 'Lucknow Center', registrationFees: 15000, marksheetFees: 750, description: 'Tier 1 City' }
+      ];
 
-    const initialExams: Exam[] = [
-      { id: 'ex-1', name: 'Q1 Theory Exam', session: '2024-25', trade: 'Tally Prime Expert', unit: 'Final', startDate: '2024-07-01', endDate: '2024-07-02', remarks: 'Bring AD-Card', status: 'UPCOMING', invigilator: 'Prof. Sharma' }
-    ];
+      const initialExams: Exam[] = [
+        { id: 'ex-1', name: 'Q1 Theory Exam', session: '2024-25', trade: 'Tally Prime Expert', unit: 'Final', startDate: '2024-07-01', endDate: '2024-07-02', remarks: 'Bring AD-Card', status: 'UPCOMING', invigilator: 'Prof. Sharma' }
+      ];
 
-    setCourseCategories(initialCategories);
-    setCourses(initialCourses);
-    setSessions(initialSessions);
-    setFranchises(initialFranchises);
-    setStudents(initialStudents);
-    setFeePayments(initialPayments);
-    setEnquiries(initialEnquiries);
-    setAnnouncements(initialAnnouncements);
-    setFranchiseFees(initialFranchiseFees);
-    setExams(initialExams);
+      setCourseCategories(initialCategories);
+      setCourses(initialCourses);
+      setSessions(initialSessions);
+      setFranchises(initialFranchises);
+      setStudents(initialStudents);
+      setFeePayments(initialPayments);
+      setEnquiries(initialEnquiries);
+      setAnnouncements(initialAnnouncements);
+      setFranchiseFees(initialFranchiseFees);
+      setExams(initialExams);
 
-    localStorage.setItem('courseCategories', JSON.stringify(initialCategories));
-    localStorage.setItem('courses', JSON.stringify(initialCourses));
-    localStorage.setItem('sessions', JSON.stringify(initialSessions));
-    localStorage.setItem('franchises', JSON.stringify(initialFranchises));
-    localStorage.setItem('students', JSON.stringify(initialStudents));
-    localStorage.setItem('feePayments', JSON.stringify(initialPayments));
-    localStorage.setItem('enquiries', JSON.stringify(initialEnquiries));
-    localStorage.setItem('announcements', JSON.stringify(initialAnnouncements));
-    localStorage.setItem('franchiseFees', JSON.stringify(initialFranchiseFees));
-    localStorage.setItem('exams', JSON.stringify(initialExams));
+      // Seed to remote database safely using Admin Client to bypass default row access locks
+      await supabaseAdmin.from('courses').insert(camelToSnake(initialCourses));
+      await supabaseAdmin.from('franchises').insert(camelToSnake(initialFranchises));
+      
+      const mappedSessions = initialSessions.map(s => ({
+        id: ensureUUID(s.id),
+        name: s.name,
+        start_date: s.startDate,
+        end_date: s.endDate,
+        status: s.status,
+        is_default: s.isDefault
+      }));
+      await supabaseAdmin.from('academic_sessions').insert(mappedSessions);
+      await supabaseAdmin.from('students').insert(camelToSnake(initialStudents));
+
+      const mappedPayments = initialPayments.map(p => ({
+        id: ensureUUID(p.id),
+        student_id: p.studentId,
+        receipt_no: p.receiptNo,
+        date: p.date,
+        fee_type: p.feeType,
+        amount: p.amount,
+        discount: p.discount,
+        penalty: p.penalty,
+        paid_amount: p.paidAmount,
+        balance: p.balance,
+        payment_mode: p.paymentMode,
+        status: p.status,
+        remarks: p.remarks || ''
+      }));
+      await supabaseAdmin.from('fee_payments').insert(mappedPayments);
+      await supabaseAdmin.from('admission_enquiries').insert(camelToSnake(initialEnquiries));
+      await supabaseAdmin.from('announcements').insert(camelToSnake(initialAnnouncements));
+
+      const mappedExams = initialExams.map(ex => ({
+        id: ensureUUID(ex.id),
+        name: ex.name,
+        session: ex.session,
+        trade: ex.trade,
+        unit: ex.unit,
+        start_date: ex.startDate,
+        end_date: ex.endDate,
+        remarks: ex.remarks,
+        status: ex.status,
+        invigilator: ex.invigilator
+      }));
+      await supabaseAdmin.from('exams').insert(mappedExams);
+
+      const mappedFranchiseFees = initialFranchiseFees.map(ff => ({
+        id: ensureUUID(ff.id),
+        head: 'FRANCHISE_FEE_RECORD',
+        course_id: ff.franchiseId,
+        course_name: ff.franchiseName,
+        amount: ff.registrationFees,
+        discount: ff.marksheetFees,
+        frequency: ff.description,
+        type: 'FRANCHISE_FEE',
+        status: 'ACTIVE'
+      }));
+      await supabaseAdmin.from('fee_structures').insert(mappedFranchiseFees);
+
+      console.log('Database seeded with standard initial datasets.');
+    } catch (e) {
+      console.error('Remote seeding failed, operating on state fallback:', e);
+    }
   };
 
-  // Initialize from storage or defaults
+  // 1. Initial State Hydration effect from Supabase
   useEffect(() => {
-    const savedFranchises = localStorage.getItem('franchises');
-    const savedStudents = localStorage.getItem('students');
-    const savedEnquiries = localStorage.getItem('enquiries');
-    const savedCourses = localStorage.getItem('courses');
-    const savedFeeStructures = localStorage.getItem('feeStructures');
-    const savedFeePayments = localStorage.getItem('feePayments');
-    const savedFranchiseFees = localStorage.getItem('franchiseFees');
-    const savedCertificates = localStorage.getItem('certificates');
-    const savedSessions = localStorage.getItem('sessions');
-    const savedAnnouncements = localStorage.getItem('announcements');
-    const savedVouchers = localStorage.getItem('vouchers');
-    const savedExams = localStorage.getItem('exams');
-    const savedSubjects = localStorage.getItem('subjects');
-    const savedCategories = localStorage.getItem('courseCategories');
-    const savedPrograms = localStorage.getItem('programs');
-    const savedGlobalSettings = localStorage.getItem('globalCourseSettings');
-    const savedWalletTransactions = localStorage.getItem('walletTransactions');
-    const savedBusinessTransactions = localStorage.getItem('businessTransactions');
-    const savedBusinessProfile = localStorage.getItem('businessProfile');
     const savedUser = localStorage.getItem('user');
-
     if (savedUser) setCurrentUser(JSON.parse(savedUser));
-    
-    // Seed data if courses is empty (or first launch)
-    const parsedCourses = savedCourses ? JSON.parse(savedCourses) : [];
-    if (!savedCourses || (Array.isArray(parsedCourses) && parsedCourses.length === 0)) {
-      seedData();
-    } else {
-      const safeParse = (val: string | null) => {
-        if (!val) return [];
-        try {
-          const parsed = JSON.parse(val);
-          return Array.isArray(parsed) ? parsed : [];
-        } catch (e) {
-          return [];
+
+    const loadFromSupabase = async () => {
+      try {
+        setIsLoading(true);
+
+        // Fetch from all collections
+        const [
+          { data: fData },
+          { data: sData },
+          { data: cData },
+          { data: pData },
+          { data: eData },
+          { data: seData },
+          { data: anData },
+          { data: voData },
+          { data: exData },
+          { data: certData },
+          { data: wtData },
+          { data: btData },
+          { data: fsData },
+          { data: bpData }
+        ] = await Promise.all([
+          supabaseAdmin.from('franchises').select('*'),
+          supabaseAdmin.from('students').select('*'),
+          supabaseAdmin.from('courses').select('*'),
+          supabaseAdmin.from('fee_payments').select('*'),
+          supabaseAdmin.from('admission_enquiries').select('*'),
+          supabaseAdmin.from('academic_sessions').select('*'),
+          supabaseAdmin.from('announcements').select('*'),
+          supabaseAdmin.from('vouchers').select('*'),
+          supabaseAdmin.from('exams').select('*'),
+          supabaseAdmin.from('certificates').select('*'),
+          supabaseAdmin.from('wallet_transactions').select('*'),
+          supabaseAdmin.from('business_transactions').select('*'),
+          supabaseAdmin.from('fee_structures').select('*'),
+          supabaseAdmin.from('business_profile').select('*')
+        ]);
+
+        const rawCourses = cData ? snakeToCamel(cData) : [];
+        if (rawCourses.length === 0) {
+          // Empty remote Database - trigger initial seeding to database
+          await seedInitialDataToSupabase();
+        } else {
+          setFranchises(fData ? snakeToCamel(fData) : []);
+          setStudents(sData ? snakeToCamel(sData) : []);
+          setCourses(rawCourses);
+          setFeePayments(pData ? snakeToCamel(pData) : []);
+          setEnquiries(eData ? snakeToCamel(eData) : []);
+          setAnnouncements(anData ? snakeToCamel(anData) : []);
+          setVouchers(voData ? snakeToCamel(voData) : []);
+          setCertificates(certData ? snakeToCamel(certData) : []);
+          setWalletTransactions(wtData ? snakeToCamel(wtData) : []);
+          setBusinessTransactions(btData ? snakeToCamel(btData) : []);
+
+          const rawSessions = seData ? snakeToCamel(seData) : [];
+          setSessions(rawSessions);
+
+          const rawExams = exData ? snakeToCamel(exData) : [];
+          setExams(rawExams);
+
+          const rawFeeStructures = fsData ? snakeToCamel(fsData) : [];
+          setFeeStructures(rawFeeStructures.filter((x: any) => x.type !== 'FRANCHISE_FEE'));
+          setFranchiseFees(rawFeeStructures.filter((x: any) => x.type === 'FRANCHISE_FEE').map((x: any) => ({
+            id: x.id,
+            franchiseId: x.courseId,
+            franchiseName: x.courseName,
+            registrationFees: x.amount,
+            marksheetFees: x.discount,
+            description: x.frequency || ''
+          })));
+
+          if (bpData && bpData.length > 0) {
+            setBusinessProfile(snakeToCamel(bpData[0]));
+          }
         }
-      };
-
-      setFranchises(safeParse(savedFranchises));
-      setStudents(safeParse(savedStudents));
-      setEnquiries(safeParse(savedEnquiries));
-      setCourses(safeParse(savedCourses));
-      setFeeStructures(safeParse(savedFeeStructures));
-      setFeePayments(safeParse(savedFeePayments));
-      setFranchiseFees(safeParse(savedFranchiseFees));
-      setCertificates(safeParse(savedCertificates));
-      setSessions(safeParse(savedSessions));
-      setAnnouncements(safeParse(savedAnnouncements));
-      setVouchers(safeParse(savedVouchers));
-      setExams(safeParse(savedExams));
-      setSubjects(safeParse(savedSubjects));
-      setCourseCategories(safeParse(savedCategories));
-      setPrograms(safeParse(savedPrograms));
-      
-      if (savedGlobalSettings) {
-        try {
-          const parsed = JSON.parse(savedGlobalSettings);
-          setGlobalCourseSettings(prev => ({ ...prev, ...parsed }));
-        } catch (e) {}
+      } catch (e) {
+        console.error('Failed to load real-time datasets from Supabase. Offline mode starting...', e);
+      } finally {
+        setIsLoading(false);
       }
-      
-      setWalletTransactions(safeParse(savedWalletTransactions));
-      setBusinessTransactions(safeParse(savedBusinessTransactions));
-      
-      if (savedBusinessProfile) {
-        try {
-          const parsed = JSON.parse(savedBusinessProfile);
-          setBusinessProfile(prev => ({ ...prev, ...parsed }));
-        } catch (e) {}
-      }
-    }
+    };
 
-    setIsLoading(false);
+    loadFromSupabase();
   }, []);
 
-  // Save to storage on updates
+  // 2. Real-Time postgres changes live synchronization channel
+  useEffect(() => {
+    const channel = supabaseAdmin
+      .channel('global-database-realtime-replication')
+      .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+        const table = payload.table;
+        const eventType = payload.eventType;
+        const newRecord = payload.new ? snakeToCamel(payload.new) : null;
+        const oldRecord = payload.old ? snakeToCamel(payload.old) : null;
+
+        if (table === 'courses') {
+          if (eventType === 'INSERT') {
+            setCourses(prev => prev.some(x => x.id === newRecord.id) ? prev : [...prev, newRecord]);
+          } else if (eventType === 'UPDATE') {
+            setCourses(prev => prev.map(x => x.id === newRecord.id ? { ...x, ...newRecord } : x));
+          } else if (eventType === 'DELETE') {
+            setCourses(prev => prev.filter(x => x.id !== oldRecord.id));
+          }
+        }
+
+        else if (table === 'franchises') {
+          if (eventType === 'INSERT') {
+            setFranchises(prev => prev.some(x => x.id === newRecord.id) ? prev : [...prev, newRecord]);
+          } else if (eventType === 'UPDATE') {
+            setFranchises(prev => prev.map(x => x.id === newRecord.id ? { ...x, ...newRecord } : x));
+          } else if (eventType === 'DELETE') {
+            setFranchises(prev => prev.filter(x => x.id !== oldRecord.id));
+          }
+        }
+
+        else if (table === 'students') {
+          if (eventType === 'INSERT') {
+            setStudents(prev => prev.some(x => x.id === newRecord.id) ? prev : [...prev, newRecord]);
+          } else if (eventType === 'UPDATE') {
+            setStudents(prev => prev.map(x => x.id === newRecord.id ? { ...x, ...newRecord } : x));
+          } else if (eventType === 'DELETE') {
+            setStudents(prev => prev.filter(x => x.id !== oldRecord.id));
+          }
+        }
+
+        else if (table === 'exams') {
+          if (eventType === 'INSERT') {
+            setExams(prev => prev.some(x => x.id === newRecord.id) ? prev : [...prev, newRecord]);
+          } else if (eventType === 'UPDATE') {
+            setExams(prev => prev.map(x => x.id === newRecord.id ? { ...x, ...newRecord } : x));
+          } else if (eventType === 'DELETE') {
+            setExams(prev => prev.filter(x => x.id !== oldRecord.id));
+          }
+        }
+
+        else if (table === 'vouchers') {
+          if (eventType === 'INSERT') {
+            setVouchers(prev => prev.some(x => x.id === newRecord.id) ? prev : [newRecord, ...prev]);
+          } else if (eventType === 'UPDATE') {
+            setVouchers(prev => prev.map(x => x.id === newRecord.id ? { ...x, ...newRecord } : x));
+          }
+        }
+
+        else if (table === 'wallet_transactions') {
+          if (eventType === 'INSERT') {
+            setWalletTransactions(prev => prev.some(x => x.id === newRecord.id) ? prev : [newRecord, ...prev]);
+          }
+        }
+
+        else if (table === 'business_transactions') {
+          if (eventType === 'INSERT') {
+            setBusinessTransactions(prev => prev.some(x => x.id === newRecord.id) ? prev : [newRecord, ...prev]);
+          }
+        }
+
+        else if (table === 'admission_enquiries') {
+          if (eventType === 'INSERT') {
+            setEnquiries(prev => prev.some(x => x.id === newRecord.id) ? prev : [newRecord, ...prev]);
+          } else if (eventType === 'UPDATE') {
+            setEnquiries(prev => prev.map(x => x.id === newRecord.id ? { ...x, ...newRecord } : x));
+          } else if (eventType === 'DELETE') {
+            setEnquiries(prev => prev.filter(x => x.id !== oldRecord.id));
+          }
+        }
+
+        else if (table === 'announcements') {
+          if (eventType === 'INSERT') {
+            setAnnouncements(prev => prev.some(x => x.id === newRecord.id) ? prev : [newRecord, ...prev]);
+          } else if (eventType === 'UPDATE') {
+            setAnnouncements(prev => prev.map(x => x.id === newRecord.id ? { ...x, ...newRecord } : x));
+          } else if (eventType === 'DELETE') {
+            setAnnouncements(prev => prev.filter(x => x.id !== oldRecord.id));
+          }
+        }
+
+        else if (table === 'certificates') {
+          if (eventType === 'INSERT') {
+            setCertificates(prev => prev.some(x => x.id === newRecord.id) ? prev : [...prev, newRecord]);
+          } else if (eventType === 'UPDATE') {
+            setCertificates(prev => prev.map(x => x.id === newRecord.id ? { ...x, ...newRecord } : x));
+          }
+        }
+
+        else if (table === 'academic_sessions') {
+          if (eventType === 'INSERT') {
+            setSessions(prev => prev.some(x => x.id === newRecord.id) ? prev : [...prev, newRecord]);
+          } else if (eventType === 'UPDATE') {
+            setSessions(prev => prev.map(x => x.id === newRecord.id ? { ...x, ...newRecord } : x));
+          } else if (eventType === 'DELETE') {
+            setSessions(prev => prev.filter(x => x.id !== oldRecord.id));
+          }
+        }
+
+        else if (table === 'fee_structures') {
+          if (newRecord && newRecord.type === 'FRANCHISE_FEE') {
+            const mappedFF = {
+              id: newRecord.id,
+              franchiseId: newRecord.courseId,
+              franchiseName: newRecord.courseName,
+              registrationFees: newRecord.amount,
+              marksheetFees: newRecord.discount,
+              description: newRecord.frequency || ''
+            };
+            if (eventType === 'INSERT') {
+              setFranchiseFees(prev => prev.some(x => x.id === mappedFF.id) ? prev : [...prev, mappedFF]);
+            } else if (eventType === 'UPDATE') {
+              setFranchiseFees(prev => prev.map(x => x.id === mappedFF.id ? { ...x, ...mappedFF } : x));
+            } else if (eventType === 'DELETE') {
+              setFranchiseFees(prev => prev.filter(x => x.id !== oldRecord.id));
+            }
+          } else if (newRecord) {
+            if (eventType === 'INSERT') {
+              setFeeStructures(prev => prev.some(x => x.id === newRecord.id) ? prev : [...prev, newRecord]);
+            } else if (eventType === 'UPDATE') {
+              setFeeStructures(prev => prev.map(x => x.id === newRecord.id ? { ...x, ...newRecord } : x));
+            } else if (eventType === 'DELETE') {
+              setFeeStructures(prev => prev.filter(x => x.id !== oldRecord.id));
+            }
+          }
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabaseAdmin.removeChannel(channel);
+    };
+  }, []);
+
+  // 3. Fallback Local Storage Persistence
   useEffect(() => {
     if (!isLoading) {
       const saveData = (key: string, data: any) => {
@@ -416,17 +685,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.removeItem('user');
   };
 
-  const addFranchise = (f: Franchise) => setFranchises(prev => [...prev, f]);
-  const updateFranchise = (id: string, updates: Partial<Franchise>) => 
-    setFranchises(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
-  const deleteFranchise = (id: string) => setFranchises(prev => prev.filter(f => f.id !== id));
-  
-  const addStudent = (s: Student) => setStudents(prev => [...prev, s]);
-  const updateStudent = (id: string, updates: Partial<Student>) =>
-    setStudents(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+  const addFranchise = async (f: Franchise) => {
+    setFranchises(prev => [...prev, f]);
+    try {
+      await supabaseAdmin.from('franchises').insert(camelToSnake(f));
+    } catch (err) {
+      console.error('Failed to sync insert franchise to database:', err);
+    }
+  };
 
-  const issueCertificate = (c: Certificate) => setCertificates(prev => [...prev, c]);
-  const addWalletTransaction = (t: WalletTransaction) => {
+  const updateFranchise = async (id: string, updates: Partial<Franchise>) => {
+    setFranchises(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
+    try {
+      await supabaseAdmin.from('franchises').update(camelToSnake(updates)).eq('id', id);
+    } catch (err) {
+      console.error('Failed to sync update franchise on database:', err);
+    }
+  };
+
+  const deleteFranchise = async (id: string) => {
+    setFranchises(prev => prev.filter(f => f.id !== id));
+    try {
+      await supabaseAdmin.from('franchises').delete().eq('id', id);
+    } catch (err) {
+      console.error('Failed to sync delete franchise from database:', err);
+    }
+  };
+  
+  const addStudent = async (s: Student) => {
+    setStudents(prev => [...prev, s]);
+    try {
+      await supabaseAdmin.from('students').insert(camelToSnake(s));
+    } catch (err) {
+      console.error('Failed to sync add student to database:', err);
+    }
+  };
+
+  const updateStudent = async (id: string, updates: Partial<Student>) => {
+    setStudents(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+    try {
+      await supabaseAdmin.from('students').update(camelToSnake(updates)).eq('id', id);
+    } catch (err) {
+      console.error('Failed to sync update student on database:', err);
+    }
+  };
+
+  const issueCertificate = async (c: Certificate) => {
+    setCertificates(prev => [...prev, c]);
+    try {
+      await supabaseAdmin.from('certificates').insert(camelToSnake(c));
+    } catch (err) {
+      console.error('Failed to sync issue certificate to database:', err);
+    }
+  };
+
+  const addWalletTransaction = async (t: WalletTransaction) => {
     // Check for sufficient balance if it's a debit
     if (t.type === 'DEBIT' && t.status === 'SUCCESS') {
       const currentFranchise = franchises.find(f => f.id === t.franchiseId);
@@ -440,25 +753,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     if (t.status === 'SUCCESS') {
       const amountChange = t.type === 'CREDIT' ? t.amount : -t.amount;
+      const targetFranchise = franchises.find(f => f.id === t.franchiseId);
+      const originalBalance = targetFranchise?.walletBalance || 0;
+      const newBalance = originalBalance + amountChange;
+
       setFranchises(prev => prev.map(f => 
         f.id === t.franchiseId 
-          ? { ...f, walletBalance: (f.walletBalance || 0) + amountChange }
+          ? { ...f, walletBalance: newBalance }
           : f
       ));
+
+      try {
+        await supabaseAdmin.from('franchises').update({ wallet_balance: newBalance }).eq('id', t.franchiseId);
+      } catch (err) {
+        console.error('Failed to update wallet balance on franchise:', err);
+      }
+    }
+
+    try {
+      await supabaseAdmin.from('wallet_transactions').insert(camelToSnake(t));
+    } catch (err) {
+      console.error('Failed to sync wallet transaction to database:', err);
     }
   };
 
-  const addBusinessTransaction = (t: BusinessTransaction) => setBusinessTransactions(prev => [t, ...prev]);
+  const addBusinessTransaction = async (t: BusinessTransaction) => {
+    setBusinessTransactions(prev => [t, ...prev]);
+    try {
+      await supabaseAdmin.from('business_transactions').insert(camelToSnake(t));
+    } catch (err) {
+      console.error('Failed to sync business transaction to database:', err);
+    }
+  };
 
-  const addVoucher = (v: Voucher) => setVouchers(prev => [v, ...prev]);
-  const updateVoucher = (id: string, updates: Partial<Voucher>) => 
+  const addVoucher = async (v: Voucher) => {
+    setVouchers(prev => [v, ...prev]);
+    try {
+      await supabaseAdmin.from('vouchers').insert(camelToSnake(v));
+    } catch (err) {
+      console.error('Failed to sync voucher to database:', err);
+    }
+  };
+
+  const updateVoucher = async (id: string, updates: Partial<Voucher>) => {
     setVouchers(prev => prev.map(v => v.id === id ? { ...v, ...updates } : v));
+    try {
+      await supabaseAdmin.from('vouchers').update(camelToSnake(updates)).eq('id', id);
+    } catch (err) {
+      console.error('Failed to sync update voucher on database:', err);
+    }
+  };
 
-  const verifyVoucher = (id: string) => {
+  const verifyVoucher = async (id: string) => {
     const voucher = vouchers.find(v => v.id === id);
     if (!voucher || voucher.status === 'VERIFIED') return;
 
-    updateVoucher(id, { status: 'VERIFIED' });
+    await updateVoucher(id, { status: 'VERIFIED' });
     
     // Add transaction to wallet
     const newTx: WalletTransaction = {
@@ -471,10 +821,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'SUCCESS',
       voucherId: id
     };
-    addWalletTransaction(newTx);
+    await addWalletTransaction(newTx);
 
     // Also add to business transactions
-    addBusinessTransaction({
+    await addBusinessTransaction({
       id: Math.random().toString(36).substr(2, 9),
       date: new Date().toISOString().split('T')[0],
       type: 'INCOME',
@@ -487,16 +837,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const addCourse = (c: Course) => setCourses(prev => [...prev, c]);
-  const updateCourse = (id: string, updates: Partial<Course>) =>
+  const addCourse = async (c: Course) => {
+    setCourses(prev => [...prev, c]);
+    try {
+      await supabaseAdmin.from('courses').insert(camelToSnake(c));
+    } catch (err) {
+      console.error('Failed to sync add course to database:', err);
+    }
+  };
+
+  const updateCourse = async (id: string, updates: Partial<Course>) => {
     setCourses(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
-  const deleteCourse = (id: string) => setCourses(prev => prev.filter(c => c.id !== id));
+    try {
+      await supabaseAdmin.from('courses').update(camelToSnake(updates)).eq('id', id);
+    } catch (err) {
+      console.error('Failed to sync update course on database:', err);
+    }
+  };
+
+  const deleteCourse = async (id: string) => {
+    setCourses(prev => prev.filter(c => c.id !== id));
+    try {
+      await supabaseAdmin.from('courses').delete().eq('id', id);
+    } catch (err) {
+      console.error('Failed to sync delete course from database:', err);
+    }
+  };
 
   const addCourseCategory = (cat: CourseCategory) => {
     if (!courseCategories.find(c => c.id === cat.id)) {
       setCourseCategories(prev => [...prev, cat]);
     }
   };
+
   const updateCourseCategory = (id: string, updates: Partial<CourseCategory>) => {
     const oldCategory = courseCategories.find(c => c.id === id);
     setCourseCategories(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
@@ -507,6 +880,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ));
     }
   };
+
   const deleteCourseCategory = (id: string) => {
     if (!id) return;
     const categoryToDelete = courseCategories.find(c => c.id === id);
@@ -527,47 +901,198 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateGlobalCourseSettings = (updates: Partial<GlobalCourseSettings>) =>
     setGlobalCourseSettings(prev => ({ ...prev, ...updates }));
 
-  const addSession = (s: AcademicSession) => setSessions(prev => [...prev, s]);
-  const updateSession = (id: string, updates: Partial<AcademicSession>) =>
+  const addSession = async (s: AcademicSession) => {
+    setSessions(prev => [...prev, s]);
+    try {
+      await supabaseAdmin.from('academic_sessions').insert({
+        id: ensureUUID(s.id),
+        name: s.name,
+        start_date: s.startDate,
+        end_date: s.endDate,
+        status: s.status,
+        is_default: s.isDefault
+      });
+    } catch (err) {
+      console.error('Failed to sync session insert:', err);
+    }
+  };
+
+  const updateSession = async (id: string, updates: Partial<AcademicSession>) => {
     setSessions(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
-  const deleteSession = (id: string) => setSessions(prev => prev.filter(s => s.id !== id));
+    try {
+      const mappedUpdates: any = {};
+      if (updates.name !== undefined) mappedUpdates.name = updates.name;
+      if (updates.startDate !== undefined) mappedUpdates.start_date = updates.startDate;
+      if (updates.endDate !== undefined) mappedUpdates.end_date = updates.endDate;
+      if (updates.status !== undefined) mappedUpdates.status = updates.status;
+      if (updates.isDefault !== undefined) mappedUpdates.is_default = updates.isDefault;
+      await supabaseAdmin.from('academic_sessions').update(mappedUpdates).eq('id', id);
+    } catch (err) {
+      console.error('Failed to sync session update:', err);
+    }
+  };
 
-  const addAnnouncement = (a: Announcement) => setAnnouncements(prev => [a, ...prev]);
-  const updateAnnouncement = (id: string, updates: Partial<Announcement>) =>
+  const deleteSession = async (id: string) => {
+    setSessions(prev => prev.filter(s => s.id !== id));
+    try {
+      await supabaseAdmin.from('academic_sessions').delete().eq('id', id);
+    } catch (err) {
+      console.error('Failed to sync session deletion:', err);
+    }
+  };
+
+  const addAnnouncement = async (a: Announcement) => {
+    setAnnouncements(prev => [a, ...prev]);
+    try {
+      await supabaseAdmin.from('announcements').insert(camelToSnake(a));
+    } catch (err) {
+      console.error('Failed to sync insert announcement:', err);
+    }
+  };
+
+  const updateAnnouncement = async (id: string, updates: Partial<Announcement>) => {
     setAnnouncements(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
-  const deleteAnnouncement = (id: string) => setAnnouncements(prev => prev.filter(a => a.id !== id));
+    try {
+      await supabaseAdmin.from('announcements').update(camelToSnake(updates)).eq('id', id);
+    } catch (err) {
+      console.error('Failed to sync update announcement:', err);
+    }
+  };
 
-  const addExam = (e: Exam) => setExams(prev => [...prev, e]);
-  const updateExam = (id: string, updates: Partial<Exam>) =>
+  const deleteAnnouncement = async (id: string) => {
+    setAnnouncements(prev => prev.filter(a => a.id !== id));
+    try {
+      await supabaseAdmin.from('announcements').delete().eq('id', id);
+    } catch (err) {
+      console.error('Failed to sync delete announcement:', err);
+    }
+  };
+
+  const addExam = async (e: Exam) => {
+    setExams(prev => [...prev, e]);
+    try {
+      await supabaseAdmin.from('exams').insert({
+        id: ensureUUID(e.id),
+        name: e.name,
+        session: e.session,
+        trade: e.trade,
+        unit: e.unit,
+        start_date: e.startDate,
+        end_date: e.endDate,
+        remarks: e.remarks,
+        status: e.status,
+        invigilator: e.invigilator
+      });
+    } catch (err) {
+      console.error('Failed to sync exam insert:', err);
+    }
+  };
+
+  const updateExam = async (id: string, updates: Partial<Exam>) => {
     setExams(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
-  const deleteExam = (id: string) => setExams(prev => prev.filter(e => e.id !== id));
+    try {
+      const mappedUpdates: any = {};
+      if (updates.name !== undefined) mappedUpdates.name = updates.name;
+      if (updates.session !== undefined) mappedUpdates.session = updates.session;
+      if (updates.trade !== undefined) mappedUpdates.trade = updates.trade;
+      if (updates.unit !== undefined) mappedUpdates.unit = updates.unit;
+      if (updates.startDate !== undefined) mappedUpdates.start_date = updates.startDate;
+      if (updates.endDate !== undefined) mappedUpdates.end_date = updates.endDate;
+      if (updates.remarks !== undefined) mappedUpdates.remarks = updates.remarks;
+      if (updates.status !== undefined) mappedUpdates.status = updates.status;
+      if (updates.invigilator !== undefined) mappedUpdates.invigilator = updates.invigilator;
+      await supabaseAdmin.from('exams').update(mappedUpdates).eq('id', id);
+    } catch (err) {
+      console.error('Failed to sync exam update:', err);
+    }
+  };
+
+  const deleteExam = async (id: string) => {
+    setExams(prev => prev.filter(e => e.id !== id));
+    try {
+      await supabaseAdmin.from('exams').delete().eq('id', id);
+    } catch (err) {
+      console.error('Failed to sync exam delete:', err);
+    }
+  };
 
   const addSubject = (s: Subject) => setSubjects(prev => [...prev, s]);
   const updateSubject = (id: string, updates: Partial<Subject>) =>
     setSubjects(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
   const deleteSubject = (id: string) => setSubjects(prev => prev.filter(s => s.id !== id));
 
-  const addFeeStructure = (f: FeeStructure) => setFeeStructures(prev => [...prev, f]);
-  const updateFeeStructure = (id: string, updates: Partial<FeeStructure>) =>
-    setFeeStructures(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
-  const deleteFeeStructure = (id: string) => setFeeStructures(prev => prev.filter(f => f.id !== id));
+  const addFeeStructure = async (f: FeeStructure) => {
+    setFeeStructures(prev => [...prev, f]);
+    try {
+      await supabaseAdmin.from('fee_structures').insert(camelToSnake(f));
+    } catch (err) {
+      console.error('Failed to sync fee structure insert:', err);
+    }
+  };
 
-  const addFeePayment = (p: FeePayment) => {
+  const updateFeeStructure = async (id: string, updates: Partial<FeeStructure>) => {
+    setFeeStructures(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
+    try {
+      await supabaseAdmin.from('fee_structures').update(camelToSnake(updates)).eq('id', id);
+    } catch (err) {
+      console.error('Failed to sync fee structure update:', err);
+    }
+  };
+
+  const deleteFeeStructure = async (id: string) => {
+    setFeeStructures(prev => prev.filter(f => f.id !== id));
+    try {
+      await supabaseAdmin.from('fee_structures').delete().eq('id', id);
+    } catch (err) {
+      console.error('Failed to sync fee structure delete:', err);
+    }
+  };
+
+  const addFeePayment = async (p: FeePayment) => {
     setFeePayments(prev => [...prev, p]);
     
     // Update student's paid amount and status
-    setStudents(prev => prev.map(s => {
-      if (s.id === p.studentId) {
-        const newPaidAmount = s.paidAmount + p.paidAmount;
-        const newStatus = newPaidAmount >= s.totalFees ? 'PAID' : (newPaidAmount > 0 ? 'PARTIAL' : 'PENDING');
-        return { ...s, paidAmount: newPaidAmount, feeStatus: newStatus };
+    const student = students.find(s => s.id === p.studentId);
+    if (student) {
+      const newPaidAmount = student.paidAmount + p.paidAmount;
+      const newStatus = newPaidAmount >= student.totalFees ? 'PAID' : (newPaidAmount > 0 ? 'PARTIAL' : 'PENDING');
+      
+      setStudents(prev => prev.map(s => {
+        if (s.id === p.studentId) {
+          return { ...s, paidAmount: newPaidAmount, feeStatus: newStatus };
+        }
+        return s;
+      }));
+
+      try {
+        await supabaseAdmin.from('students').update({ paid_amount: newPaidAmount, fee_status: newStatus }).eq('id', p.studentId);
+      } catch (err) {
+        console.error('Failed to sync update student balances:', err);
       }
-      return s;
-    }));
+    }
+
+    try {
+      await supabaseAdmin.from('fee_payments').insert({
+        id: ensureUUID(p.id),
+        student_id: p.studentId,
+        receipt_no: p.receiptNo,
+        date: p.date,
+        fee_type: p.feeType,
+        amount: p.amount,
+        discount: p.discount,
+        penalty: p.penalty,
+        paid_amount: p.paidAmount,
+        balance: p.balance,
+        payment_mode: p.paymentMode,
+        status: p.status,
+        remarks: p.remarks || ''
+      });
+    } catch (err) {
+      console.error('Failed to sync fee payment insert:', err);
+    }
 
     // Record as business transaction (Income)
-    const student = students.find(s => s.id === p.studentId);
-    addBusinessTransaction({
+    await addBusinessTransaction({
       id: Math.random().toString(36).substr(2, 9),
       date: p.date,
       type: 'INCOME',
@@ -580,17 +1105,75 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const addEnquiry = (e: AdmissionEnquiry) => setEnquiries(prev => [e, ...prev]);
-  const updateEnquiry = (id: string, updates: Partial<AdmissionEnquiry>) =>
+  const addEnquiry = async (e: AdmissionEnquiry) => {
+    setEnquiries(prev => [e, ...prev]);
+    try {
+      await supabaseAdmin.from('admission_enquiries').insert(camelToSnake(e));
+    } catch (err) {
+      console.error('Failed to sync enquiry insert:', err);
+    }
+  };
+
+  const updateEnquiry = async (id: string, updates: Partial<AdmissionEnquiry>) => {
     setEnquiries(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
-  const deleteEnquiry = (id: string) => setEnquiries(prev => prev.filter(e => e.id !== id));
+    try {
+      await supabaseAdmin.from('admission_enquiries').update(camelToSnake(updates)).eq('id', id);
+    } catch (err) {
+      console.error('Failed to sync enquiry update:', err);
+    }
+  };
 
-  const addFranchiseFee = (f: FranchiseFee) => setFranchiseFees(prev => [...prev, f]);
-  const updateFranchiseFee = (id: string, updates: Partial<FranchiseFee>) =>
+  const deleteEnquiry = async (id: string) => {
+    setEnquiries(prev => prev.filter(e => e.id !== id));
+    try {
+      await supabaseAdmin.from('admission_enquiries').delete().eq('id', id);
+    } catch (err) {
+      console.error('Failed to sync enquiry delete:', err);
+    }
+  };
+
+  const addFranchiseFee = async (f: FranchiseFee) => {
+    setFranchiseFees(prev => [...prev, f]);
+    try {
+      await supabaseAdmin.from('fee_structures').insert({
+        id: ensureUUID(f.id),
+        head: 'FRANCHISE_FEE_RECORD',
+        course_id: f.franchiseId,
+        course_name: f.franchiseName,
+        amount: f.registrationFees,
+        discount: f.marksheetFees,
+        frequency: f.description,
+        type: 'FRANCHISE_FEE',
+        status: 'ACTIVE'
+      });
+    } catch (err) {
+      console.error('Failed to sync franchise fee insert:', err);
+    }
+  };
+
+  const updateFranchiseFee = async (id: string, updates: Partial<FranchiseFee>) => {
     setFranchiseFees(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
+    try {
+      const mappedUpdates: any = {};
+      if (updates.franchiseId !== undefined) mappedUpdates.course_id = updates.franchiseId;
+      if (updates.franchiseName !== undefined) mappedUpdates.course_name = updates.franchiseName;
+      if (updates.registrationFees !== undefined) mappedUpdates.amount = updates.registrationFees;
+      if (updates.marksheetFees !== undefined) mappedUpdates.discount = updates.marksheetFees;
+      if (updates.description !== undefined) mappedUpdates.frequency = updates.description;
+      await supabaseAdmin.from('fee_structures').update(mappedUpdates).eq('id', id);
+    } catch (err) {
+      console.error('Failed to sync franchise fee update:', err);
+    }
+  };
 
-  const updateBusinessProfile = (updates: Partial<BusinessProfile>) =>
+  const updateBusinessProfile = async (updates: Partial<BusinessProfile>) => {
     setBusinessProfile(prev => ({ ...prev, ...updates }));
+    try {
+      await supabaseAdmin.from('business_profile').upsert(camelToSnake({ id: 'bp1', ...updates }));
+    } catch (err) {
+      console.error('Failed to sync business profile upsert:', err);
+    }
+  };
 
   const clearData = () => {
     if (window.confirm('CRITICAL: This will delete ALL student records, transactions, and settings. This cannot be undone. Are you sure?')) {
