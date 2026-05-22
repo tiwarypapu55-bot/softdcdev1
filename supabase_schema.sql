@@ -292,19 +292,26 @@ CREATE TABLE IF NOT EXISTS public.certificates (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 10. EMPLOYEES
+-- 10. EMPLOYEES (Onboarded Staff / Franchise Personnel)
 CREATE TABLE IF NOT EXISTS public.employees (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    franchise_id TEXT REFERENCES public.franchises(id) ON DELETE SET NULL,
     name TEXT NOT NULL,
     email TEXT,
     phone TEXT,
-    designation TEXT,
+    designation TEXT, -- e.g. "Center Manager"
     department TEXT,
     date_of_joining DATE,
     salary NUMERIC,
     status TEXT DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'INACTIVE')),
     avatar TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    -- Security Clearances (From Onboarding Registration form)
+    manage_fees BOOLEAN DEFAULT FALSE,
+    view_students BOOLEAN DEFAULT FALSE,
+    edit_courses BOOLEAN DEFAULT FALSE,
+    process_salaries BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- 11. ANNOUNCEMENTS
@@ -389,6 +396,44 @@ CREATE TABLE IF NOT EXISTS public.exams (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- 17. FUND REQUESTS (Wallet Top-Up requests)
+CREATE TABLE IF NOT EXISTS public.fund_requests (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    franchise_id TEXT REFERENCES public.franchises(id) ON DELETE CASCADE,
+    amount NUMERIC NOT NULL,
+    status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+    remarks TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 18. ATTENDANCE (Daily Student Attendance)
+CREATE TABLE IF NOT EXISTS public.attendance (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    student_id TEXT REFERENCES public.students(id) ON DELETE CASCADE,
+    date DATE NOT NULL DEFAULT CURRENT_DATE,
+    status TEXT NOT NULL CHECK (status IN ('PRESENT', 'ABSENT', 'LEAVE', 'P', 'A', 'L')),
+    franchise_id TEXT REFERENCES public.franchises(id) ON DELETE CASCADE,
+    remarks TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE (student_id, date)
+);
+
+-- 19. TIMETABLE SLOTS
+CREATE TABLE IF NOT EXISTS public.timetable (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    franchise_id TEXT REFERENCES public.franchises(id) ON DELETE CASCADE,
+    day_of_week TEXT NOT NULL CHECK (day_of_week IN ('MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY')),
+    class_type TEXT NOT NULL CHECK (class_type IN ('PRACTICAL', 'THEORY', 'CLASS', 'EXAM', 'WORKSHOP')),
+    time_slot TEXT NOT NULL, -- e.g., "09:00 AM - 10:30 AM"
+    subject TEXT NOT NULL, -- e.g. "GST Professional"
+    faculty TEXT, -- e.g. "Anita Rao"
+    room TEXT, -- e.g. "Lab 01"
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- ROW LEVEL SECURITY (Optional but recommended)
 -- By default, we enable RLS on sensitive tables
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -435,6 +480,21 @@ CREATE TRIGGER update_announcements_updated_at BEFORE UPDATE ON public.announcem
 DROP TRIGGER IF EXISTS update_admission_enquiries_updated_at ON public.admission_enquiries;
 CREATE TRIGGER update_admission_enquiries_updated_at BEFORE UPDATE ON public.admission_enquiries FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_employees_updated_at ON public.employees;
+CREATE TRIGGER update_employees_updated_at BEFORE UPDATE ON public.employees FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_fund_requests_updated_at ON public.fund_requests;
+CREATE TRIGGER update_fund_requests_updated_at BEFORE UPDATE ON public.fund_requests FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_attendance_updated_at ON public.attendance;
+CREATE TRIGGER update_attendance_updated_at BEFORE UPDATE ON public.attendance FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_timetable_updated_at ON public.timetable;
+CREATE TRIGGER update_timetable_updated_at BEFORE UPDATE ON public.timetable FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_fee_payments_updated_at ON public.fee_payments;
+CREATE TRIGGER update_fee_payments_updated_at BEFORE UPDATE ON public.fee_payments FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
 -- FIX RLS AUTO ENABLE SECURITY DEFINER WARNINGS IF IT EXISTS
 DO $$
 BEGIN
@@ -457,6 +517,11 @@ CREATE INDEX IF NOT EXISTS idx_students_franchise_id ON public.students(franchis
 CREATE INDEX IF NOT EXISTS idx_fee_payments_student_id ON public.fee_payments(student_id);
 CREATE INDEX IF NOT EXISTS idx_fee_payments_receipt_no ON public.fee_payments(receipt_no);
 CREATE INDEX IF NOT EXISTS idx_wallet_transactions_franchise_id ON public.wallet_transactions(franchise_id);
+CREATE INDEX IF NOT EXISTS idx_employees_franchise_id ON public.employees(franchise_id);
+CREATE INDEX IF NOT EXISTS idx_fund_requests_franchise_id ON public.fund_requests(franchise_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_student_id ON public.attendance(student_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_franchise_id ON public.attendance(franchise_id);
+CREATE INDEX IF NOT EXISTS idx_timetable_franchise_id ON public.timetable(franchise_id);
 
 -- FAIL-SAFE ALTER STATEMENTS FOR EXISTING DATABASES
 ALTER TABLE public.courses ADD COLUMN IF NOT EXISTS photo_url TEXT;
@@ -507,6 +572,17 @@ EXCEPTION WHEN OTHERS THEN
     NULL;
 END $$;
 
+-- Employees modifications
+ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS franchise_id TEXT REFERENCES public.franchises(id) ON DELETE SET NULL;
+ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS manage_fees BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS view_students BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS edit_courses BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS process_salaries BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+-- Fee payments modifications
+ALTER TABLE public.fee_payments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
 -- ENABLE RLS ON NEW TABLES
 ALTER TABLE public.course_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.courses ENABLE ROW LEVEL SECURITY;
@@ -514,6 +590,11 @@ ALTER TABLE public.subjects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.programs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.global_course_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.certificate_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.employees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.fund_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.attendance ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.timetable ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.fee_payments ENABLE ROW LEVEL SECURITY;
 
 -- POLICIES FOR NEW TABLES (Enables smooth client integrations)
 DROP POLICY IF EXISTS "Allow select for public/authenticated on courses" ON public.courses;
@@ -545,4 +626,34 @@ DROP POLICY IF EXISTS "Allow select for public/authenticated on templates" ON pu
 CREATE POLICY "Allow select for public/authenticated on templates" ON public.certificate_templates FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Allow all for authenticated on templates" ON public.certificate_templates;
 CREATE POLICY "Allow all for authenticated on templates" ON public.certificate_templates FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+-- EMPLOYEES POLICIES
+DROP POLICY IF EXISTS "Allow select for public/authenticated on employees" ON public.employees;
+CREATE POLICY "Allow select for public/authenticated on employees" ON public.employees FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow all for authenticated on employees" ON public.employees;
+CREATE POLICY "Allow all for authenticated on employees" ON public.employees FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+-- FUND REQUESTS POLICIES
+DROP POLICY IF EXISTS "Allow select for public/authenticated on fund_requests" ON public.fund_requests;
+CREATE POLICY "Allow select for public/authenticated on fund_requests" ON public.fund_requests FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow all for authenticated on fund_requests" ON public.fund_requests;
+CREATE POLICY "Allow all for authenticated on fund_requests" ON public.fund_requests FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+-- ATTENDANCE POLICIES
+DROP POLICY IF EXISTS "Allow select for public/authenticated on attendance" ON public.attendance;
+CREATE POLICY "Allow select for public/authenticated on attendance" ON public.attendance FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow all for authenticated on attendance" ON public.attendance;
+CREATE POLICY "Allow all for authenticated on attendance" ON public.attendance FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+-- TIMETABLE POLICIES
+DROP POLICY IF EXISTS "Allow select for public/authenticated on timetable" ON public.timetable;
+CREATE POLICY "Allow select for public/authenticated on timetable" ON public.timetable FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow all for authenticated on timetable" ON public.timetable;
+CREATE POLICY "Allow all for authenticated on timetable" ON public.timetable FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+-- FEE PAYMENTS POLICIES
+DROP POLICY IF EXISTS "Allow select for public/authenticated on fee_payments" ON public.fee_payments;
+CREATE POLICY "Allow select for public/authenticated on fee_payments" ON public.fee_payments FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow all for authenticated on fee_payments" ON public.fee_payments;
+CREATE POLICY "Allow all for authenticated on fee_payments" ON public.fee_payments FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
 

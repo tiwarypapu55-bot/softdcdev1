@@ -140,6 +140,99 @@ const camelToSnake = (obj: any): any => {
   return obj;
 };
 
+const mapDbToBusinessProfile = (row: any): BusinessProfile => {
+  if (!row) return {} as BusinessProfile;
+  return {
+    id: row.id || '00000000-0000-0000-0000-000000000001',
+    name: row.name || 'SOFTDEV TALLY GURU',
+    legalName: row.legal_name || 'SOFTDEV TALLY GURU PRASHIKSHAN SANSTHAN SOCIETY',
+    isoNo: row.iso_no || '9001:2015',
+    regNo: row.reg_no || 'G-58913 / 1442',
+    email: row.email || 'info@stginstitute.in',
+    phone: row.phone || '+91 9450455378',
+    address: row.address || 'Near Mahila Degree College, Companybagh Basti (Uttar Pradesh) India-272001',
+    regionalAddress: row.regional_address || '',
+    pincode: row.pincode || '',
+    website: row.website || 'www.stginstitute.in',
+    workingHours: row.working_hours || '09:00 AM - 06:00 PM',
+    logoUrl: row.logo_url || '',
+    headerImageUrl: row.header_image_url || '',
+    signatureUrl: row.signature_url || '',
+    mission: row.mission || 'To empower students through technology and quality education.',
+    facebookUrl: row.facebook_url || '',
+    twitterUrl: row.twitter_url || '',
+    instagramUrl: row.instagram_url || '',
+    linkedinUrl: row.linkedin_url || '',
+    directorPhotoUrl: row.director_photo_url || '',
+    directorName: row.director_name || '',
+    directorMessage: row.director_message || '',
+    banners: row.banners || [],
+    gallery: row.gallery || [],
+    aboutUsUrl: row.about_banner_url || '',
+    contactUsUrl: row.contact_banner_url || '',
+    featuredCoursesBannerUrl: row.featured_courses_image_url || '',
+    successStoriesBannerUrl: row.success_stories_banner_url || '',
+    receiptHeaderUrl: row.receipt_top_header_url || '',
+    visionaries: row.visionaries || [],
+    prospectus: (row.prospectus_url || row.prospectus_name) ? {
+      url: row.prospectus_url || '',
+      name: row.prospectus_name || '',
+      size: row.prospectus_size || '',
+      version: row.prospectus_version || ''
+    } : null
+  };
+};
+
+const mapBusinessProfileToDb = (bp: Partial<BusinessProfile>): any => {
+  const row: any = {};
+  if (bp.id !== undefined) row.id = bp.id;
+  if (bp.name !== undefined) row.name = bp.name;
+  if (bp.legalName !== undefined) row.legal_name = bp.legalName;
+  if (bp.isoNo !== undefined) row.iso_no = bp.isoNo;
+  if (bp.regNo !== undefined) row.reg_no = bp.regNo;
+  if (bp.email !== undefined) row.email = bp.email;
+  if (bp.phone !== undefined) row.phone = bp.phone;
+  if (bp.address !== undefined) row.address = bp.address;
+  if (bp.regionalAddress !== undefined) row.regional_address = bp.regionalAddress;
+  if (bp.pincode !== undefined) row.pincode = bp.pincode;
+  if (bp.website !== undefined) row.website = bp.website;
+  if (bp.workingHours !== undefined) row.working_hours = bp.workingHours;
+  if (bp.logoUrl !== undefined) row.logo_url = bp.logoUrl;
+  if (bp.headerImageUrl !== undefined) row.header_image_url = bp.headerImageUrl;
+  if (bp.signatureUrl !== undefined) row.signature_url = bp.signatureUrl;
+  if (bp.mission !== undefined) row.mission = bp.mission;
+  if (bp.facebookUrl !== undefined) row.facebook_url = bp.facebookUrl;
+  if (bp.twitterUrl !== undefined) row.twitter_url = bp.twitterUrl;
+  if (bp.instagramUrl !== undefined) row.instagram_url = bp.instagramUrl;
+  if (bp.linkedinUrl !== undefined) row.linkedin_url = bp.linkedinUrl;
+  if (bp.directorPhotoUrl !== undefined) row.director_photo_url = bp.directorPhotoUrl;
+  if (bp.directorName !== undefined) row.director_name = bp.directorName;
+  if (bp.directorMessage !== undefined) row.director_message = bp.directorMessage;
+  if (bp.banners !== undefined) row.banners = bp.banners;
+  if (bp.gallery !== undefined) row.gallery = bp.gallery;
+  if (bp.aboutUsUrl !== undefined) row.about_banner_url = bp.aboutUsUrl;
+  if (bp.contactUsUrl !== undefined) row.contact_banner_url = bp.contactUsUrl;
+  if (bp.featuredCoursesBannerUrl !== undefined) row.featured_courses_image_url = bp.featuredCoursesBannerUrl;
+  if (bp.successStoriesBannerUrl !== undefined) row.success_stories_banner_url = bp.successStoriesBannerUrl;
+  if (bp.receiptHeaderUrl !== undefined) row.receipt_top_header_url = bp.receiptHeaderUrl;
+  if (bp.visionaries !== undefined) row.visionaries = bp.visionaries;
+  
+  if (bp.prospectus !== undefined) {
+    if (bp.prospectus) {
+      row.prospectus_url = bp.prospectus.url;
+      row.prospectus_name = bp.prospectus.name;
+      row.prospectus_size = bp.prospectus.size;
+      row.prospectus_version = bp.prospectus.version;
+    } else {
+      row.prospectus_url = null;
+      row.prospectus_name = null;
+      row.prospectus_size = null;
+      row.prospectus_version = null;
+    }
+  }
+  return row;
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [franchises, setFranchises] = useState<Franchise[]>([]);
@@ -166,7 +259,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     minAttendance: 75
   });
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile>({
-    id: 'bp1',
+    id: '00000000-0000-0000-0000-000000000001',
     name: 'SOFTDEV TALLY GURU',
     legalName: 'SOFTDEV TALLY GURU PRASHIKSHAN SANSTHAN SOCIETY',
     isoNo: '9001:2015',
@@ -478,7 +571,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           })));
 
           if (bpData && bpData.length > 0) {
-            setBusinessProfile(snakeToCamel(bpData[0]));
+            setBusinessProfile(mapDbToBusinessProfile(bpData[0]));
           }
         }
       } catch (e) {
@@ -1167,9 +1260,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateBusinessProfile = async (updates: Partial<BusinessProfile>) => {
-    setBusinessProfile(prev => ({ ...prev, ...updates }));
+    setBusinessProfile(prev => {
+      const merged = { ...prev, ...updates };
+      if (!isUUID(merged.id)) {
+        merged.id = '00000000-0000-0000-0000-000000000001';
+      }
+      return merged;
+    });
     try {
-      await supabaseAdmin.from('business_profile').upsert(camelToSnake({ id: 'bp1', ...updates }));
+      const dbRow = mapBusinessProfileToDb({
+        ...businessProfile,
+        ...updates,
+        id: isUUID(businessProfile.id) ? businessProfile.id : '00000000-0000-0000-0000-000000000001'
+      });
+      await supabaseAdmin.from('business_profile').upsert(dbRow);
     } catch (err) {
       console.error('Failed to sync business profile upsert:', err);
     }
