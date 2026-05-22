@@ -24,3 +24,80 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
     persistSession: false,
   }
 });
+
+/**
+ * Ensures the 'business-assets' bucket exists
+ */
+export const ensureBucketExists = async () => {
+  try {
+    await supabaseAdmin.storage.createBucket('business-assets', {
+      public: true,
+    });
+  } catch (e) {
+    // Ignore error if bucket already exists
+  }
+};
+
+/**
+ * Uploads a Base64 string or File/Blob to the public 'business-assets' bucket and returns its public URL
+ */
+export const uploadToStorage = async (
+  fileOrBase64: File | Blob | string,
+  fileName: string
+): Promise<string> => {
+  try {
+    await ensureBucketExists();
+
+    let body: any = fileOrBase64;
+    let contentType = 'application/octet-stream';
+
+    if (typeof fileOrBase64 === 'string' && fileOrBase64.startsWith('data:')) {
+      const parts = fileOrBase64.split(';base64,');
+      if (parts.length >= 2) {
+        contentType = parts[0].split(':')[1].split(';')[0] || contentType;
+        const raw = window.atob(parts[1]);
+        const rawLength = raw.length;
+        const uInt8Array = new Uint8Array(rawLength);
+        for (let i = 0; i < rawLength; ++i) {
+          uInt8Array[i] = raw.charCodeAt(i);
+        }
+        body = new Blob([uInt8Array], { type: contentType });
+      } else {
+        return fileOrBase64;
+      }
+    } else if (fileOrBase64 instanceof File) {
+      contentType = fileOrBase64.type;
+    } else if (fileOrBase64 instanceof Blob) {
+      contentType = fileOrBase64.type;
+    } else {
+      return fileOrBase64 as any;
+    }
+
+    const cleanedFileName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+
+    const { data, error } = await supabaseAdmin.storage
+      .from('business-assets')
+      .upload(cleanedFileName, body, {
+        contentType,
+        upsert: true
+      });
+
+    if (error) {
+      console.error('Supabase Storage upload error:', error);
+      throw error;
+    }
+
+    const { data: urlData } = supabaseAdmin.storage
+      .from('business-assets')
+      .getPublicUrl(cleanedFileName);
+
+    return urlData.publicUrl;
+  } catch (err) {
+    console.error('Failed to upload asset to Supabase Storage:', err);
+    if (typeof fileOrBase64 === 'string') {
+      return fileOrBase64;
+    }
+    throw err;
+  }
+};
+

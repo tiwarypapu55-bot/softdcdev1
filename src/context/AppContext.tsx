@@ -4,7 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase, supabaseAdmin } from '../lib/supabase';
+import { supabase, supabaseAdmin, uploadToStorage } from '../lib/supabase';
 import { User, Franchise, Student, Certificate, WalletTransaction, UserRole, Course, FeeStructure, FeePayment, FranchiseFee, AdmissionEnquiry, Exam, BusinessProfile, BusinessTransaction, AcademicSession, Announcement, Voucher, CourseCategory, Program, GlobalCourseSettings, Subject } from '../types';
 
 interface AppState {
@@ -1260,6 +1260,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateBusinessProfile = async (updates: Partial<BusinessProfile>) => {
+    // 1. Instantly update local UI state with the edits for an incredibly fast and snappy response
     setBusinessProfile(prev => {
       const merged = { ...prev, ...updates };
       if (!isUUID(merged.id)) {
@@ -1267,15 +1268,100 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return merged;
     });
+
     try {
+      // 2. Clone updates to safely upload any base64 files (data URIs) to Supabase Storage
+      const bpToSave = { ...updates };
+      const bpId = isUUID(businessProfile.id) ? businessProfile.id : '00000000-0000-0000-0000-000000000001';
+
+      if (bpToSave.logoUrl?.startsWith('data:')) {
+        bpToSave.logoUrl = await uploadToStorage(bpToSave.logoUrl, `logo_${bpId}.webp`);
+      }
+      if (bpToSave.headerImageUrl?.startsWith('data:')) {
+        bpToSave.headerImageUrl = await uploadToStorage(bpToSave.headerImageUrl, `header_${bpId}.webp`);
+      }
+      if (bpToSave.signatureUrl?.startsWith('data:')) {
+        bpToSave.signatureUrl = await uploadToStorage(bpToSave.signatureUrl, `signature_${bpId}.webp`);
+      }
+      if (bpToSave.directorPhotoUrl?.startsWith('data:')) {
+        bpToSave.directorPhotoUrl = await uploadToStorage(bpToSave.directorPhotoUrl, `director_${bpId}.webp`);
+      }
+      if (bpToSave.aboutUsUrl?.startsWith('data:')) {
+        bpToSave.aboutUsUrl = await uploadToStorage(bpToSave.aboutUsUrl, `about_${bpId}.webp`);
+      }
+      if (bpToSave.contactUsUrl?.startsWith('data:')) {
+        bpToSave.contactUsUrl = await uploadToStorage(bpToSave.contactUsUrl, `contact_${bpId}.webp`);
+      }
+      if (bpToSave.featuredCoursesBannerUrl?.startsWith('data:')) {
+        bpToSave.featuredCoursesBannerUrl = await uploadToStorage(bpToSave.featuredCoursesBannerUrl, `featured_courses_${bpId}.webp`);
+      }
+      if (bpToSave.successStoriesBannerUrl?.startsWith('data:')) {
+        bpToSave.successStoriesBannerUrl = await uploadToStorage(bpToSave.successStoriesBannerUrl, `success_stories_${bpId}.webp`);
+      }
+      if (bpToSave.receiptHeaderUrl?.startsWith('data:')) {
+        bpToSave.receiptHeaderUrl = await uploadToStorage(bpToSave.receiptHeaderUrl, `receipt_header_${bpId}.webp`);
+      }
+
+      // Upload Home Banners array if they contain base64 files
+      if (bpToSave.banners && bpToSave.banners.length > 0) {
+        const uploadedBanners: string[] = [];
+        for (let i = 0; i < bpToSave.banners.length; i++) {
+          const banner = bpToSave.banners[i];
+          if (banner.startsWith('data:')) {
+            const url = await uploadToStorage(banner, `banner_${bpId}_${i}.webp`);
+            uploadedBanners.push(url);
+          } else {
+            uploadedBanners.push(banner);
+          }
+        }
+        bpToSave.banners = uploadedBanners;
+      }
+
+      // Upload Gallery photos if they contain base64 files
+      if (bpToSave.gallery && bpToSave.gallery.length > 0) {
+        const uploadedGallery = [];
+        for (let i = 0; i < bpToSave.gallery.length; i++) {
+          const item = bpToSave.gallery[i];
+          if (item.url && item.url.startsWith('data:')) {
+            const url = await uploadToStorage(item.url, `gallery_${bpId}_${item.id}.webp`);
+            uploadedGallery.push({ ...item, url });
+          } else {
+            uploadedGallery.push(item);
+          }
+        }
+        bpToSave.gallery = uploadedGallery;
+      }
+
+      // Upload Prospectus if it contains base64 file
+      if (bpToSave.prospectus && bpToSave.prospectus.url && bpToSave.prospectus.url.startsWith('data:')) {
+        const url = await uploadToStorage(bpToSave.prospectus.url, `prospectus_${bpId}.pdf`);
+        bpToSave.prospectus = {
+          ...bpToSave.prospectus,
+          url
+        };
+      }
+
+      // 3. Keep local state in sync with the clean, permanent public storage URLs
+      setBusinessProfile(prev => ({
+        ...prev,
+        ...bpToSave,
+        id: bpId
+      }));
+
+      // 4. Map to snakecase rows and serialize to DB row structure
       const dbRow = mapBusinessProfileToDb({
         ...businessProfile,
-        ...updates,
-        id: isUUID(businessProfile.id) ? businessProfile.id : '00000000-0000-0000-0000-000000000001'
+        ...bpToSave,
+        id: bpId
       });
-      await supabaseAdmin.from('business_profile').upsert(dbRow);
+
+      // 5. Try to save row to Supabase
+      const { data, error } = await supabaseAdmin.from('business_profile').upsert(dbRow).select();
+      if (error) {
+        console.error('Failed to sync business profile upsert raw error:', error);
+      }
     } catch (err) {
-      console.error('Failed to sync business profile upsert:', err);
+      console.error('Failed to sync business profile upsert exception:', err);
     }
   };
 

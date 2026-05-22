@@ -12,6 +12,7 @@ import { Link } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import { useApp } from '../../context/AppContext';
 import { clsx } from 'clsx';
+import { downloadFile } from '../../lib/storage';
 
 export const WebsiteHome = () => {
   const { businessProfile, courses } = useApp();
@@ -97,10 +98,7 @@ export const WebsiteHome = () => {
                    <button 
                      onClick={() => {
                        if (businessProfile.prospectus?.url) {
-                         const link = document.createElement('a');
-                         link.href = businessProfile.prospectus.url;
-                         link.download = businessProfile.prospectus.name;
-                         link.click();
+                         downloadFile(businessProfile.prospectus.url, businessProfile.prospectus.name || 'Prospectus.pdf');
                        } else {
                          alert("No prospectus uploaded yet.");
                        }
@@ -435,10 +433,7 @@ export const WebsiteHome = () => {
                   <button 
                     onClick={() => {
                       if (businessProfile.prospectus?.url) {
-                        const link = document.createElement('a');
-                        link.href = businessProfile.prospectus.url;
-                        link.download = businessProfile.prospectus.name;
-                        link.click();
+                        downloadFile(businessProfile.prospectus.url, businessProfile.prospectus.name || 'Prospectus.pdf');
                       } else {
                         alert("No prospectus uploaded yet.");
                       }

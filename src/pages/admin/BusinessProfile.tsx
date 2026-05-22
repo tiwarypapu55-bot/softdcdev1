@@ -34,7 +34,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { BusinessProfile as BusinessProfileType } from '../../types';
 import { clsx } from 'clsx';
-import { compressImage } from '../../lib/storage';
+import { compressImage, downloadFile } from '../../lib/storage';
 
 export const BusinessProfile = () => {
   const { businessProfile, updateBusinessProfile, clearData } = useApp();
@@ -957,10 +957,7 @@ export const BusinessProfile = () => {
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
                          <button type="button" className="p-3 bg-white text-[#141414] rounded-full shadow-xl hover:scale-110 transition-transform" onClick={() => {
                            if (formData.prospectus?.url) {
-                             const link = document.createElement('a');
-                             link.href = formData.prospectus.url;
-                             link.download = formData.prospectus.name;
-                             link.click();
+                             downloadFile(formData.prospectus.url, formData.prospectus.name || 'Prospectus.pdf');
                            }
                          }}>
                             <Download size={20} />

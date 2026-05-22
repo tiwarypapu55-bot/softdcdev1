@@ -56,3 +56,53 @@ export const isTooLarge = (data: string): boolean => {
   // Simple check for string size (~2MB limit per large object is safe)
   return data.length > 2 * 1024 * 1024;
 };
+
+/**
+ * Traverses and triggers safe downloading of a base64 Data URL or standard HTTP URL
+ */
+export const downloadFile = (url: string, fileName: string) => {
+  if (!url) return;
+  
+  if (url.startsWith('data:')) {
+    try {
+      const parts = url.split(';base64,');
+      if (parts.length < 2) throw new Error('Invalid base64 URL');
+      const contentType = parts[0].split(':')[1] || 'application/octet-stream';
+      const raw = window.atob(parts[1]);
+      const rawLength = raw.length;
+      const uInt8Array = new Uint8Array(rawLength);
+
+      for (let i = 0; i < rawLength; ++i) {
+        uInt8Array[i] = raw.charCodeAt(i);
+      }
+
+      const blob = new Blob([uInt8Array], { type: contentType });
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      console.error('Failed to download base64 file via Blob:', e);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  } else {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+};
+

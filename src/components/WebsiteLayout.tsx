@@ -9,6 +9,7 @@ import { Menu, X, Smartphone, Mail, MapPin, Facebook, Twitter, Youtube, Linkedin
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
 import { clsx } from 'clsx';
+import { downloadFile } from '../lib/storage';
 
 const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/ais-dev-pzzj54zbvfrllp25htfrww.appspot.com/o/softdev_logo.png?alt=media&token=48c0b58e-7e9b-46a2-97b7-54324f331777";
 
@@ -81,10 +82,7 @@ export const WebsiteLayout = ({ children }: { children: React.ReactNode }) => {
             <button 
               onClick={() => {
                 if (businessProfile.prospectus?.url) {
-                  const link = document.createElement('a');
-                  link.href = businessProfile.prospectus.url;
-                  link.download = businessProfile.prospectus.name || 'Prospectus.pdf';
-                  link.click();
+                  downloadFile(businessProfile.prospectus.url, businessProfile.prospectus.name || 'Prospectus.pdf');
                 } else {
                   alert('Prospectus is not available yet.');
                 }
