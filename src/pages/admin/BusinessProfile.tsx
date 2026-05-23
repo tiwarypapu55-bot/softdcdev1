@@ -61,11 +61,18 @@ export const BusinessProfile = () => {
     setFormData(businessProfile);
   }, [businessProfile]);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    updateBusinessProfile(formData);
-    setTimeout(() => setIsSaving(false), 1500);
+    try {
+      await updateBusinessProfile(formData);
+      alert('Business Profile saved and synchronized successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save Business Profile changes. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

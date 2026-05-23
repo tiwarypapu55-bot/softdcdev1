@@ -9,10 +9,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { UserPlus, ShieldCheck, FileCheck, History, Search, ArrowRight, Loader2, CheckCircle2, AlertCircle, Download, FileText } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useApp } from '../../context/AppContext';
+import { downloadFile } from '../../lib/storage';
 
 type TabType = 'registration' | 'student-verify' | 'cert-verify' | 'old-cert-verify';
 
 export const StudentZone = () => {
+  const { businessProfile } = useApp();
   const location = useLocation();
   const navigate = useNavigate();
   const queryParams = new URLSearchParams(location.search);
@@ -90,7 +93,13 @@ export const StudentZone = () => {
                      </div>
                      <p className="text-xs text-blue-900/60 font-medium leading-relaxed">Download our latest prospectus to explore course details and institutional policies.</p>
                      <button 
-                       onClick={() => window.open('#', '_blank')}
+                       onClick={() => {
+                         if (businessProfile.prospectus?.url) {
+                           downloadFile(businessProfile.prospectus.url, businessProfile.prospectus.name || 'Prospectus.pdf');
+                         } else {
+                           alert("No prospectus uploaded yet.");
+                         }
+                       }}
                        className="w-full py-4 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center justify-center space-x-2 shadow-lg shadow-blue-500/20"
                      >
                        <Download size={14} />

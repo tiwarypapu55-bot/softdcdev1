@@ -142,6 +142,17 @@ const camelToSnake = (obj: any): any => {
 
 const mapDbToBusinessProfile = (row: any): BusinessProfile => {
   if (!row) return {} as BusinessProfile;
+
+  // Extract extra fields from gallery backup if present
+  let extraFields: any = {};
+  const galleryArray = Array.isArray(row.gallery) ? row.gallery : [];
+  const extraFieldsItem = galleryArray.find((item: any) => item && item.id === '__extra_fields_backup__');
+  if (extraFieldsItem && extraFieldsItem.data) {
+    extraFields = extraFieldsItem.data;
+  }
+
+  const cleanGallery = galleryArray.filter((item: any) => item && item.id !== '__extra_fields_backup__');
+
   return {
     id: row.id || '00000000-0000-0000-0000-000000000001',
     name: row.name || 'SOFTDEV TALLY GURU',
@@ -152,7 +163,7 @@ const mapDbToBusinessProfile = (row: any): BusinessProfile => {
     phone: row.phone || '+91 9450455378',
     address: row.address || 'Near Mahila Degree College, Companybagh Basti (Uttar Pradesh) India-272001',
     regionalAddress: row.regional_address || '',
-    pincode: row.pincode || '',
+    pincode: ('pincode' in row) ? (row.pincode || '') : (extraFields.pincode || ''),
     website: row.website || 'www.stginstitute.in',
     workingHours: row.working_hours || '09:00 AM - 06:00 PM',
     logoUrl: row.logo_url || '',
@@ -167,24 +178,44 @@ const mapDbToBusinessProfile = (row: any): BusinessProfile => {
     directorName: row.director_name || '',
     directorMessage: row.director_message || '',
     banners: row.banners || [],
-    gallery: row.gallery || [],
-    aboutUsUrl: row.about_banner_url || '',
-    contactUsUrl: row.contact_banner_url || '',
-    featuredCoursesBannerUrl: row.featured_courses_image_url || '',
-    successStoriesBannerUrl: row.success_stories_banner_url || '',
-    receiptHeaderUrl: row.receipt_top_header_url || '',
-    visionaries: row.visionaries || [],
-    prospectus: (row.prospectus_url || row.prospectus_name) ? {
+    gallery: cleanGallery,
+    aboutUsUrl: ('about_banner_url' in row) ? (row.about_banner_url || '') : (extraFields.aboutUsUrl || ''),
+    contactUsUrl: ('contact_banner_url' in row) ? (row.contact_banner_url || '') : (extraFields.contactUsUrl || ''),
+    featuredCoursesBannerUrl: ('featured_courses_image_url' in row) ? (row.featured_courses_image_url || '') : (extraFields.featuredCoursesBannerUrl || ''),
+    successStoriesBannerUrl: ('success_stories_banner_url' in row) ? (row.success_stories_banner_url || '') : (extraFields.successStoriesBannerUrl || ''),
+    receiptHeaderUrl: ('receipt_top_header_url' in row) ? (row.receipt_top_header_url || '') : (extraFields.receiptHeaderUrl || ''),
+    visionaries: ('visionaries' in row) ? (row.visionaries || []) : (extraFields.visionaries || []),
+    prospectus: row.prospectus_url || row.prospectus_name ? {
       url: row.prospectus_url || '',
       name: row.prospectus_name || '',
       size: row.prospectus_size || '',
       version: row.prospectus_version || ''
-    } : null
+    } : (extraFields.prospectus || null)
   };
 };
 
-const mapBusinessProfileToDb = (bp: Partial<BusinessProfile>): any => {
+const mapBusinessProfileToDb = (bp: Partial<BusinessProfile>, dbColumns?: string[]): any => {
+  const columns = dbColumns || [
+    'id', 'name', 'legal_name', 'iso_no', 'reg_no', 'email', 'phone', 'address', 'regional_address',
+    'website', 'working_hours', 'logo_url', 'header_image_url', 'signature_url', 'mission',
+    'facebook_url', 'twitter_url', 'instagram_url', 'linkedin_url', 'director_photo_url',
+    'director_name', 'director_message', 'banners', 'gallery', 'pincode', 'enable_digital_signatures',
+    'visionaries', 'about_banner_url', 'contact_banner_url', 'featured_courses_image_url', 
+    'success_stories_banner_url', 'receipt_top_header_url', 'prospectus_url', 'prospectus_name', 
+    'prospectus_size', 'prospectus_version', 'prospectus_updated_at'
+  ];
+
   const row: any = {};
+  const extraFields: any = {};
+
+  const assignField = (bpKey: string, dbCol: string, val: any) => {
+    if (columns.includes(dbCol)) {
+      row[dbCol] = val;
+    } else {
+      extraFields[bpKey] = val;
+    }
+  };
+
   if (bp.id !== undefined) row.id = bp.id;
   if (bp.name !== undefined) row.name = bp.name;
   if (bp.legalName !== undefined) row.legal_name = bp.legalName;
@@ -194,11 +225,16 @@ const mapBusinessProfileToDb = (bp: Partial<BusinessProfile>): any => {
   if (bp.phone !== undefined) row.phone = bp.phone;
   if (bp.address !== undefined) row.address = bp.address;
   if (bp.regionalAddress !== undefined) row.regional_address = bp.regionalAddress;
-  if (bp.pincode !== undefined) row.pincode = bp.pincode;
   if (bp.website !== undefined) row.website = bp.website;
   if (bp.workingHours !== undefined) row.working_hours = bp.workingHours;
   if (bp.logoUrl !== undefined) row.logo_url = bp.logoUrl;
-  if (bp.headerImageUrl !== undefined) row.header_image_url = bp.headerImageUrl;
+  if (bp.headerImageUrl !== undefined) {
+    if (columns.includes('header_image_url')) {
+      row.header_image_url = bp.headerImageUrl;
+    } else {
+      extraFields.headerImageUrl = bp.headerImageUrl;
+    }
+  }
   if (bp.signatureUrl !== undefined) row.signature_url = bp.signatureUrl;
   if (bp.mission !== undefined) row.mission = bp.mission;
   if (bp.facebookUrl !== undefined) row.facebook_url = bp.facebookUrl;
@@ -209,27 +245,51 @@ const mapBusinessProfileToDb = (bp: Partial<BusinessProfile>): any => {
   if (bp.directorName !== undefined) row.director_name = bp.directorName;
   if (bp.directorMessage !== undefined) row.director_message = bp.directorMessage;
   if (bp.banners !== undefined) row.banners = bp.banners;
-  if (bp.gallery !== undefined) row.gallery = bp.gallery;
-  if (bp.aboutUsUrl !== undefined) row.about_banner_url = bp.aboutUsUrl;
-  if (bp.contactUsUrl !== undefined) row.contact_banner_url = bp.contactUsUrl;
-  if (bp.featuredCoursesBannerUrl !== undefined) row.featured_courses_image_url = bp.featuredCoursesBannerUrl;
-  if (bp.successStoriesBannerUrl !== undefined) row.success_stories_banner_url = bp.successStoriesBannerUrl;
-  if (bp.receiptHeaderUrl !== undefined) row.receipt_top_header_url = bp.receiptHeaderUrl;
-  if (bp.visionaries !== undefined) row.visionaries = bp.visionaries;
-  
+
+  // Extra fields:
+  if (bp.pincode !== undefined) assignField('pincode', 'pincode', bp.pincode);
+  if (bp.aboutUsUrl !== undefined) assignField('aboutUsUrl', 'about_banner_url', bp.aboutUsUrl);
+  if (bp.contactUsUrl !== undefined) assignField('contactUsUrl', 'contact_banner_url', bp.contactUsUrl);
+  if (bp.featuredCoursesBannerUrl !== undefined) assignField('featuredCoursesBannerUrl', 'featured_courses_image_url', bp.featuredCoursesBannerUrl);
+  if (bp.successStoriesBannerUrl !== undefined) assignField('successStoriesBannerUrl', 'success_stories_banner_url', bp.successStoriesBannerUrl);
+  if (bp.receiptHeaderUrl !== undefined) assignField('receiptHeaderUrl', 'receipt_top_header_url', bp.receiptHeaderUrl);
+  if (bp.visionaries !== undefined) assignField('visionaries', 'visionaries', bp.visionaries);
+
   if (bp.prospectus !== undefined) {
     if (bp.prospectus) {
-      row.prospectus_url = bp.prospectus.url;
-      row.prospectus_name = bp.prospectus.name;
-      row.prospectus_size = bp.prospectus.size;
-      row.prospectus_version = bp.prospectus.version;
+      if (columns.includes('prospectus_url')) {
+        row.prospectus_url = bp.prospectus.url;
+        row.prospectus_name = bp.prospectus.name;
+        row.prospectus_size = bp.prospectus.size;
+        row.prospectus_version = bp.prospectus.version;
+      } else {
+        extraFields.prospectus = bp.prospectus;
+      }
     } else {
-      row.prospectus_url = null;
-      row.prospectus_name = null;
-      row.prospectus_size = null;
-      row.prospectus_version = null;
+      if (columns.includes('prospectus_url')) {
+        row.prospectus_url = null;
+        row.prospectus_name = null;
+        row.prospectus_size = null;
+        row.prospectus_version = null;
+      } else {
+        extraFields.prospectus = null;
+      }
     }
   }
+
+  // Gallery
+  if (bp.gallery !== undefined) {
+    const cleanGallery = bp.gallery.filter((item: any) => item && item.id !== '__extra_fields_backup__');
+    if (Object.keys(extraFields).length > 0) {
+      row.gallery = [
+        ...cleanGallery,
+        { id: '__extra_fields_backup__', url: '', caption: 'Extra Fields Backup Space', data: extraFields }
+      ];
+    } else {
+      row.gallery = cleanGallery;
+    }
+  }
+
   return row;
 };
 
@@ -258,6 +318,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     passPercentage: 35,
     minAttendance: 75
   });
+  const [businessProfileColumns, setBusinessProfileColumns] = useState<string[]>([
+    'id', 'name', 'legal_name', 'iso_no', 'reg_no', 'email', 'phone', 'address', 'regional_address',
+    'website', 'working_hours', 'logo_url', 'header_image_url', 'signature_url', 'mission',
+    'facebook_url', 'twitter_url', 'instagram_url', 'linkedin_url', 'director_photo_url',
+    'director_name', 'director_message', 'banners', 'gallery', 'pincode', 'enable_digital_signatures',
+    'visionaries', 'about_banner_url', 'contact_banner_url', 'featured_courses_image_url', 
+    'success_stories_banner_url', 'receipt_top_header_url', 'prospectus_url', 'prospectus_name', 
+    'prospectus_size', 'prospectus_version', 'prospectus_updated_at'
+  ]);
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile>({
     id: '00000000-0000-0000-0000-000000000001',
     name: 'SOFTDEV TALLY GURU',
@@ -489,6 +558,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }));
       await supabaseAdmin.from('fee_structures').insert(mappedFranchiseFees);
 
+      const defaultProfile = mapBusinessProfileToDb({
+        id: '00000000-0000-0000-0000-000000000001',
+        name: 'SOFTDEV TALLY GURU',
+        legalName: 'SOFTDEV TALLY GURU PRASHIKSHAN SANSTHAN SOCIETY',
+        isoNo: '9001:2015',
+        regNo: 'G-58913 / 1442',
+        email: 'info@stginstitute.in',
+        phone: '+91 9450455378',
+        address: 'Near Mahila Degree College, Companybagh Basti (Uttar Pradesh) India-272001',
+        regionalAddress: 'Near Kisan Degree College, Mahson Road Basti (Uttar Pradesh) India-272001',
+        website: 'www.stginstitute.in',
+        workingHours: '09:00 AM - 06:00 PM',
+        mission: 'To empower students through technology and quality education.',
+        logoUrl: 'https://firebasestorage.googleapis.com/v0/b/ais-dev-pzzj54zbvfrllp25htfrww.appspot.com/o/softdev_logo.png?alt=media&token=48c0b58e-7e9b-46a2-97b7-54324f331777',
+        directorName: 'Director',
+        directorMessage: `At Softdev Guru, our mission has always been clear: to bridge the gap between traditional education and the rapidly evolving demands of the global digital economy. We don't just teach software; we cultivate a mindset of innovation and practical excellence.`,
+        banners: [
+          'https://firebasestorage.googleapis.com/v0/b/ais-dev-pzzj54zbvfrllp25htfrww.appspot.com/o/softdev_banner_wide.png?alt=media&token=48c0b58e-7e9b-46a2-97b7-54324f331777',
+          'https://via.placeholder.com/1200x400?text=SOFTDEV+TALLY+GURU+LAB',
+          'https://via.placeholder.com/1200x400?text=SOFTDEV+TALLY+GURU+WORKSHOP'
+        ],
+        gallery: [
+          { id: 'h1', url: 'https://firebasestorage.googleapis.com/v0/b/ais-dev-pzzj54zbvfrllp25htfrww.appspot.com/o/softdev_banner_wide.png?alt=media&token=48c0b58e-7e9b-46a2-97b7-54324f331777', caption: 'Official Institute Banner' },
+          { id: '1', url: 'https://via.placeholder.com/800x600?text=Institute+Lab', caption: 'State of the Art Lab' },
+          { id: '2', url: 'https://via.placeholder.com/800x600?text=Accounting+Workshop', caption: 'Accounting Workshop' },
+          { id: '3', url: 'https://via.placeholder.com/800x600?text=Celebration', caption: 'Success Celebration' }
+        ]
+      });
+      await supabaseAdmin.from('business_profile').insert(defaultProfile);
+
       console.log('Database seeded with standard initial datasets.');
     } catch (e) {
       console.error('Remote seeding failed, operating on state fallback:', e);
@@ -571,6 +670,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           })));
 
           if (bpData && bpData.length > 0) {
+            setBusinessProfileColumns(Object.keys(bpData[0]));
             setBusinessProfile(mapDbToBusinessProfile(bpData[0]));
           }
         }
@@ -1273,33 +1373,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // 2. Clone updates to safely upload any base64 files (data URIs) to Supabase Storage
       const bpToSave = { ...updates };
       const bpId = isUUID(businessProfile.id) ? businessProfile.id : '00000000-0000-0000-0000-000000000001';
+      const timestamp = Date.now();
 
-      if (bpToSave.logoUrl?.startsWith('data:')) {
-        bpToSave.logoUrl = await uploadToStorage(bpToSave.logoUrl, `logo_${bpId}.webp`);
+      if (bpToSave.logoUrl && typeof bpToSave.logoUrl === 'string' && bpToSave.logoUrl.startsWith('data:')) {
+        bpToSave.logoUrl = await uploadToStorage(bpToSave.logoUrl, `logo_${bpId}_${timestamp}.webp`);
       }
-      if (bpToSave.headerImageUrl?.startsWith('data:')) {
-        bpToSave.headerImageUrl = await uploadToStorage(bpToSave.headerImageUrl, `header_${bpId}.webp`);
+      if (bpToSave.headerImageUrl && typeof bpToSave.headerImageUrl === 'string' && bpToSave.headerImageUrl.startsWith('data:')) {
+        bpToSave.headerImageUrl = await uploadToStorage(bpToSave.headerImageUrl, `header_${bpId}_${timestamp}.webp`);
       }
-      if (bpToSave.signatureUrl?.startsWith('data:')) {
-        bpToSave.signatureUrl = await uploadToStorage(bpToSave.signatureUrl, `signature_${bpId}.webp`);
+      if (bpToSave.signatureUrl && typeof bpToSave.signatureUrl === 'string' && bpToSave.signatureUrl.startsWith('data:')) {
+        bpToSave.signatureUrl = await uploadToStorage(bpToSave.signatureUrl, `signature_${bpId}_${timestamp}.webp`);
       }
-      if (bpToSave.directorPhotoUrl?.startsWith('data:')) {
-        bpToSave.directorPhotoUrl = await uploadToStorage(bpToSave.directorPhotoUrl, `director_${bpId}.webp`);
+      if (bpToSave.directorPhotoUrl && typeof bpToSave.directorPhotoUrl === 'string' && bpToSave.directorPhotoUrl.startsWith('data:')) {
+        bpToSave.directorPhotoUrl = await uploadToStorage(bpToSave.directorPhotoUrl, `director_${bpId}_${timestamp}.webp`);
       }
-      if (bpToSave.aboutUsUrl?.startsWith('data:')) {
-        bpToSave.aboutUsUrl = await uploadToStorage(bpToSave.aboutUsUrl, `about_${bpId}.webp`);
+      if (bpToSave.aboutUsUrl && typeof bpToSave.aboutUsUrl === 'string' && bpToSave.aboutUsUrl.startsWith('data:')) {
+        bpToSave.aboutUsUrl = await uploadToStorage(bpToSave.aboutUsUrl, `about_${bpId}_${timestamp}.webp`);
       }
-      if (bpToSave.contactUsUrl?.startsWith('data:')) {
-        bpToSave.contactUsUrl = await uploadToStorage(bpToSave.contactUsUrl, `contact_${bpId}.webp`);
+      if (bpToSave.contactUsUrl && typeof bpToSave.contactUsUrl === 'string' && bpToSave.contactUsUrl.startsWith('data:')) {
+        bpToSave.contactUsUrl = await uploadToStorage(bpToSave.contactUsUrl, `contact_${bpId}_${timestamp}.webp`);
       }
-      if (bpToSave.featuredCoursesBannerUrl?.startsWith('data:')) {
-        bpToSave.featuredCoursesBannerUrl = await uploadToStorage(bpToSave.featuredCoursesBannerUrl, `featured_courses_${bpId}.webp`);
+      if (bpToSave.featuredCoursesBannerUrl && typeof bpToSave.featuredCoursesBannerUrl === 'string' && bpToSave.featuredCoursesBannerUrl.startsWith('data:')) {
+        bpToSave.featuredCoursesBannerUrl = await uploadToStorage(bpToSave.featuredCoursesBannerUrl, `featured_courses_${bpId}_${timestamp}.webp`);
       }
-      if (bpToSave.successStoriesBannerUrl?.startsWith('data:')) {
-        bpToSave.successStoriesBannerUrl = await uploadToStorage(bpToSave.successStoriesBannerUrl, `success_stories_${bpId}.webp`);
+      if (bpToSave.successStoriesBannerUrl && typeof bpToSave.successStoriesBannerUrl === 'string' && bpToSave.successStoriesBannerUrl.startsWith('data:')) {
+        bpToSave.successStoriesBannerUrl = await uploadToStorage(bpToSave.successStoriesBannerUrl, `success_stories_${bpId}_${timestamp}.webp`);
       }
-      if (bpToSave.receiptHeaderUrl?.startsWith('data:')) {
-        bpToSave.receiptHeaderUrl = await uploadToStorage(bpToSave.receiptHeaderUrl, `receipt_header_${bpId}.webp`);
+      if (bpToSave.receiptHeaderUrl && typeof bpToSave.receiptHeaderUrl === 'string' && bpToSave.receiptHeaderUrl.startsWith('data:')) {
+        bpToSave.receiptHeaderUrl = await uploadToStorage(bpToSave.receiptHeaderUrl, `receipt_header_${bpId}_${timestamp}.webp`);
       }
 
       // Upload Home Banners array if they contain base64 files
@@ -1307,10 +1408,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const uploadedBanners: string[] = [];
         for (let i = 0; i < bpToSave.banners.length; i++) {
           const banner = bpToSave.banners[i];
-          if (banner.startsWith('data:')) {
-            const url = await uploadToStorage(banner, `banner_${bpId}_${i}.webp`);
+          if (banner && typeof banner === 'string' && banner.startsWith('data:')) {
+            const url = await uploadToStorage(banner, `banner_${bpId}_${i}_${timestamp}.webp`);
             uploadedBanners.push(url);
-          } else {
+          } else if (banner) {
             uploadedBanners.push(banner);
           }
         }
@@ -1322,10 +1423,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const uploadedGallery = [];
         for (let i = 0; i < bpToSave.gallery.length; i++) {
           const item = bpToSave.gallery[i];
-          if (item.url && item.url.startsWith('data:')) {
-            const url = await uploadToStorage(item.url, `gallery_${bpId}_${item.id}.webp`);
+          if (item && item.url && typeof item.url === 'string' && item.url.startsWith('data:')) {
+            const url = await uploadToStorage(item.url, `gallery_${bpId}_${item.id}_${timestamp}.webp`);
             uploadedGallery.push({ ...item, url });
-          } else {
+          } else if (item) {
             uploadedGallery.push(item);
           }
         }
@@ -1333,8 +1434,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       // Upload Prospectus if it contains base64 file
-      if (bpToSave.prospectus && bpToSave.prospectus.url && bpToSave.prospectus.url.startsWith('data:')) {
-        const url = await uploadToStorage(bpToSave.prospectus.url, `prospectus_${bpId}.pdf`);
+      if (bpToSave.prospectus && bpToSave.prospectus.url && typeof bpToSave.prospectus.url === 'string' && bpToSave.prospectus.url.startsWith('data:')) {
+        const url = await uploadToStorage(bpToSave.prospectus.url, `prospectus_${bpId}_${timestamp}.pdf`);
         bpToSave.prospectus = {
           ...bpToSave.prospectus,
           url
@@ -1353,15 +1454,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ...businessProfile,
         ...bpToSave,
         id: bpId
+      }, businessProfileColumns);
+
+      // Filter DBRow to only include keys that are actual columns in the Supabase schema cache
+      const filteredDbRow: any = {};
+      Object.keys(dbRow).forEach(key => {
+        if (businessProfileColumns.includes(key)) {
+          filteredDbRow[key] = dbRow[key];
+        } else {
+          console.warn(`Column '${key}' is not available in their remote database schema. Skipping to prevent request crash.`);
+        }
       });
 
       // 5. Try to save row to Supabase
-      const { data, error } = await supabaseAdmin.from('business_profile').upsert(dbRow).select();
+      const { data, error } = await supabaseAdmin.from('business_profile').upsert(filteredDbRow).select();
       if (error) {
         console.error('Failed to sync business profile upsert raw error:', error);
+        throw error;
       }
     } catch (err) {
       console.error('Failed to sync business profile upsert exception:', err);
+      throw err;
     }
   };
 

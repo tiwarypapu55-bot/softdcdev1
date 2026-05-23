@@ -512,17 +512,6 @@ BEGIN
     END IF;
 END $$;
 
--- Add indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_students_franchise_id ON public.students(franchise_id);
-CREATE INDEX IF NOT EXISTS idx_fee_payments_student_id ON public.fee_payments(student_id);
-CREATE INDEX IF NOT EXISTS idx_fee_payments_receipt_no ON public.fee_payments(receipt_no);
-CREATE INDEX IF NOT EXISTS idx_wallet_transactions_franchise_id ON public.wallet_transactions(franchise_id);
-CREATE INDEX IF NOT EXISTS idx_employees_franchise_id ON public.employees(franchise_id);
-CREATE INDEX IF NOT EXISTS idx_fund_requests_franchise_id ON public.fund_requests(franchise_id);
-CREATE INDEX IF NOT EXISTS idx_attendance_student_id ON public.attendance(student_id);
-CREATE INDEX IF NOT EXISTS idx_attendance_franchise_id ON public.attendance(franchise_id);
-CREATE INDEX IF NOT EXISTS idx_timetable_franchise_id ON public.timetable(franchise_id);
-
 -- FAIL-SAFE ALTER STATEMENTS FOR EXISTING DATABASES
 ALTER TABLE public.courses ADD COLUMN IF NOT EXISTS photo_url TEXT;
 ALTER TABLE public.courses ADD COLUMN IF NOT EXISTS banner_image_url TEXT;
@@ -579,6 +568,17 @@ ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS view_students BOOLEAN DEFA
 ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS edit_courses BOOLEAN DEFAULT FALSE;
 ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS process_salaries BOOLEAN DEFAULT FALSE;
 ALTER TABLE public.employees ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+-- Add indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_students_franchise_id ON public.students(franchise_id);
+CREATE INDEX IF NOT EXISTS idx_fee_payments_student_id ON public.fee_payments(student_id);
+CREATE INDEX IF NOT EXISTS idx_fee_payments_receipt_no ON public.fee_payments(receipt_no);
+CREATE INDEX IF NOT EXISTS idx_wallet_transactions_franchise_id ON public.wallet_transactions(franchise_id);
+CREATE INDEX IF NOT EXISTS idx_employees_franchise_id ON public.employees(franchise_id);
+CREATE INDEX IF NOT EXISTS idx_fund_requests_franchise_id ON public.fund_requests(franchise_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_student_id ON public.attendance(student_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_franchise_id ON public.attendance(franchise_id);
+CREATE INDEX IF NOT EXISTS idx_timetable_franchise_id ON public.timetable(franchise_id);
 
 -- Fee payments modifications
 ALTER TABLE public.fee_payments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
@@ -657,3 +657,132 @@ CREATE POLICY "Allow select for public/authenticated on fee_payments" ON public.
 DROP POLICY IF EXISTS "Allow all for authenticated on fee_payments" ON public.fee_payments;
 CREATE POLICY "Allow all for authenticated on fee_payments" ON public.fee_payments FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
 
+-- PROFILES POLICIES
+DROP POLICY IF EXISTS "Allow select for public/authenticated on profiles" ON public.profiles;
+CREATE POLICY "Allow select for public/authenticated on profiles" ON public.profiles FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow all for authenticated on profiles" ON public.profiles;
+CREATE POLICY "Allow all for authenticated on profiles" ON public.profiles FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+-- BUSINESS PROFILE POLICIES
+ALTER TABLE public.business_profile ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow select for public/authenticated on business_profile" ON public.business_profile;
+CREATE POLICY "Allow select for public/authenticated on business_profile" ON public.business_profile FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow all for authenticated on business_profile" ON public.business_profile;
+CREATE POLICY "Allow all for authenticated on business_profile" ON public.business_profile FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+-- FRANCHISES POLICIES
+DROP POLICY IF EXISTS "Allow select for public/authenticated on franchises" ON public.franchises;
+CREATE POLICY "Allow select for public/authenticated on franchises" ON public.franchises FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow all for authenticated on franchises" ON public.franchises;
+CREATE POLICY "Allow all for authenticated on franchises" ON public.franchises FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+-- STUDENTS POLICIES
+DROP POLICY IF EXISTS "Allow select for public/authenticated on students" ON public.students;
+CREATE POLICY "Allow select for public/authenticated on students" ON public.students FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow all for authenticated on students" ON public.students;
+CREATE POLICY "Allow all for authenticated on students" ON public.students FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+-- CERTIFICATES POLICIES
+ALTER TABLE public.certificates ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow select for public/authenticated on certificates" ON public.certificates;
+CREATE POLICY "Allow select for public/authenticated on certificates" ON public.certificates FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow all for authenticated on certificates" ON public.certificates;
+CREATE POLICY "Allow all for authenticated on certificates" ON public.certificates FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+-- VOUCHERS POLICIES
+ALTER TABLE public.vouchers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow select for public/authenticated on vouchers" ON public.vouchers;
+CREATE POLICY "Allow select for public/authenticated on vouchers" ON public.vouchers FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow all for authenticated on vouchers" ON public.vouchers;
+CREATE POLICY "Allow all for authenticated on vouchers" ON public.vouchers FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+-- WALLET TRANSACTIONS POLICIES
+ALTER TABLE public.wallet_transactions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow select for public/authenticated on wallet_transactions" ON public.wallet_transactions;
+CREATE POLICY "Allow select for public/authenticated on wallet_transactions" ON public.wallet_transactions FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow all for authenticated on wallet_transactions" ON public.wallet_transactions;
+CREATE POLICY "Allow all for authenticated on wallet_transactions" ON public.wallet_transactions FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+-- ANNOUNCEMENTS POLICIES
+ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow select for public/authenticated on announcements" ON public.announcements;
+CREATE POLICY "Allow select for public/authenticated on announcements" ON public.announcements FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow all for authenticated on announcements" ON public.announcements;
+CREATE POLICY "Allow all for authenticated on announcements" ON public.announcements FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+-- ADMISSION ENQUIRIES POLICIES
+ALTER TABLE public.admission_enquiries ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow select for public/authenticated on admission_enquiries" ON public.admission_enquiries;
+CREATE POLICY "Allow select for public/authenticated on admission_enquiries" ON public.admission_enquiries FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public insert on admission_enquiries" ON public.admission_enquiries;
+CREATE POLICY "Allow public insert on admission_enquiries" ON public.admission_enquiries FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for authenticated on admission_enquiries" ON public.admission_enquiries;
+CREATE POLICY "Allow all for authenticated on admission_enquiries" ON public.admission_enquiries FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+-- BUSINESS TRANSACTIONS POLICIES
+ALTER TABLE public.business_transactions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow select for public/authenticated on business_transactions" ON public.business_transactions;
+CREATE POLICY "Allow select for public/authenticated on business_transactions" ON public.business_transactions FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow all for authenticated on business_transactions" ON public.business_transactions;
+CREATE POLICY "Allow all for authenticated on business_transactions" ON public.business_transactions FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+-- FEE STRUCTURES POLICIES
+ALTER TABLE public.fee_structures ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow select for public/authenticated on fee_structures" ON public.fee_structures;
+CREATE POLICY "Allow select for public/authenticated on fee_structures" ON public.fee_structures FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow all for authenticated on fee_structures" ON public.fee_structures;
+CREATE POLICY "Allow all for authenticated on fee_structures" ON public.fee_structures FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+-- ACADEMIC SESSIONS POLICIES
+ALTER TABLE public.academic_sessions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow select for public/authenticated on academic_sessions" ON public.academic_sessions;
+CREATE POLICY "Allow select for public/authenticated on academic_sessions" ON public.academic_sessions FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow all for authenticated on academic_sessions" ON public.academic_sessions;
+CREATE POLICY "Allow all for authenticated on academic_sessions" ON public.academic_sessions FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+-- EXAMS POLICIES
+ALTER TABLE public.exams ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow select for public/authenticated on exams" ON public.exams;
+CREATE POLICY "Allow select for public/authenticated on exams" ON public.exams FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow all for authenticated on exams" ON public.exams;
+CREATE POLICY "Allow all for authenticated on exams" ON public.exams FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+
+-- 1. FORCE ENABLE RLS
+ALTER TABLE public.academic_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admission_enquiries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.business_profile ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.business_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.certificates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.exams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.fee_structures ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.franchises ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vouchers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wallet_transactions ENABLE ROW LEVEL SECURITY;
+
+-- 2. CREATE STANDARD ALL-READ / SECURE-WRITE POLICIES
+DO $$
+DECLARE
+    t text;
+    tables text[] := ARRAY[
+        'academic_sessions', 'admission_enquiries', 'announcements', 
+        'business_profile', 'business_transactions', 'certificates', 
+        'exams', 'fee_structures', 'franchises', 'students', 
+        'vouchers', 'wallet_transactions'
+    ];
+BEGIN
+    FOREACH t IN ARRAY tables LOOP
+        -- Active SELECT policy
+        EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', 'Allow select for public on ' || t, t);
+        EXECUTE format('CREATE POLICY %I ON public.%I FOR SELECT USING (true)', 'Allow select for public on ' || t, t);
+        
+        -- Active Write policy for logged-in operators/synced devices
+        EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', 'Allow all for authenticated on ' || t, t);
+        EXECUTE format('CREATE POLICY %I ON public.%I FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL)', 'Allow all for authenticated on ' || t, t);
+    END LOOP;
+    
+    -- Special insert rule for admission leads without authentication
+    DROP POLICY IF EXISTS "Allow public insert on admission_enquiries" ON public.admission_enquiries;
+    CREATE POLICY "Allow public insert on admission_enquiries" ON public.admission_enquiries FOR INSERT WITH CHECK (true);
+END $$;
