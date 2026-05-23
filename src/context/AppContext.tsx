@@ -166,18 +166,18 @@ const mapDbToBusinessProfile = (row: any): BusinessProfile => {
     pincode: ('pincode' in row) ? (row.pincode || '') : (extraFields.pincode || ''),
     website: row.website || 'www.stginstitute.in',
     workingHours: row.working_hours || '09:00 AM - 06:00 PM',
-    logoUrl: row.logo_url || '',
-    headerImageUrl: row.header_image_url || '',
-    signatureUrl: row.signature_url || '',
+    logoUrl: ('logo_url' in row) ? (row.logo_url || '') : (extraFields.logoUrl || ''),
+    headerImageUrl: ('header_image_url' in row) ? (row.header_image_url || '') : (extraFields.headerImageUrl || ''),
+    signatureUrl: ('signature_url' in row) ? (row.signature_url || '') : (extraFields.signatureUrl || ''),
     mission: row.mission || 'To empower students through technology and quality education.',
     facebookUrl: row.facebook_url || '',
     twitterUrl: row.twitter_url || '',
     instagramUrl: row.instagram_url || '',
     linkedinUrl: row.linkedin_url || '',
-    directorPhotoUrl: row.director_photo_url || '',
-    directorName: row.director_name || '',
-    directorMessage: row.director_message || '',
-    banners: row.banners || [],
+    directorPhotoUrl: ('director_photo_url' in row) ? (row.director_photo_url || '') : (extraFields.directorPhotoUrl || ''),
+    directorName: ('director_name' in row) ? (row.director_name || '') : (extraFields.directorName || ''),
+    directorMessage: ('director_message' in row) ? (row.director_message || '') : (extraFields.directorMessage || ''),
+    banners: ('banners' in row) ? (row.banners || []) : (extraFields.banners || []),
     gallery: cleanGallery,
     aboutUsUrl: ('about_banner_url' in row) ? (row.about_banner_url || '') : (extraFields.aboutUsUrl || ''),
     contactUsUrl: ('contact_banner_url' in row) ? (row.contact_banner_url || '') : (extraFields.contactUsUrl || ''),
@@ -218,33 +218,27 @@ const mapBusinessProfileToDb = (bp: Partial<BusinessProfile>, dbColumns?: string
 
   if (bp.id !== undefined) row.id = bp.id;
   if (bp.name !== undefined) row.name = bp.name;
-  if (bp.legalName !== undefined) row.legal_name = bp.legalName;
-  if (bp.isoNo !== undefined) row.iso_no = bp.isoNo;
-  if (bp.regNo !== undefined) row.reg_no = bp.regNo;
-  if (bp.email !== undefined) row.email = bp.email;
-  if (bp.phone !== undefined) row.phone = bp.phone;
-  if (bp.address !== undefined) row.address = bp.address;
-  if (bp.regionalAddress !== undefined) row.regional_address = bp.regionalAddress;
-  if (bp.website !== undefined) row.website = bp.website;
-  if (bp.workingHours !== undefined) row.working_hours = bp.workingHours;
-  if (bp.logoUrl !== undefined) row.logo_url = bp.logoUrl;
-  if (bp.headerImageUrl !== undefined) {
-    if (columns.includes('header_image_url')) {
-      row.header_image_url = bp.headerImageUrl;
-    } else {
-      extraFields.headerImageUrl = bp.headerImageUrl;
-    }
-  }
-  if (bp.signatureUrl !== undefined) row.signature_url = bp.signatureUrl;
-  if (bp.mission !== undefined) row.mission = bp.mission;
-  if (bp.facebookUrl !== undefined) row.facebook_url = bp.facebookUrl;
-  if (bp.twitterUrl !== undefined) row.twitter_url = bp.twitterUrl;
-  if (bp.instagramUrl !== undefined) row.instagram_url = bp.instagramUrl;
-  if (bp.linkedinUrl !== undefined) row.linkedin_url = bp.linkedinUrl;
-  if (bp.directorPhotoUrl !== undefined) row.director_photo_url = bp.directorPhotoUrl;
-  if (bp.directorName !== undefined) row.director_name = bp.directorName;
-  if (bp.directorMessage !== undefined) row.director_message = bp.directorMessage;
-  if (bp.banners !== undefined) row.banners = bp.banners;
+  if (bp.legalName !== undefined) assignField('legalName', 'legal_name', bp.legalName);
+  if (bp.isoNo !== undefined) assignField('isoNo', 'iso_no', bp.isoNo);
+  if (bp.regNo !== undefined) assignField('regNo', 'reg_no', bp.regNo);
+  if (bp.email !== undefined) assignField('email', 'email', bp.email);
+  if (bp.phone !== undefined) assignField('phone', 'phone', bp.phone);
+  if (bp.address !== undefined) assignField('address', 'address', bp.address);
+  if (bp.regionalAddress !== undefined) assignField('regionalAddress', 'regional_address', bp.regionalAddress);
+  if (bp.website !== undefined) assignField('website', 'website', bp.website);
+  if (bp.workingHours !== undefined) assignField('workingHours', 'working_hours', bp.workingHours);
+  if (bp.logoUrl !== undefined) assignField('logoUrl', 'logo_url', bp.logoUrl);
+  if (bp.headerImageUrl !== undefined) assignField('headerImageUrl', 'header_image_url', bp.headerImageUrl);
+  if (bp.signatureUrl !== undefined) assignField('signatureUrl', 'signature_url', bp.signatureUrl);
+  if (bp.mission !== undefined) assignField('mission', 'mission', bp.mission);
+  if (bp.facebookUrl !== undefined) assignField('facebookUrl', 'facebook_url', bp.facebookUrl);
+  if (bp.twitterUrl !== undefined) assignField('twitterUrl', 'twitter_url', bp.twitterUrl);
+  if (bp.instagramUrl !== undefined) assignField('instagramUrl', 'instagram_url', bp.instagramUrl);
+  if (bp.linkedinUrl !== undefined) assignField('linkedinUrl', 'linkedin_url', bp.linkedinUrl);
+  if (bp.directorPhotoUrl !== undefined) assignField('directorPhotoUrl', 'director_photo_url', bp.directorPhotoUrl);
+  if (bp.directorName !== undefined) assignField('directorName', 'director_name', bp.directorName);
+  if (bp.directorMessage !== undefined) assignField('directorMessage', 'director_message', bp.directorMessage);
+  if (bp.banners !== undefined) assignField('banners', 'banners', bp.banners);
 
   // Extra fields:
   if (bp.pincode !== undefined) assignField('pincode', 'pincode', bp.pincode);
@@ -288,6 +282,10 @@ const mapBusinessProfileToDb = (bp: Partial<BusinessProfile>, dbColumns?: string
     } else {
       row.gallery = cleanGallery;
     }
+  } else if (Object.keys(extraFields).length > 0) {
+    row.gallery = [
+      { id: '__extra_fields_backup__', url: '', caption: 'Extra Fields Backup Space', data: extraFields }
+    ];
   }
 
   return row;
@@ -501,6 +499,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await supabaseAdmin.from('courses').insert(camelToSnake(initialCourses));
       await supabaseAdmin.from('franchises').insert(camelToSnake(initialFranchises));
       
+      const mappedCategories = initialCategories.map(cat => ({
+        id: cat.id,
+        name: cat.name,
+        description: cat.description || '',
+        thumbnail_url: cat.imageUrl || '',
+        banner_image_url: cat.bannerUrl || ''
+      }));
+      await supabaseAdmin.from('course_categories').insert(mappedCategories);
+      
       const mappedSessions = initialSessions.map(s => ({
         id: ensureUUID(s.id),
         name: s.name,
@@ -618,7 +625,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           { data: wtData },
           { data: btData },
           { data: fsData },
-          { data: bpData }
+          { data: bpData },
+          { data: ccData }
         ] = await Promise.all([
           supabaseAdmin.from('franchises').select('*'),
           supabaseAdmin.from('students').select('*'),
@@ -633,7 +641,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           supabaseAdmin.from('wallet_transactions').select('*'),
           supabaseAdmin.from('business_transactions').select('*'),
           supabaseAdmin.from('fee_structures').select('*'),
-          supabaseAdmin.from('business_profile').select('*')
+          supabaseAdmin.from('business_profile').select('*'),
+          supabaseAdmin.from('course_categories').select('*')
         ]);
 
         const rawCourses = cData ? snakeToCamel(cData) : [];
@@ -651,6 +660,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setCertificates(certData ? snakeToCamel(certData) : []);
           setWalletTransactions(wtData ? snakeToCamel(wtData) : []);
           setBusinessTransactions(btData ? snakeToCamel(btData) : []);
+
+          const rawCategories = ccData ? ccData.map((row: any) => ({
+            id: row.id,
+            name: row.name,
+            description: row.description || '',
+            imageUrl: row.thumbnail_url || row.image_url || '',
+            bannerUrl: row.banner_image_url || row.banner_url || ''
+          })) : [];
+          setCourseCategories(rawCategories);
 
           const rawSessions = seData ? snakeToCamel(seData) : [];
           setSessions(rawSessions);
@@ -670,7 +688,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           })));
 
           if (bpData && bpData.length > 0) {
-            setBusinessProfileColumns(Object.keys(bpData[0]));
+            const dbKeys = Object.keys(bpData[0]);
+            setBusinessProfileColumns(prev => Array.from(new Set([...prev, ...dbKeys])));
             setBusinessProfile(mapDbToBusinessProfile(bpData[0]));
           }
         }
@@ -1057,13 +1076,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const addCourseCategory = (cat: CourseCategory) => {
+  const addCourseCategory = async (cat: CourseCategory) => {
     if (!courseCategories.find(c => c.id === cat.id)) {
       setCourseCategories(prev => [...prev, cat]);
+      try {
+        let imageUrl = cat.imageUrl || '';
+        let bannerUrl = cat.bannerUrl || '';
+        const timestamp = Date.now();
+        const catId = cat.id;
+
+        if (imageUrl.startsWith('data:')) {
+          imageUrl = await uploadToStorage(imageUrl, `cat_thumb_${catId}_${timestamp}.webp`);
+        }
+        if (bannerUrl.startsWith('data:')) {
+          bannerUrl = await uploadToStorage(bannerUrl, `cat_banner_${catId}_${timestamp}.webp`);
+        }
+
+        // Keep local state in sync with clean URL
+        setCourseCategories(prev => prev.map(c => c.id === catId ? { ...c, imageUrl, bannerUrl } : c));
+
+        const mappedCategory = {
+          id: catId,
+          name: cat.name,
+          description: cat.description || '',
+          thumbnail_url: imageUrl,
+          banner_image_url: bannerUrl
+        };
+        await supabaseAdmin.from('course_categories').insert(mappedCategory);
+      } catch (err) {
+        console.error('Failed to sync add course category to database:', err);
+      }
     }
   };
 
-  const updateCourseCategory = (id: string, updates: Partial<CourseCategory>) => {
+  const updateCourseCategory = async (id: string, updates: Partial<CourseCategory>) => {
     const oldCategory = courseCategories.find(c => c.id === id);
     setCourseCategories(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
 
@@ -1072,9 +1118,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         course.category === oldCategory.name ? { ...course, category: updates.name! } : course
       ));
     }
+
+    try {
+      const dbUpdates: any = {};
+      if (updates.name !== undefined) dbUpdates.name = updates.name;
+      if (updates.description !== undefined) dbUpdates.description = updates.description;
+      
+      let imageUrl = updates.imageUrl;
+      let bannerUrl = updates.bannerUrl;
+      const timestamp = Date.now();
+
+      if (imageUrl && imageUrl.startsWith('data:')) {
+        imageUrl = await uploadToStorage(imageUrl, `cat_thumb_${id}_${timestamp}.webp`);
+        dbUpdates.thumbnail_url = imageUrl;
+        setCourseCategories(prev => prev.map(c => c.id === id ? { ...c, imageUrl } : c));
+      } else if (imageUrl !== undefined) {
+        dbUpdates.thumbnail_url = imageUrl;
+      }
+
+      if (bannerUrl && bannerUrl.startsWith('data:')) {
+        bannerUrl = await uploadToStorage(bannerUrl, `cat_banner_${id}_${timestamp}.webp`);
+        dbUpdates.banner_image_url = bannerUrl;
+        setCourseCategories(prev => prev.map(c => c.id === id ? { ...c, bannerUrl } : c));
+      } else if (bannerUrl !== undefined) {
+        dbUpdates.banner_image_url = bannerUrl;
+      }
+
+      await supabaseAdmin.from('course_categories').update(dbUpdates).eq('id', id);
+    } catch (err) {
+      console.error('Failed to sync update course category in database:', err);
+    }
   };
 
-  const deleteCourseCategory = (id: string) => {
+  const deleteCourseCategory = async (id: string) => {
     if (!id) return;
     const categoryToDelete = courseCategories.find(c => c.id === id);
     setCourseCategories(prev => prev.filter(c => c.id !== id));
@@ -1083,6 +1159,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCourses(prev => prev.map(course => 
         course.category === categoryToDelete.name ? { ...course, category: '' } : course
       ));
+    }
+
+    try {
+      await supabaseAdmin.from('course_categories').delete().eq('id', id);
+    } catch (err) {
+      console.error('Failed to sync delete course category from database:', err);
     }
   };
 

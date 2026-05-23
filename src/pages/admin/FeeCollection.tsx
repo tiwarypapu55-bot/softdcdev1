@@ -40,6 +40,38 @@ export const FeeCollection = () => {
     remarks: ''
   });
 
+  // Reset payment data and load default matching course fee when modal opens or student changes
+  React.useEffect(() => {
+    if (showPaymentModal && selectedStudent) {
+      const matched = (feeStructures || []).find(f => 
+        f.status === 'ACTIVE' && 
+        f.head === 'Course Fee' && 
+        (f.courseName === selectedStudent.course || f.courseId === 'all' || f.courseName === 'All IT Courses') &&
+        f.session === selectedStudent.session
+      ) || (feeStructures || []).find(f => 
+        f.status === 'ACTIVE' && 
+        f.head === 'Course Fee' && 
+        (f.courseName === selectedStudent.course || f.courseId === 'all' || f.courseName === 'All IT Courses')
+      );
+
+      const baseAmount = matched ? (matched.amount || 0) : 0;
+      const discount = matched ? (matched.discount || 0) : 0;
+      const penalty = matched ? (matched.latePenalty || 0) : 0;
+      const finalPaid = Math.max(0, (baseAmount + penalty) - discount);
+
+      setPaymentData({
+        heads: [{ 
+          type: 'Course Fee', 
+          amount: baseAmount, 
+          discount: discount, 
+          penalty: penalty 
+        }],
+        paymentModes: [{ mode: 'Cash', amount: finalPaid, transactionId: '' }],
+        remarks: ''
+      });
+    }
+  }, [showPaymentModal, selectedStudent, feeStructures]);
+
   const totalPayable = paymentData.heads.reduce((acc, h) => acc + (h.amount + h.penalty - h.discount), 0);
   const totalPaidInModes = paymentData.paymentModes.reduce((acc, m) => acc + m.amount, 0);
 
@@ -64,9 +96,34 @@ export const FeeCollection = () => {
   };
 
   const addHead = () => {
+    const matched = (feeStructures || []).find(f => 
+      f.status === 'ACTIVE' && 
+      f.head === 'Course Fee' && 
+      (f.courseName === selectedStudent?.course || f.courseId === 'all' || f.courseName === 'All IT Courses') &&
+      f.session === selectedStudent?.session
+    ) || (feeStructures || []).find(f => 
+      f.status === 'ACTIVE' && 
+      f.head === 'Course Fee' && 
+      (f.courseName === selectedStudent?.course || f.courseId === 'all' || f.courseName === 'All IT Courses')
+    );
+
+    const newHeads = [
+      ...paymentData.heads,
+      { 
+        type: 'Course Fee', 
+        amount: matched ? (matched.amount || 0) : 0, 
+        discount: matched ? (matched.discount || 0) : 0, 
+        penalty: matched ? (matched.latePenalty || 0) : 0 
+      }
+    ];
+
+    const newTotalPayable = newHeads.reduce((acc, h) => acc + (h.amount + h.penalty - h.discount), 0);
+    const newModes = paymentData.paymentModes.map((m, idx) => idx === 0 ? { ...m, amount: newTotalPayable } : m);
+
     setPaymentData({
       ...paymentData,
-      heads: [...paymentData.heads, { type: 'Course Fee', amount: 0, discount: 0, penalty: 0 }]
+      heads: newHeads,
+      paymentModes: newModes
     });
   };
 
@@ -563,9 +620,39 @@ export const FeeCollection = () => {
                             required
                             value={head.type}
                             onChange={(e) => {
+                              const chosenType = e.target.value;
                               const newHeads = [...paymentData.heads];
-                              newHeads[idx].type = e.target.value;
-                              setPaymentData({ ...paymentData, heads: newHeads });
+                              newHeads[idx].type = chosenType;
+
+                              const matched = (feeStructures || []).find(f => 
+                                f.status === 'ACTIVE' && 
+                                f.head === chosenType && 
+                                (f.courseName === selectedStudent?.course || f.courseId === 'all' || f.courseName === 'All IT Courses') &&
+                                f.session === selectedStudent?.session
+                              ) || (feeStructures || []).find(f => 
+                                f.status === 'ACTIVE' && 
+                                f.head === chosenType && 
+                                (f.courseName === selectedStudent?.course || f.courseId === 'all' || f.courseName === 'All IT Courses')
+                              );
+
+                              if (matched) {
+                                newHeads[idx].amount = matched.amount || 0;
+                                newHeads[idx].discount = matched.discount || 0;
+                                newHeads[idx].penalty = matched.latePenalty || 0;
+                              } else {
+                                newHeads[idx].amount = 0;
+                                newHeads[idx].discount = 0;
+                                newHeads[idx].penalty = 0;
+                              }
+
+                              const newTotalPayable = newHeads.reduce((acc, h) => acc + (h.amount + h.penalty - h.discount), 0);
+                              const newModes = paymentData.paymentModes.map((m, mIdx) => mIdx === 0 ? { ...m, amount: newTotalPayable } : m);
+
+                              setPaymentData({ 
+                                ...paymentData, 
+                                heads: newHeads,
+                                paymentModes: newModes
+                              });
                             }}
                             className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-blue-600 font-bold text-[10px] appearance-none"
                           >

@@ -56,6 +56,61 @@ export const FeeCollection = () => {
     isFullPayment: true
   });
 
+  // Reset payment data when modal opens
+  useEffect(() => {
+    if (showPaymentModal && selectedStudent) {
+      setPaymentData({
+        feeType: '',
+        amount: 0,
+        discount: 0,
+        penalty: 0,
+        paidAmount: 0,
+        paymentMode: 'Cash',
+        transactionId: '',
+        remarks: '',
+        isFullPayment: true
+      });
+    }
+  }, [showPaymentModal, selectedStudent]);
+
+  const handleFeeTypeChange = (chosenType: string) => {
+    const matched = (feeStructures || []).find(f => 
+      f.status === 'ACTIVE' && 
+      f.head === chosenType && 
+      (f.courseName === selectedStudent?.course || f.courseId === 'all' || f.courseName === 'All IT Courses') &&
+      f.session === selectedStudent?.session
+    ) || (feeStructures || []).find(f => 
+      f.status === 'ACTIVE' && 
+      f.head === chosenType && 
+      (f.courseName === selectedStudent?.course || f.courseId === 'all' || f.courseName === 'All IT Courses')
+    );
+
+    if (matched) {
+      const baseAmount = matched.amount || 0;
+      const discount = matched.discount || 0;
+      const penalty = matched.latePenalty || 0;
+      const finalPaid = Math.max(0, (baseAmount + penalty) - discount);
+
+      setPaymentData(prev => ({
+        ...prev,
+        feeType: chosenType,
+        amount: baseAmount,
+        discount: discount,
+        penalty: penalty,
+        paidAmount: finalPaid
+      }));
+    } else {
+      setPaymentData(prev => ({
+        ...prev,
+        feeType: chosenType,
+        amount: 0,
+        discount: 0,
+        penalty: 0,
+        paidAmount: 0
+      }));
+    }
+  };
+
   // Filter students by franchise
   const franchiseStudents = (students || []).filter(s => s.franchiseId === currentUser?.franchiseId);
 
@@ -511,7 +566,7 @@ export const FeeCollection = () => {
                     <select 
                       required
                       value={paymentData.feeType}
-                      onChange={(e) => setPaymentData({...paymentData, feeType: e.target.value})}
+                      onChange={(e) => handleFeeTypeChange(e.target.value)}
                       className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold"
                     >
                       <option value="">Select Category</option>
