@@ -596,7 +596,14 @@ export const FeeCollection = () => {
                       required
                       value={paymentData.amount || ''}
                       onFocus={(e) => e.target.select()}
-                      onChange={(e) => setPaymentData({...paymentData, amount: e.target.value === '' ? 0 : Number(e.target.value)})}
+                      onChange={(e) => {
+                        const amountVal = e.target.value === '' ? 0 : Number(e.target.value);
+                        setPaymentData(prev => ({
+                          ...prev,
+                          amount: amountVal,
+                          paidAmount: Math.max(0, (amountVal + prev.penalty) - prev.discount)
+                        }));
+                      }}
                       className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold"
                     />
                   </div>
@@ -606,7 +613,14 @@ export const FeeCollection = () => {
                       type="number"
                       value={paymentData.discount || ''}
                       onFocus={(e) => e.target.select()}
-                      onChange={(e) => setPaymentData({...paymentData, discount: e.target.value === '' ? 0 : Number(e.target.value)})}
+                      onChange={(e) => {
+                        const discountVal = e.target.value === '' ? 0 : Number(e.target.value);
+                        setPaymentData(prev => ({
+                          ...prev,
+                          discount: discountVal,
+                          paidAmount: Math.max(0, (prev.amount + prev.penalty) - discountVal)
+                        }));
+                      }}
                       className="w-full p-4 bg-emerald-50 border border-emerald-100 rounded-2xl outline-none font-bold text-emerald-700"
                     />
                   </div>
@@ -616,7 +630,14 @@ export const FeeCollection = () => {
                       type="number"
                       value={paymentData.penalty || ''}
                       onFocus={(e) => e.target.select()}
-                      onChange={(e) => setPaymentData({...paymentData, penalty: e.target.value === '' ? 0 : Number(e.target.value)})}
+                      onChange={(e) => {
+                        const penaltyVal = e.target.value === '' ? 0 : Number(e.target.value);
+                        setPaymentData(prev => ({
+                          ...prev,
+                          penalty: penaltyVal,
+                          paidAmount: Math.max(0, (prev.amount + penaltyVal) - prev.discount)
+                        }));
+                      }}
                       className="w-full p-4 bg-red-50 border border-red-100 rounded-2xl outline-none font-bold text-red-700"
                     />
                   </div>

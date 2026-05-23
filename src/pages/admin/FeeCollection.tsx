@@ -677,9 +677,12 @@ export const FeeCollection = () => {
                             value={head.amount || ''}
                             onFocus={(e) => e.target.select()}
                             onChange={(e) => {
+                              const v = e.target.value === '' ? 0 : Number(e.target.value);
                               const newHeads = [...paymentData.heads];
-                              newHeads[idx].amount = e.target.value === '' ? 0 : Number(e.target.value);
-                              setPaymentData({ ...paymentData, heads: newHeads });
+                              newHeads[idx].amount = v;
+                              const newTotalPayable = newHeads.reduce((acc, h) => acc + (h.amount + (h.penalty || 0) - (h.discount || 0)), 0);
+                              const newModes = paymentData.paymentModes.map((m, mIdx) => mIdx === 0 ? { ...m, amount: newTotalPayable } : m);
+                              setPaymentData({ ...paymentData, heads: newHeads, paymentModes: newModes });
                             }}
                             className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px]"
                           />
@@ -691,9 +694,12 @@ export const FeeCollection = () => {
                             value={head.discount || ''}
                             onFocus={(e) => e.target.select()}
                             onChange={(e) => {
+                              const v = e.target.value === '' ? 0 : Number(e.target.value);
                               const newHeads = [...paymentData.heads];
-                              newHeads[idx].discount = e.target.value === '' ? 0 : Number(e.target.value);
-                              setPaymentData({ ...paymentData, heads: newHeads });
+                              newHeads[idx].discount = v;
+                              const newTotalPayable = newHeads.reduce((acc, h) => acc + (h.amount + (h.penalty || 0) - (h.discount || 0)), 0);
+                              const newModes = paymentData.paymentModes.map((m, mIdx) => mIdx === 0 ? { ...m, amount: newTotalPayable } : m);
+                              setPaymentData({ ...paymentData, heads: newHeads, paymentModes: newModes });
                             }}
                             className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px] text-emerald-600"
                           />
@@ -706,9 +712,12 @@ export const FeeCollection = () => {
                                 value={head.penalty || ''}
                                 onFocus={(e) => e.target.select()}
                                 onChange={(e) => {
+                                  const v = e.target.value === '' ? 0 : Number(e.target.value);
                                   const newHeads = [...paymentData.heads];
-                                  newHeads[idx].penalty = e.target.value === '' ? 0 : Number(e.target.value);
-                                  setPaymentData({ ...paymentData, heads: newHeads });
+                                  newHeads[idx].penalty = v;
+                                  const newTotalPayable = newHeads.reduce((acc, h) => acc + (h.amount + (h.penalty || 0) - (h.discount || 0)), 0);
+                                  const newModes = paymentData.paymentModes.map((m, mIdx) => mIdx === 0 ? { ...m, amount: newTotalPayable } : m);
+                                  setPaymentData({ ...paymentData, heads: newHeads, paymentModes: newModes });
                                 }}
                                 className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px] text-red-600"
                              />
