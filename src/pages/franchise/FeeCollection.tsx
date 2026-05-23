@@ -366,12 +366,14 @@ export const FeeCollection = () => {
               )}
             </AnimatePresence>
           </div>
+        </div>
 
-          {selectedStudent && (
+        <div className="lg:col-span-2">
+          {selectedStudent ? (
              <motion.div 
                initial={{ opacity: 0, x: -20 }}
                animate={{ opacity: 1, x: 0 }}
-               className="bg-[#141414] p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group"
+               className="bg-[#141414] p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group h-full flex flex-col justify-between"
              >
                <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/5 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
                <div className="relative space-y-6">
@@ -438,11 +440,16 @@ export const FeeCollection = () => {
                    </div>
                  </div>
                </motion.div>
+             ) : (
+               <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-[2.5rem] h-full min-h-[300px] flex flex-col items-center justify-center p-8 text-center text-gray-400">
+                 <User size={32} className="mb-2" />
+                 <p className="text-xs font-black uppercase tracking-widest text-[#888888]">Please select a student to view details & post payments</p>
+               </div>
              )}
         </div>
+      </div>
 
-        {/* Right Column: Deposited Fee & Receipts */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="mt-8 space-y-6">
           <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
             <div className="p-8 border-b border-gray-50 flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -536,7 +543,6 @@ export const FeeCollection = () => {
             </div>
           </div>
         </div>
-      </div>
       </div>
 
       {/* Payment Modal */}
@@ -866,8 +872,8 @@ export const FeeCollection = () => {
                                    </div>
                                  </div>
                                  <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Admission No</div>
-                                   <div className="px-4 flex items-center font-black uppercase text-blue-600 text-[10px]">{student.admissionNo || '--'}</div>
+                                   <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Enrollment No</div>
+                                   <div className="px-4 flex items-center font-black uppercase text-blue-600 text-[10px]">{student.enrollmentNo || student.admissionNo || '--'}</div>
                                  </div>
                                  <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
                                    <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Father's Name</div>
@@ -942,7 +948,9 @@ export const FeeCollection = () => {
                                       });
                                    });
 
-                                   return Object.entries(summary).map(([type, data], idx) => {
+                                   return Object.entries(summary)
+                                     .filter(([type]) => type !== 'Course Fee')
+                                     .map(([type, data], idx) => {
                                      const balance = Math.max(0, (data.amount + data.penalty) - data.discount - data.paid);
                                      const status = balance <= 0 ? 'Paid' : (data.paid > 0 ? 'Partial' : 'Pending');
                                      
@@ -1117,12 +1125,12 @@ export const FeeCollection = () => {
 
                         <div className="flex justify-between items-end mt-12 border-t-2 border-black pt-8">
                            <div className="text-[9px] font-black space-y-4 max-w-[65%]">
-                              <p className="text-red-600 underline">Terms & Conditions:</p>
+                              <p className="text-red-600 underline">Instructions:</p>
                               <ol className="list-decimal list-inside space-y-1">
-                                 <li>Fees once paid will not be refunded or adjusted in any case.</li>
-                                 <li>Student must carry this receipt for any official work.</li>
-                                 <li>Payment is valid only for the mentioned course and duration.</li>
-                                 <li>Fine may apply for late fee deposition.</li>
+                                 <li>Fees once paid are non-refundable.</li>
+                                 <li>Once the fee has been paid, it will neither be refunded under any circumstances nor transferred or adjusted to any other course or student.</li>
+                                 <li>Kindly deposit the fee on time.</li>
+                                 <li>A late fee of ₹50 per day will be charged after the due date.</li>
                               </ol>
                            </div>
                            <div className="text-center">

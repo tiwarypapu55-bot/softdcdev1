@@ -33,9 +33,23 @@ export const FeeCollection = () => {
   const [showReceipt, setShowReceipt] = useState<FeePayment | null>(null);
   const [receiptType, setReceiptType] = useState<'SINGLE' | 'HISTORY'>('SINGLE');
   const [printPaperSize, setPrintPaperSize] = useState<'A4' | 'A5'>('A5');
+
+  const getCalculatedPenalty = (dueDateStr: string, rate: number) => {
+    if (!dueDateStr) return 0;
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const due = new Date(dueDateStr);
+    due.setHours(0,0,0,0);
+    if (today > due) {
+      const diffTime = today.getTime() - due.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      return Math.max(0, diffDays * rate);
+    }
+    return 0;
+  };
   
   const [paymentData, setPaymentData] = useState({
-    heads: [{ type: 'Course Fee', amount: 0, discount: 0, penalty: 0 }],
+    heads: [{ type: 'Course Fee', amount: 0, discount: 0, penalty: 0, dueDate: new Date().toISOString().split('T')[0], penaltyRate: 50 }],
     paymentModes: [{ mode: 'Cash', amount: 0, transactionId: '' }],
     remarks: ''
   });
@@ -56,7 +70,9 @@ export const FeeCollection = () => {
 
       const baseAmount = matched ? (matched.amount || 0) : 0;
       const discount = matched ? (matched.discount || 0) : 0;
-      const penalty = matched ? (matched.latePenalty || 0) : 0;
+      const penaltyRate = matched ? (matched.latePenalty ?? 50) : 50;
+      const dueDate = new Date().toISOString().split('T')[0];
+      const penalty = getCalculatedPenalty(dueDate, penaltyRate);
       const finalPaid = Math.max(0, (baseAmount + penalty) - discount);
 
       setPaymentData({
@@ -64,7 +80,9 @@ export const FeeCollection = () => {
           type: 'Course Fee', 
           amount: baseAmount, 
           discount: discount, 
-          penalty: penalty 
+          penalty: penalty,
+          dueDate: dueDate,
+          penaltyRate: penaltyRate
         }],
         paymentModes: [{ mode: 'Cash', amount: finalPaid, transactionId: '' }],
         remarks: ''
@@ -72,7 +90,7 @@ export const FeeCollection = () => {
     }
   }, [showPaymentModal, selectedStudent, feeStructures]);
 
-  const totalPayable = paymentData.heads.reduce((acc, h) => acc + (h.amount + h.penalty - h.discount), 0);
+  const totalPayable = paymentData.heads.reduce((acc, h) => acc + (h.amount + (h.penalty || 0) - (h.discount || 0)), 0);
   const totalPaidInModes = paymentData.paymentModes.reduce((acc, m) => acc + m.amount, 0);
 
   const filteredStudents = (searchTerm.length > 0 || filterCourse !== 'ALL' || filterBranch !== 'ALL')
@@ -107,17 +125,25 @@ export const FeeCollection = () => {
       (f.courseName === selectedStudent?.course || f.courseId === 'all' || f.courseName === 'All IT Courses')
     );
 
+    const baseAmount = matched ? (matched.amount || 0) : 0;
+    const discount = matched ? (matched.discount || 0) : 0;
+    const penaltyRate = matched ? (matched.latePenalty ?? 50) : 50;
+    const dueDate = new Date().toISOString().split('T')[0];
+    const penalty = getCalculatedPenalty(dueDate, penaltyRate);
+
     const newHeads = [
       ...paymentData.heads,
       { 
         type: 'Course Fee', 
-        amount: matched ? (matched.amount || 0) : 0, 
-        discount: matched ? (matched.discount || 0) : 0, 
-        penalty: matched ? (matched.latePenalty || 0) : 0 
+        amount: baseAmount, 
+        discount: discount, 
+        penalty: penalty,
+        dueDate: dueDate,
+        penaltyRate: penaltyRate
       }
     ];
 
-    const newTotalPayable = newHeads.reduce((acc, h) => acc + (h.amount + h.penalty - h.discount), 0);
+    const newTotalPayable = newHeads.reduce((acc, h) => acc + (h.amount + (h.penalty || 0) - (h.discount || 0)), 0);
     const newModes = paymentData.paymentModes.map((m, idx) => idx === 0 ? { ...m, amount: newTotalPayable } : m);
 
     setPaymentData({
@@ -131,7 +157,9 @@ export const FeeCollection = () => {
     if (paymentData.heads.length > 1) {
       const newHeads = [...paymentData.heads];
       newHeads.splice(index, 1);
-      setPaymentData({ ...paymentData, heads: newHeads });
+      const newTotalPayable = newHeads.reduce((acc, h) => acc + (h.amount + (h.penalty || 0) - (h.discount || 0)), 0);
+      const newModes = paymentData.paymentModes.map((m, idx) => idx === 0 ? { ...m, amount: newTotalPayable } : m);
+      setPaymentData({ ...paymentData, heads: newHeads, paymentModes: newModes });
     }
   };
 
@@ -180,7 +208,9 @@ export const FeeCollection = () => {
       paymentMode: paymentData.paymentModes.map(m => m.mode).join(' + '),
       paymentModes: paymentData.paymentModes,
       status: balance <= 0 ? 'Paid' : (totalPaidInModes > 0 ? 'Partial' : 'Pending'),
-      remarks: paymentData.remarks
+      remarks: paymentData.remarks,
+      dueDate: paymentData.heads[0]?.dueDate,
+      penaltyRate: paymentData.heads[0]?.penaltyRate
     };
 
     addFeePayment(newPayment);
@@ -189,7 +219,7 @@ export const FeeCollection = () => {
     
     // Reset form
     setPaymentData({
-      heads: [{ type: 'Course Fee', amount: 0, discount: 0, penalty: 0 }],
+      heads: [{ type: 'Course Fee', amount: 0, discount: 0, penalty: 0, dueDate: new Date().toISOString().split('T')[0], penaltyRate: 50 }],
       paymentModes: [{ mode: 'Cash', amount: 0, transactionId: '' }],
       remarks: ''
     });
@@ -412,12 +442,14 @@ export const FeeCollection = () => {
               )}
             </AnimatePresence>
           </div>
+        </div>
 
-          {selectedStudent && (
+        <div className="lg:col-span-2">
+          {selectedStudent ? (
             <motion.div 
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="bg-[#141414] p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group"
+              className="bg-[#141414] p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden group h-full flex flex-col justify-between"
             >
               <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/5 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
               <div className="relative space-y-6">
@@ -484,11 +516,17 @@ export const FeeCollection = () => {
                 </div>
               </div>
             </motion.div>
+          ) : (
+            <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-[2.5rem] h-full min-h-[300px] flex flex-col items-center justify-center p-8 text-center text-gray-400">
+              <User size={32} className="mb-2" />
+              <p className="text-xs font-black uppercase tracking-widest text-[#888888]">Please select a student to view details & post payments</p>
+            </div>
           )}
         </div>
+      </div>
 
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
+      <div className="mt-8 space-y-6">
+        <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
             <div className="p-8 border-b border-gray-50 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <History className="text-blue-600" size={20} />
@@ -505,6 +543,7 @@ export const FeeCollection = () => {
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Inst.</th>
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Student</th>
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Fee Type</th>
+                    <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Due Date</th>
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Paid</th>
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Balance</th>
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest text-center">Action</th>
@@ -527,6 +566,9 @@ export const FeeCollection = () => {
                         <td className="px-8 py-6 font-bold text-[10px] text-[#141414] uppercase tracking-tight">{student?.name || 'Unknown'}</td>
                         <td className="px-8 py-6">
                           <span className="px-3 py-1 bg-gray-50 text-[8px] font-black uppercase tracking-widest rounded-full">{payment.feeType}</span>
+                        </td>
+                        <td className="px-8 py-6 text-xs font-mono font-bold text-red-600 uppercase">
+                          {payment.dueDate || '--'}
                         </td>
                         <td className="px-8 py-6 text-xs font-black text-emerald-600">₹{payment.paidAmount.toLocaleString()}</td>
                         <td className="px-8 py-6 text-xs font-black text-red-600">₹{payment.balance.toLocaleString()}</td>
@@ -579,7 +621,6 @@ export const FeeCollection = () => {
           </div>
         </div>
       </div>
-      </div>
 
       {/* Payment Modal */}
       <AnimatePresence>
@@ -613,119 +654,198 @@ export const FeeCollection = () => {
                   
                   <div className="space-y-4">
                     {paymentData.heads.map((head, idx) => (
-                      <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-2xl relative group">
-                        <div className="md:col-span-1 space-y-1">
-                          <label className="text-[8px] font-black text-[#888888] uppercase tracking-widest">Type</label>
-                          <select 
-                            required
-                            value={head.type}
-                            onChange={(e) => {
-                              const chosenType = e.target.value;
-                              const newHeads = [...paymentData.heads];
-                              newHeads[idx].type = chosenType;
-
-                              const matched = (feeStructures || []).find(f => 
-                                f.status === 'ACTIVE' && 
-                                f.head === chosenType && 
-                                (f.courseName === selectedStudent?.course || f.courseId === 'all' || f.courseName === 'All IT Courses') &&
-                                f.session === selectedStudent?.session
-                              ) || (feeStructures || []).find(f => 
-                                f.status === 'ACTIVE' && 
-                                f.head === chosenType && 
-                                (f.courseName === selectedStudent?.course || f.courseId === 'all' || f.courseName === 'All IT Courses')
-                              );
-
-                              if (matched) {
-                                newHeads[idx].amount = matched.amount || 0;
-                                newHeads[idx].discount = matched.discount || 0;
-                                newHeads[idx].penalty = matched.latePenalty || 0;
-                              } else {
-                                newHeads[idx].amount = 0;
-                                newHeads[idx].discount = 0;
-                                newHeads[idx].penalty = 0;
-                              }
-
-                              const newTotalPayable = newHeads.reduce((acc, h) => acc + (h.amount + h.penalty - h.discount), 0);
-                              const newModes = paymentData.paymentModes.map((m, mIdx) => mIdx === 0 ? { ...m, amount: newTotalPayable } : m);
-
-                              setPaymentData({ 
-                                ...paymentData, 
-                                heads: newHeads,
-                                paymentModes: newModes
-                              });
-                            }}
-                            className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-blue-600 font-bold text-[10px] appearance-none"
+                      <div key={idx} className="space-y-4 p-4 bg-gray-50 rounded-3xl relative group border border-gray-200">
+                        {paymentData.heads.length > 1 && (
+                          <button 
+                            type="button" 
+                            onClick={() => removeHead(idx)} 
+                            className="absolute right-4 top-4 p-1.5 text-gray-400 hover:text-red-500 hover:bg-white rounded-full bg-transparent border-0 font-bold transition-all shadow-sm z-10"
+                            title="Remove Head"
                           >
-                            <option value="Course Fee">Course Fee</option>
-                            {(feeStructures || []).map(f => <option key={f.id} value={f.head}>{f.head}</option>)}
-                            <option value="Admission Fee">Admission Fee</option>
-                            <option value="Monthly Fee">Monthly Fee</option>
-                            <option value="Exam Fee">Exam Fee</option>
-                            <option value="Registration Fee">Registration Fee</option>
-                            <option value="Certificate Fee">Certificate Fee</option>
-                            <option value="Late Penalty">Late Penalty</option>
-                            <option value="Prospectus Fee">Prospectus Fee</option>
-                            <option value="Backpaper Fee">Backpaper Fee</option>
-                            <option value="Other">Other</option>
-                          </select>
+                            <X size={14} />
+                          </button>
+                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black text-[#888888] uppercase tracking-widest">Type</label>
+                            <select 
+                              required
+                              value={head.type}
+                              onChange={(e) => {
+                                const chosenType = e.target.value;
+                                const newHeads = [...paymentData.heads];
+                                newHeads[idx].type = chosenType;
+
+                                const matched = (feeStructures || []).find(f => 
+                                  f.status === 'ACTIVE' && 
+                                  f.head === chosenType && 
+                                  (f.courseName === selectedStudent?.course || f.courseId === 'all' || f.courseName === 'All IT Courses') &&
+                                  f.session === selectedStudent?.session
+                                ) || (feeStructures || []).find(f => 
+                                  f.status === 'ACTIVE' && 
+                                  f.head === chosenType && 
+                                  (f.courseName === selectedStudent?.course || f.courseId === 'all' || f.courseName === 'All IT Courses')
+                                );
+
+                                const baseAmount = matched ? (matched.amount || 0) : 0;
+                                const discount = matched ? (matched.discount || 0) : 0;
+                                const pRate = matched ? (matched.latePenalty ?? 50) : 50;
+                                const dDate = (head as any).dueDate || new Date().toISOString().split('T')[0];
+                                
+                                newHeads[idx].amount = baseAmount;
+                                newHeads[idx].discount = discount;
+                                (newHeads[idx] as any).penaltyRate = pRate;
+                                (newHeads[idx] as any).dueDate = dDate;
+                                
+                                // Recalculate dynamic penalty based on due date
+                                newHeads[idx].penalty = getCalculatedPenalty(dDate, pRate);
+
+                                const newTotalPayable = newHeads.reduce((acc, h) => acc + (h.amount + (h.penalty || 0) - (h.discount || 0)), 0);
+                                const newModes = paymentData.paymentModes.map((m, mIdx) => mIdx === 0 ? { ...m, amount: newTotalPayable } : m);
+
+                                setPaymentData({ 
+                                  ...paymentData, 
+                                  heads: newHeads,
+                                  paymentModes: newModes
+                                });
+                              }}
+                              className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-blue-600 font-bold text-[10px] appearance-none"
+                            >
+                              <option value="Course Fee">Course Fee</option>
+                              {(feeStructures || []).map(f => <option key={f.id} value={f.head}>{f.head}</option>)}
+                              <option value="Admission Fee">Admission Fee</option>
+                              <option value="Monthly Fee">Monthly Fee</option>
+                              <option value="Exam Fee">Exam Fee</option>
+                              <option value="Registration Fee">Registration Fee</option>
+                              <option value="Certificate Fee">Certificate Fee</option>
+                              <option value="Late Penalty">Late Penalty</option>
+                              <option value="Prospectus Fee">Prospectus Fee</option>
+                              <option value="Backpaper Fee">Backpaper Fee</option>
+                              <option value="Other">Other</option>
+                            </select>
+                          </div>
+                          
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black text-blue-600 uppercase tracking-widest">Due Date *</label>
+                            <input 
+                              type="date"
+                              required
+                              value={(head as any).dueDate || ''}
+                              onChange={(e) => {
+                                const dDate = e.target.value;
+                                const newHeads = [...paymentData.heads];
+                                (newHeads[idx] as any).dueDate = dDate;
+                                
+                                const pRate = (newHeads[idx] as any).penaltyRate || 0;
+                                newHeads[idx].penalty = getCalculatedPenalty(dDate, pRate);
+                                
+                                const newTotalPayable = newHeads.reduce((acc, iH) => acc + (iH.amount + (iH.penalty || 0) - (iH.discount || 0)), 0);
+                                const newModes = paymentData.paymentModes.map((m, mIdx) => mIdx === 0 ? { ...m, amount: newTotalPayable } : m);
+                                
+                                setPaymentData({ ...paymentData, heads: newHeads, paymentModes: newModes });
+                              }}
+                              className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px]"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black text-[#888888] uppercase tracking-widest">Penalty Rate (₹/Day)</label>
+                            <input 
+                              type="number"
+                              required
+                              value={(head as any).penaltyRate ?? 0}
+                              onFocus={(e) => e.target.select()}
+                              onChange={(e) => {
+                                const pRate = e.target.value === '' ? 0 : Number(e.target.value);
+                                const newHeads = [...paymentData.heads];
+                                (newHeads[idx] as any).penaltyRate = pRate;
+                                
+                                const dDate = (newHeads[idx] as any).dueDate || '';
+                                newHeads[idx].penalty = getCalculatedPenalty(dDate, pRate);
+                                
+                                const newTotalPayable = newHeads.reduce((acc, iH) => acc + (iH.amount + (iH.penalty || 0) - (iH.discount || 0)), 0);
+                                const newModes = paymentData.paymentModes.map((m, mIdx) => mIdx === 0 ? { ...m, amount: newTotalPayable } : m);
+                                
+                                setPaymentData({ ...paymentData, heads: newHeads, paymentModes: newModes });
+                              }}
+                              className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px]"
+                            />
+                          </div>
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-[8px] font-black text-[#888888] uppercase tracking-widest">Base Fee (₹)</label>
-                          <input 
-                            type="number"
-                            required
-                            value={head.amount || ''}
-                            onFocus={(e) => e.target.select()}
-                            onChange={(e) => {
-                              const v = e.target.value === '' ? 0 : Number(e.target.value);
-                              const newHeads = [...paymentData.heads];
-                              newHeads[idx].amount = v;
-                              const newTotalPayable = newHeads.reduce((acc, h) => acc + (h.amount + (h.penalty || 0) - (h.discount || 0)), 0);
-                              const newModes = paymentData.paymentModes.map((m, mIdx) => mIdx === 0 ? { ...m, amount: newTotalPayable } : m);
-                              setPaymentData({ ...paymentData, heads: newHeads, paymentModes: newModes });
-                            }}
-                            className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px]"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">Disc (₹)</label>
-                          <input 
-                            type="number"
-                            value={head.discount || ''}
-                            onFocus={(e) => e.target.select()}
-                            onChange={(e) => {
-                              const v = e.target.value === '' ? 0 : Number(e.target.value);
-                              const newHeads = [...paymentData.heads];
-                              newHeads[idx].discount = v;
-                              const newTotalPayable = newHeads.reduce((acc, h) => acc + (h.amount + (h.penalty || 0) - (h.discount || 0)), 0);
-                              const newModes = paymentData.paymentModes.map((m, mIdx) => mIdx === 0 ? { ...m, amount: newTotalPayable } : m);
-                              setPaymentData({ ...paymentData, heads: newHeads, paymentModes: newModes });
-                            }}
-                            className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px] text-emerald-600"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[8px] font-black text-red-500 uppercase tracking-widest">Pen (₹)</label>
-                          <div className="flex items-center space-x-2">
-                             <input 
-                                type="number"
-                                value={head.penalty || ''}
-                                onFocus={(e) => e.target.select()}
-                                onChange={(e) => {
-                                  const v = e.target.value === '' ? 0 : Number(e.target.value);
-                                  const newHeads = [...paymentData.heads];
-                                  newHeads[idx].penalty = v;
-                                  const newTotalPayable = newHeads.reduce((acc, h) => acc + (h.amount + (h.penalty || 0) - (h.discount || 0)), 0);
-                                  const newModes = paymentData.paymentModes.map((m, mIdx) => mIdx === 0 ? { ...m, amount: newTotalPayable } : m);
-                                  setPaymentData({ ...paymentData, heads: newHeads, paymentModes: newModes });
-                                }}
-                                className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px] text-red-600"
-                             />
-                             {paymentData.heads.length > 1 && (
-                                <button type="button" onClick={() => removeHead(idx)} className="p-1 text-gray-300 hover:text-red-500 transition-colors">
-                                   <X size={14} />
-                                </button>
-                             )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black text-[#141414] uppercase tracking-widest">Base Fee (₹)</label>
+                            <input 
+                              type="number"
+                              required
+                              value={head.amount || ''}
+                              onFocus={(e) => e.target.select()}
+                              onChange={(e) => {
+                                const v = e.target.value === '' ? 0 : Number(e.target.value);
+                                const newHeads = [...paymentData.heads];
+                                newHeads[idx].amount = v;
+                                const newTotalPayable = newHeads.reduce((acc, iH) => acc + (iH.amount + (iH.penalty || 0) - (iH.discount || 0)), 0);
+                                const newModes = paymentData.paymentModes.map((m, mIdx) => mIdx === 0 ? { ...m, amount: newTotalPayable } : m);
+                                setPaymentData({ ...paymentData, heads: newHeads, paymentModes: newModes });
+                              }}
+                              className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px]"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">Disc (₹)</label>
+                            <input 
+                              type="number"
+                              required
+                              value={head.discount || ''}
+                              onFocus={(e) => e.target.select()}
+                              onChange={(e) => {
+                                const v = e.target.value === '' ? 0 : Number(e.target.value);
+                                const newHeads = [...paymentData.heads];
+                                newHeads[idx].discount = v;
+                                const newTotalPayable = newHeads.reduce((acc, iH) => acc + (iH.amount + (iH.penalty || 0) - (iH.discount || 0)), 0);
+                                const newModes = paymentData.paymentModes.map((m, mIdx) => mIdx === 0 ? { ...m, amount: newTotalPayable } : m);
+                                setPaymentData({ ...paymentData, heads: newHeads, paymentModes: newModes });
+                              }}
+                              className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px] text-emerald-600"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center">
+                              <label className="text-[8px] font-black text-red-500 uppercase tracking-widest">Pen / Late Fine (₹)</label>
+                              {(() => {
+                                const dDate = (head as any).dueDate;
+                                if (dDate) {
+                                  const today = new Date();
+                                  today.setHours(0,0,0,0);
+                                  const due = new Date(dDate);
+                                  due.setHours(0,0,0,0);
+                                  if (today > due) {
+                                    const diffTime = today.getTime() - due.getTime();
+                                    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                                    return <span className="text-[7px] font-black text-red-500 uppercase bg-red-50 px-1 rounded">({diffDays} days late)</span>;
+                                  }
+                                }
+                                return null;
+                              })()}
+                            </div>
+                            <input 
+                              type="number"
+                              required
+                              value={head.penalty || ''}
+                              onFocus={(e) => e.target.select()}
+                              onChange={(e) => {
+                                const v = e.target.value === '' ? 0 : Number(e.target.value);
+                                const newHeads = [...paymentData.heads];
+                                newHeads[idx].penalty = v;
+                                const newTotalPayable = newHeads.reduce((acc, iH) => acc + (iH.amount + (iH.penalty || 0) - (iH.discount || 0)), 0);
+                                const newModes = paymentData.paymentModes.map((m, mIdx) => mIdx === 0 ? { ...m, amount: newTotalPayable } : m);
+                                setPaymentData({ ...paymentData, heads: newHeads, paymentModes: newModes });
+                              }}
+                              className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px] text-red-600"
+                            />
                           </div>
                         </div>
                       </div>
@@ -1023,8 +1143,8 @@ export const FeeCollection = () => {
                                    </div>
                                  </div>
                                  <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                   <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Admission No</div>
-                                   <div className="px-4 flex items-center font-black uppercase text-blue-600 text-[10px]">{student.admissionNo || '--'}</div>
+                                   <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Enrollment No</div>
+                                   <div className="px-4 flex items-center font-black uppercase text-blue-600 text-[10px]">{student.enrollmentNo || student.admissionNo || '--'}</div>
                                  </div>
                                  <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
                                    <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Father's Name</div>
@@ -1099,7 +1219,9 @@ export const FeeCollection = () => {
                                       });
                                    });
 
-                                   return Object.entries(summary).map(([type, data], idx) => {
+                                   return Object.entries(summary)
+                                     .filter(([type]) => type !== 'Course Fee')
+                                     .map(([type, data], idx) => {
                                      const balance = Math.max(0, (data.amount + data.penalty) - data.discount - data.paid);
                                      const status = balance <= 0 ? 'Paid' : (data.paid > 0 ? 'Partial' : 'Pending');
                                      
@@ -1144,9 +1266,12 @@ export const FeeCollection = () => {
                                    </tr>
                                 </thead>
                                 <tbody className="divide-y-[1.5px] divide-black border-b-[1.5px] border-r-[1.5px] border-black font-bold uppercase">
-                                   {(showReceipt.heads && showReceipt.heads.length > 0 ? showReceipt.heads : [{ type: showReceipt.feeType, amount: showReceipt.amount, discount: showReceipt.discount, penalty: showReceipt.penalty }]).map((h, idx) => (
+                                   {(showReceipt.heads && showReceipt.heads.length > 0 ? showReceipt.heads : [{ type: showReceipt.feeType, amount: showReceipt.amount, discount: showReceipt.discount, penalty: showReceipt.penalty, dueDate: showReceipt.dueDate }]).map((h, idx) => (
                                       <tr key={idx} className="divide-x-[1.5px] divide-black bg-white">
-                                         <td className="py-2.5 px-4 text-left font-black">{h.type}</td>
+                                         <td className="py-2.5 px-4 text-left font-black">
+                                           {h.type}
+                                           {h.dueDate && <span className="text-[8px] text-red-600 block lowercase font-mono"> (due: {h.dueDate})</span>}
+                                         </td>
                                          <td className="py-2.5">₹{h.amount.toFixed(2)}</td>
                                          <td className="py-2.5 text-orange-500">₹{h.discount.toFixed(2)}</td>
                                          <td className="py-2.5 text-red-600">₹{h.penalty.toFixed(2)}</td>
@@ -1274,12 +1399,12 @@ export const FeeCollection = () => {
 
                         <div className="flex justify-between items-end mt-12 border-t-2 border-black pt-8">
                            <div className="text-[9px] font-black space-y-4 max-w-[65%]">
-                              <p className="text-red-600 underline">Terms & Conditions:</p>
+                              <p className="text-red-600 underline">Instructions:</p>
                               <ol className="list-decimal list-inside space-y-1">
-                                 <li>Fees once paid will not be refunded or adjusted in any case.</li>
-                                 <li>Student must carry this receipt for any official work.</li>
-                                 <li>Payment is valid only for the mentioned course and duration.</li>
-                                 <li>Fine may apply for late fee deposition.</li>
+                                 <li>Fees once paid are non-refundable.</li>
+                                 <li>Once the fee has been paid, it will neither be refunded under any circumstances nor transferred or adjusted to any other course or student.</li>
+                                 <li>Kindly deposit the fee on time.</li>
+                                 <li>A late fee of ₹50 per day will be charged after the due date.</li>
                               </ol>
                            </div>
                            <div className="text-center">

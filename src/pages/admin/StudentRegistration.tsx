@@ -148,7 +148,7 @@ export const StudentRegistration = () => {
     kycDocs: [],
     documents: [
       { id: 'doc-1', type: 'AADHAR', name: 'Aadhar / ID Card', url: '', status: 'PENDING', uploadedAt: new Date().toISOString() },
-      { id: 'doc-2', type: 'QUALIFICATION', name: 'Qualification Document', url: '', status: 'PENDING', uploadedAt: new Date().toISOString() },
+      { id: 'doc-2', type: 'QUALIFICATION', name: 'Aadhar Card Back', url: '', status: 'PENDING', uploadedAt: new Date().toISOString() },
       { id: 'doc-3', type: 'PHOTO', name: 'Profile Photo', url: '', status: 'PENDING', uploadedAt: new Date().toISOString() },
       { id: 'doc-4', type: 'SIGNATURE', name: 'Student Signature', url: '', status: 'PENDING', uploadedAt: new Date().toISOString() },
       { id: 'doc-5', type: 'ADDRESS_PROOF', name: 'Address Proof', url: '', status: 'PENDING', uploadedAt: new Date().toISOString() },
@@ -178,6 +178,12 @@ export const StudentRegistration = () => {
       }
     }
   }, [id, students, isEditMode]);
+
+  const matchingFeeStructures = (feeStructures || []).filter(
+    f => (f.courseName === formData.course || f.courseId === 'all' || f.courseName === 'All IT Courses') 
+         && f.status === 'ACTIVE'
+         && f.session === formData.session
+  );
 
   const handleDocumentUpload = (id: string, url: string) => {
     setFormData(prev => ({
@@ -209,7 +215,7 @@ export const StudentRegistration = () => {
     e.preventDefault();
     
     // Basic validation check
-    const requiredFields: (keyof Student)[] = ['name', 'fatherName', 'motherName', 'dob', 'gender', 'contact', 'admissionNo', 'course', 'franchiseId'];
+    const requiredFields: (keyof Student)[] = ['name', 'fatherName', 'motherName', 'dob', 'gender', 'contact', 'course', 'franchiseId'];
     const missingFields = requiredFields.filter(field => !formData[field]);
     
     if (missingFields.length > 0) {
@@ -458,7 +464,6 @@ export const StudentRegistration = () => {
           />
           <InputField 
             label="Admission No / Roll No" 
-            required 
             value={formData.admissionNo}
             onChange={(val: string) => setFormData({...formData, admissionNo: val})}
             placeholder="e.g., ST0828"
@@ -471,6 +476,55 @@ export const StudentRegistration = () => {
             onChange={(val: string) => setFormData({...formData, totalFees: Number(val)})}
             placeholder="e.g., 3000"
           />
+
+          {matchingFeeStructures.length > 0 && (
+            <div className="col-span-full bg-blue-50/50 p-6 rounded-2xl border border-blue-100/50 space-y-3.5 mt-2 transition-all">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black text-blue-700 uppercase tracking-wider flex items-center gap-2">
+                  <CreditCard size={14} />
+                  <span>Configured Fee Structure ({formData.session})</span>
+                </h4>
+                <span className="bg-blue-600 text-white font-mono text-[9px] font-black tracking-widest px-2.5 py-1 rounded-full uppercase">
+                  {matchingFeeStructures.length} head{matchingFeeStructures.length > 1 ? 's' : ''} matched
+                </span>
+              </div>
+              <div className="overflow-x-auto rounded-xl border border-blue-100/30">
+                <table className="w-full text-left text-xs bg-white">
+                  <thead>
+                    <tr className="bg-blue-700 text-white font-black text-[9px] uppercase tracking-wider divide-x divide-blue-600">
+                      <th className="px-4 py-2.5">Fee Head / Type</th>
+                      <th className="px-4 py-2.5">Academic Session</th>
+                      <th className="px-4 py-2.5">Frequency</th>
+                      <th className="px-4 py-2.5">Base Fee</th>
+                      <th className="px-4 py-2.5">Discount</th>
+                      <th className="px-4 py-2.5">Late Fine Penalty</th>
+                      <th className="px-4 py-2.5 text-right">Net Payable</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {matchingFeeStructures.map((f, idx) => {
+                      const netPayable = Math.max(0, (f.amount || 0) + (f.latePenalty || 0) - (f.discount || 0));
+                      return (
+                        <tr key={idx} className="divide-x divide-gray-50 hover:bg-blue-50/20 transition-all font-medium text-gray-700">
+                          <td className="px-4 py-3 font-bold text-gray-900">{f.head}</td>
+                          <td className="px-4 py-3 font-mono text-[10px] uppercase text-blue-600">{f.session}</td>
+                          <td className="px-4 py-3">
+                            <span className="px-2 py-0.5 bg-gray-100 rounded-md font-bold text-[9px] text-gray-600 uppercase tracking-wide">
+                              {f.frequency}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 font-mono">₹{f.amount}</td>
+                          <td className="px-4 py-3 font-mono text-emerald-600">-₹{f.discount}</td>
+                          <td className="px-4 py-3 font-mono text-red-500">+₹{f.latePenalty}</td>
+                          <td className="px-4 py-3 text-right font-mono font-bold text-blue-700">₹{netPayable}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </Section>
 
         {/* Student Details */}

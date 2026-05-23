@@ -99,6 +99,8 @@ export interface FeeHeadDetail {
   amount: number;
   discount: number;
   penalty: number;
+  dueDate?: string;
+  penaltyRate?: number;
 }
 
 export interface FeePayment {
@@ -119,6 +121,8 @@ export interface FeePayment {
   collectionTime?: string;
   status: 'Paid' | 'Partial' | 'Pending';
   remarks?: string;
+  dueDate?: string;
+  penaltyRate?: number;
 }
 
 export interface FranchiseFee {

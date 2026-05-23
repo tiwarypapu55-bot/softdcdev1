@@ -425,7 +425,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ], 
           documents: [
             { id: 'doc-1', type: 'AADHAR', name: 'Aadhar / ID Card', url: 'https://via.placeholder.com/800x500?text=Aadhar+Card+Preview', status: 'PENDING', uploadedAt: new Date().toISOString() },
-            { id: 'doc-2', type: 'QUALIFICATION', name: 'Qualification Document', url: 'https://via.placeholder.com/800x1100?text=Marksheet+Preview', status: 'PENDING', uploadedAt: new Date().toISOString() },
+            { id: 'doc-2', type: 'QUALIFICATION', name: 'Aadhar Card Back', url: 'https://via.placeholder.com/800x1100?text=Marksheet+Preview', status: 'PENDING', uploadedAt: new Date().toISOString() },
           ],
           totalFees: 5000, paidAmount: 2500,
           certificateStatus: 'NOT_APPLIED'
