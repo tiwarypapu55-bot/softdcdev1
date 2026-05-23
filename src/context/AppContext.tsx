@@ -484,6 +484,100 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         { id: 'ex-1', name: 'Q1 Theory Exam', session: '2024-25', trade: 'Tally Prime Expert', unit: 'Final', startDate: '2024-07-01', endDate: '2024-07-02', remarks: 'Bring AD-Card', status: 'UPCOMING', invigilator: 'Prof. Sharma' }
       ];
 
+      const initialFeeStructures: FeeStructure[] = [
+        {
+          id: generateUUID(),
+          head: 'Admission Fee',
+          courseId: 'c1',
+          courseName: 'Tally Prime Expert',
+          frequency: 'One-time',
+          amount: 1000,
+          discount: 0,
+          latePenalty: 5,
+          session: '2024-25',
+          type: 'Academic',
+          status: 'ACTIVE'
+        },
+        {
+          id: generateUUID(),
+          head: 'Course Fee',
+          courseId: 'c1',
+          courseName: 'Tally Prime Expert',
+          frequency: 'One-time',
+          amount: 4000,
+          discount: 0,
+          latePenalty: 5,
+          session: '2024-25',
+          type: 'Academic',
+          status: 'ACTIVE'
+        },
+        {
+          id: generateUUID(),
+          head: 'Admission Fee',
+          courseId: 'c2',
+          courseName: 'Python Fundamentals',
+          frequency: 'One-time',
+          amount: 1500,
+          discount: 0,
+          latePenalty: 10,
+          session: '2024-25',
+          type: 'Academic',
+          status: 'ACTIVE'
+        },
+        {
+          id: generateUUID(),
+          head: 'Course Fee',
+          courseId: 'c2',
+          courseName: 'Python Fundamentals',
+          frequency: 'One-time',
+          amount: 3000,
+          discount: 0,
+          latePenalty: 10,
+          session: '2024-25',
+          type: 'Academic',
+          status: 'ACTIVE'
+        },
+        {
+          id: generateUUID(),
+          head: 'Admission Fee',
+          courseId: 'c3',
+          courseName: 'DCA (Diploma in Computer App)',
+          frequency: 'One-time',
+          amount: 2000,
+          discount: 0,
+          latePenalty: 15,
+          session: '2024-25',
+          type: 'Academic',
+          status: 'ACTIVE'
+        },
+        {
+          id: generateUUID(),
+          head: 'Course Fee',
+          courseId: 'c3',
+          courseName: 'DCA (Diploma in Computer App)',
+          frequency: 'One-time',
+          amount: 8000,
+          discount: 500,
+          latePenalty: 15,
+          session: '2024-25',
+          type: 'Academic',
+          status: 'ACTIVE'
+        },
+        {
+          id: generateUUID(),
+          head: 'Exam Fee',
+          courseId: 'all',
+          courseName: 'All IT Courses',
+          frequency: 'One-time',
+          amount: 500,
+          discount: 0,
+          latePenalty: 10,
+          session: '2024-25',
+          type: 'Academic',
+          status: 'ACTIVE'
+        }
+      ];
+
       setCourseCategories(initialCategories);
       setCourses(initialCourses);
       setSessions(initialSessions);
@@ -494,6 +588,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setAnnouncements(initialAnnouncements);
       setFranchiseFees(initialFranchiseFees);
       setExams(initialExams);
+      setFeeStructures(initialFeeStructures);
 
       // Seed to remote database safely using Admin Client to bypass default row access locks
       await supabaseAdmin.from('courses').insert(camelToSnake(initialCourses));
@@ -564,6 +659,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         status: 'ACTIVE'
       }));
       await supabaseAdmin.from('fee_structures').insert(mappedFranchiseFees);
+
+      await supabaseAdmin.from('fee_structures').insert(camelToSnake(initialFeeStructures));
 
       const defaultProfile = mapBusinessProfileToDb({
         id: '00000000-0000-0000-0000-000000000001',
@@ -1297,9 +1394,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteSubject = (id: string) => setSubjects(prev => prev.filter(s => s.id !== id));
 
   const addFeeStructure = async (f: FeeStructure) => {
-    setFeeStructures(prev => [...prev, f]);
+    const cleanFee = { ...f, id: ensureUUID(f.id) };
+    setFeeStructures(prev => [...prev, cleanFee]);
     try {
-      await supabaseAdmin.from('fee_structures').insert(camelToSnake(f));
+      await supabaseAdmin.from('fee_structures').insert(camelToSnake(cleanFee));
     } catch (err) {
       console.error('Failed to sync fee structure insert:', err);
     }
