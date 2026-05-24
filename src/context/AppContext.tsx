@@ -746,6 +746,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (rawCourses.length === 0) {
           // Empty remote Database - trigger initial seeding to database
           await seedInitialDataToSupabase();
+          
+          // Seed fallback from localStorage
+          const storedPrograms = localStorage.getItem('programs');
+          const storedSubjects = localStorage.getItem('subjects');
+          const storedSettings = localStorage.getItem('globalCourseSettings');
+          if (storedPrograms) setPrograms(JSON.parse(storedPrograms));
+          if (storedSubjects) setSubjects(JSON.parse(storedSubjects));
+          if (storedSettings) setGlobalCourseSettings(JSON.parse(storedSettings));
         } else {
           setFranchises(fData ? snakeToCamel(fData) : []);
           setStudents(sData ? snakeToCamel(sData) : []);
@@ -787,7 +795,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (bpData && bpData.length > 0) {
             const dbKeys = Object.keys(bpData[0]);
             setBusinessProfileColumns(prev => Array.from(new Set([...prev, ...dbKeys])));
-            setBusinessProfile(mapDbToBusinessProfile(bpData[0]));
+            const loadedBp = mapDbToBusinessProfile(bpData[0]);
+            setBusinessProfile(loadedBp);
+
+            const galleryArray = Array.isArray(bpData[0].gallery) ? bpData[0].gallery : [];
+            const extraFieldsItem = galleryArray.find((item: any) => item && item.id === '__extra_fields_backup__');
+            if (extraFieldsItem && extraFieldsItem.data) {
+              const extraFields = extraFieldsItem.data;
+              if (extraFields.programs) setPrograms(extraFields.programs);
+              if (extraFields.subjects) setSubjects(extraFields.subjects);
+              if (extraFields.globalCourseSettings) setGlobalCourseSettings(extraFields.globalCourseSettings);
+            } else {
+              const storedPrograms = localStorage.getItem('programs');
+              const storedSubjects = localStorage.getItem('subjects');
+              const storedSettings = localStorage.getItem('globalCourseSettings');
+              if (storedPrograms) setPrograms(JSON.parse(storedPrograms));
+              if (storedSubjects) setSubjects(JSON.parse(storedSubjects));
+              if (storedSettings) setGlobalCourseSettings(JSON.parse(storedSettings));
+            }
+          } else {
+            const storedPrograms = localStorage.getItem('programs');
+            const storedSubjects = localStorage.getItem('subjects');
+            const storedSettings = localStorage.getItem('globalCourseSettings');
+            if (storedPrograms) setPrograms(JSON.parse(storedPrograms));
+            if (storedSubjects) setSubjects(JSON.parse(storedSubjects));
+            if (storedSettings) setGlobalCourseSettings(JSON.parse(storedSettings));
           }
         }
       } catch (e) {
@@ -855,18 +887,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setVouchers(prev => prev.some(x => x.id === newRecord.id) ? prev : [newRecord, ...prev]);
           } else if (eventType === 'UPDATE') {
             setVouchers(prev => prev.map(x => x.id === newRecord.id ? { ...x, ...newRecord } : x));
+          } else if (eventType === 'DELETE') {
+            setVouchers(prev => prev.filter(x => x.id !== oldRecord.id));
           }
         }
 
         else if (table === 'wallet_transactions') {
           if (eventType === 'INSERT') {
             setWalletTransactions(prev => prev.some(x => x.id === newRecord.id) ? prev : [newRecord, ...prev]);
+          } else if (eventType === 'UPDATE') {
+            setWalletTransactions(prev => prev.map(x => x.id === newRecord.id ? { ...x, ...newRecord } : x));
+          } else if (eventType === 'DELETE') {
+            setWalletTransactions(prev => prev.filter(x => x.id !== oldRecord.id));
           }
         }
 
         else if (table === 'business_transactions') {
           if (eventType === 'INSERT') {
             setBusinessTransactions(prev => prev.some(x => x.id === newRecord.id) ? prev : [newRecord, ...prev]);
+          } else if (eventType === 'UPDATE') {
+            setBusinessTransactions(prev => prev.map(x => x.id === newRecord.id ? { ...x, ...newRecord } : x));
+          } else if (eventType === 'DELETE') {
+            setBusinessTransactions(prev => prev.filter(x => x.id !== oldRecord.id));
           }
         }
 
@@ -895,6 +937,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setCertificates(prev => prev.some(x => x.id === newRecord.id) ? prev : [...prev, newRecord]);
           } else if (eventType === 'UPDATE') {
             setCertificates(prev => prev.map(x => x.id === newRecord.id ? { ...x, ...newRecord } : x));
+          } else if (eventType === 'DELETE') {
+            setCertificates(prev => prev.filter(x => x.id !== oldRecord.id));
           }
         }
 
@@ -905,6 +949,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setSessions(prev => prev.map(x => x.id === newRecord.id ? { ...x, ...newRecord } : x));
           } else if (eventType === 'DELETE') {
             setSessions(prev => prev.filter(x => x.id !== oldRecord.id));
+          }
+        }
+
+        else if (table === 'fee_payments') {
+          if (eventType === 'INSERT') {
+            setFeePayments(prev => prev.some(x => x.id === newRecord.id) ? prev : [...prev, newRecord]);
+          } else if (eventType === 'UPDATE') {
+            setFeePayments(prev => prev.map(x => x.id === newRecord.id ? { ...x, ...newRecord } : x));
+          } else if (eventType === 'DELETE') {
+            setFeePayments(prev => prev.filter(x => x.id !== oldRecord.id));
+          }
+        }
+
+        else if (table === 'business_profile') {
+          if (eventType === 'INSERT' || eventType === 'UPDATE') {
+            const parsedBp = mapDbToBusinessProfile(payload.new);
+            setBusinessProfile(parsedBp);
+
+            // Extract extra backup fields
+            const galleryArray = Array.isArray(payload.new.gallery) ? payload.new.gallery : [];
+            const extraFieldsItem = galleryArray.find((item: any) => item && item.id === '__extra_fields_backup__');
+            if (extraFieldsItem && extraFieldsItem.data) {
+              const extraFields = extraFieldsItem.data;
+              if (extraFields.programs) setPrograms(extraFields.programs);
+              if (extraFields.subjects) setSubjects(extraFields.subjects);
+              if (extraFields.globalCourseSettings) setGlobalCourseSettings(extraFields.globalCourseSettings);
+            }
           }
         }
 
@@ -1265,13 +1336,79 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const addProgram = (p: Program) => setPrograms(prev => [...prev, p]);
-  const updateProgram = (id: string, updates: Partial<Program>) =>
-    setPrograms(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
-  const deleteProgram = (id: string) => setPrograms(prev => prev.filter(p => p.id !== id));
+  const saveExtraToDb = async (newPrograms: Program[], newSubjects: Subject[], newSettings: GlobalCourseSettings) => {
+    try {
+      const extraFields: any = {
+        programs: newPrograms,
+        subjects: newSubjects,
+        globalCourseSettings: newSettings
+      };
 
-  const updateGlobalCourseSettings = (updates: Partial<GlobalCourseSettings>) =>
-    setGlobalCourseSettings(prev => ({ ...prev, ...updates }));
+      const galleryArray = Array.isArray(businessProfile.gallery) ? businessProfile.gallery : [];
+      const extraFieldsItem = galleryArray.find((item: any) => item && item.id === '__extra_fields_backup__');
+      let combinedExtraFields = { ...(extraFieldsItem?.data || {}) };
+      combinedExtraFields = {
+        ...combinedExtraFields,
+        ...extraFields
+      };
+
+      const cleanGallery = galleryArray.filter((item: any) => item && item.id !== '__extra_fields_backup__');
+      
+      const updatedGallery = [
+        ...cleanGallery,
+        { id: '__extra_fields_backup__', url: '', caption: 'Extra Fields Backup Space', data: combinedExtraFields }
+      ];
+
+      // Update business_profile local state so it stays in sync
+      setBusinessProfile(prev => ({
+        ...prev,
+        gallery: updatedGallery
+      }));
+
+      // Update business_profile in DB
+      const bpId = isUUID(businessProfile.id) ? businessProfile.id : '00000000-0000-0000-0000-000000000001';
+      const dbRow = mapBusinessProfileToDb({
+        ...businessProfile,
+        gallery: updatedGallery,
+        id: bpId
+      }, businessProfileColumns);
+
+      const filteredDbRow: any = {};
+      Object.keys(dbRow).forEach(key => {
+        if (businessProfileColumns.includes(key)) {
+          filteredDbRow[key] = dbRow[key];
+        }
+      });
+
+      await supabaseAdmin.from('business_profile').upsert(filteredDbRow);
+    } catch (err) {
+      console.error('Failed to sync extra schema properties to Supabase business_profile:', err);
+    }
+  };
+
+  const addProgram = async (p: Program) => {
+    const updated = [...programs, p];
+    setPrograms(updated);
+    await saveExtraToDb(updated, subjects, globalCourseSettings);
+  };
+
+  const updateProgram = async (id: string, updates: Partial<Program>) => {
+    const updated = programs.map(p => p.id === id ? { ...p, ...updates } : p);
+    setPrograms(updated);
+    await saveExtraToDb(updated, subjects, globalCourseSettings);
+  };
+
+  const deleteProgram = async (id: string) => {
+    const updated = programs.filter(p => p.id !== id);
+    setPrograms(updated);
+    await saveExtraToDb(updated, subjects, globalCourseSettings);
+  };
+
+  const updateGlobalCourseSettings = async (updates: Partial<GlobalCourseSettings>) => {
+    const updated = { ...globalCourseSettings, ...updates };
+    setGlobalCourseSettings(updated);
+    await saveExtraToDb(programs, subjects, updated);
+  };
 
   const addSession = async (s: AcademicSession) => {
     setSessions(prev => [...prev, s]);
@@ -1388,10 +1525,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const addSubject = (s: Subject) => setSubjects(prev => [...prev, s]);
-  const updateSubject = (id: string, updates: Partial<Subject>) =>
-    setSubjects(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
-  const deleteSubject = (id: string) => setSubjects(prev => prev.filter(s => s.id !== id));
+  const addSubject = async (s: Subject) => {
+    const updated = [...subjects, s];
+    setSubjects(updated);
+    await saveExtraToDb(programs, updated, globalCourseSettings);
+  };
+
+  const updateSubject = async (id: string, updates: Partial<Subject>) => {
+    const updated = subjects.map(s => s.id === id ? { ...s, ...updates } : s);
+    setSubjects(updated);
+    await saveExtraToDb(programs, updated, globalCourseSettings);
+  };
+
+  const deleteSubject = async (id: string) => {
+    const updated = subjects.filter(s => s.id !== id);
+    setSubjects(updated);
+    await saveExtraToDb(programs, updated, globalCourseSettings);
+  };
 
   const addFeeStructure = async (f: FeeStructure) => {
     const cleanFee = { ...f, id: ensureUUID(f.id) };

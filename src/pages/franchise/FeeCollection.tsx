@@ -154,6 +154,11 @@ export const FeeCollection = () => {
   const [receiptType, setReceiptType] = useState<'SINGLE' | 'HISTORY'>('SINGLE');
   const [printPaperSize, setPrintPaperSize] = useState<'A4' | 'A5'>('A5');
 
+  const [showFullPayments, setShowFullPayments] = useState(false);
+  const [fullPageSearchTerm, setFullPageSearchTerm] = useState('');
+  const [fullPageFilterCourse, setFullPageFilterCourse] = useState('ALL');
+  const [fullPageFilterStatus, setFullPageFilterStatus] = useState('ALL');
+
   useEffect(() => {
     const state = location.state as { studentId?: string } | null;
     if (state?.studentId) {
@@ -633,7 +638,7 @@ export const FeeCollection = () => {
                  <History className="text-blue-600" size={20} />
                  <h2 className="text-sm font-black text-[#141414] uppercase tracking-widest">Recent Payments</h2>
               </div>
-              <button className="px-4 py-2 bg-gray-50 text-[10px] font-black uppercase tracking-widest text-[#888888] rounded-xl hover:bg-gray-100">View All</button>
+              <button onClick={() => setShowFullPayments(true)} className="px-4 py-2 bg-gray-50 text-[10px] font-black uppercase tracking-widest text-[#888888] rounded-xl hover:bg-gray-100">View All</button>
             </div>
             
             <div className="overflow-x-auto">
@@ -733,6 +738,334 @@ export const FeeCollection = () => {
           </div>
         </div>
       </div>
+
+      {/* Full Page View of Recent Payments */}
+      <AnimatePresence>
+        {showFullPayments && (
+          <motion.div 
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 15 }}
+            className="fixed inset-0 z-50 bg-[#fafafa] flex flex-col overflow-hidden font-sans print:hidden"
+          >
+            {/* Header */}
+            <div className="bg-white border-b border-gray-100 px-8 py-5 flex flex-col md:flex-row md:items-center md:justify-between shrink-0 gap-4 shadow-sm">
+              <div className="flex items-center space-x-4">
+                <button 
+                  onClick={() => setShowFullPayments(false)} 
+                  className="p-3 bg-gray-50 hover:bg-gray-100 rounded-2xl text-gray-700 transition-all flex items-center justify-center border border-gray-100 shadow-sm"
+                  title="Close and Back"
+                >
+                  <X size={20} />
+                </button>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <History className="text-blue-600" size={24} />
+                    <h1 className="text-xl font-black text-[#141414] uppercase tracking-widest">Recent Payments</h1>
+                  </div>
+                  <p className="text-[10px] font-black text-[#888888] uppercase tracking-widest mt-1">Full-screen audit ledger, searches and transaction controls</p>
+                </div>
+              </div>
+
+              {/* Mini Stats Card */}
+              {(() => {
+                const visible = (clubbedFeePayments || []).filter(p => {
+                  const student = (students || []).find(s => s.id === p.studentId);
+                  if (!student || student.franchiseId !== currentUser?.franchiseId) return false;
+
+                  const matchesSearch = p.receiptNo.toLowerCase().includes(fullPageSearchTerm.toLowerCase()) || 
+                    student.name.toLowerCase().includes(fullPageSearchTerm.toLowerCase()) ||
+                    (student.fatherName && student.fatherName.toLowerCase().includes(fullPageSearchTerm.toLowerCase())) ||
+                    student.contact.toLowerCase().includes(fullPageSearchTerm.toLowerCase());
+
+                  const matchesCourse = fullPageFilterCourse === 'ALL' || student.course === fullPageFilterCourse;
+                  
+                  let matchesStatus = true;
+                  if (fullPageFilterStatus === 'FULLY_PAID') {
+                    matchesStatus = p.balance === 0;
+                  } else if (fullPageFilterStatus === 'BALANCE_DUE') {
+                    matchesStatus = p.balance > 0;
+                  }
+
+                  return matchesSearch && matchesCourse && matchesStatus;
+                });
+
+                const totalPaidAmount = visible.reduce((total, p) => total + p.paidAmount, 0);
+                const totalOutstanding = visible.reduce((total, p) => total + (p.balance || 0), 0);
+                const totalDiscount = visible.reduce((total, p) => total + (p.discount || 0), 0);
+
+                return (
+                  <div className="flex items-center gap-4">
+                    <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2 text-center shadow-sm">
+                      <span className="block text-[8px] font-black uppercase text-emerald-600 tracking-wider">Total Revenue</span>
+                      <span className="text-xs font-black text-emerald-700 mt-0.5 block">₹{totalPaidAmount.toLocaleString()}</span>
+                    </div>
+                    <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-2 text-center shadow-sm">
+                      <span className="block text-[8px] font-black uppercase text-red-600 tracking-wider">Total Outstanding</span>
+                      <span className="text-xs font-black text-red-700 mt-0.5 block">₹{totalOutstanding.toLocaleString()}</span>
+                    </div>
+                    <div className="bg-orange-50 border border-orange-100 rounded-xl px-4 py-2 text-center shadow-sm">
+                      <span className="block text-[8px] font-black uppercase text-orange-600 tracking-wider">Discounts Allowed</span>
+                      <span className="text-xs font-black text-orange-700 mt-0.5 block">₹{totalDiscount.toLocaleString()}</span>
+                    </div>
+                    <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-center shadow-sm">
+                      <span className="block text-[8px] font-black uppercase text-gray-500 tracking-wider">Transactions</span>
+                      <span className="text-xs font-black text-gray-700 mt-0.5 block">{visible.length}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Controls Bar */}
+            <div className="bg-white border-b border-gray-100 px-8 py-4 flex flex-col lg:flex-row items-center gap-4 shrink-0 shadow-sm">
+              <div className="relative w-full lg:max-w-xs">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <input 
+                  type="text" 
+                  placeholder="SEARCH RECEIPT, STUDENT, PHONE..." 
+                  value={fullPageSearchTerm}
+                  onChange={(e) => setFullPageSearchTerm(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 text-[10px] font-black uppercase tracking-widest pl-11 pr-4 py-3 rounded-2xl focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white placeholder-gray-400 transition-all text-gray-700"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto lg:ml-auto">
+                {/* Course Selection */}
+                <div className="flex items-center space-x-1">
+                  <span className="text-[8px] font-black text-gray-400 uppercase tracking-wider">Course:</span>
+                  <select 
+                    value={fullPageFilterCourse}
+                    onChange={(e) => setFullPageFilterCourse(e.target.value)}
+                    className="bg-gray-50 border border-gray-200 text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-600 text-gray-700"
+                  >
+                    <option value="ALL">ALL COURSES</option>
+                    {(Array.from(new Set(
+                      (students || [])
+                        .filter(s => s.franchiseId === currentUser?.franchiseId)
+                        .map(s => s.course)
+                    ))).filter(Boolean).map(c => (
+                      <option key={String(c)} value={String(c)}>{String(c).toUpperCase()}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Status Selection */}
+                <div className="flex items-center space-x-1">
+                  <span className="text-[8px] font-black text-gray-400 uppercase tracking-wider">Status:</span>
+                  <select 
+                    value={fullPageFilterStatus}
+                    onChange={(e) => setFullPageFilterStatus(e.target.value)}
+                    className="bg-gray-50 border border-gray-200 text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-600 text-gray-700"
+                  >
+                    <option value="ALL">ALL STATUSES</option>
+                    <option value="FULLY_PAID">FULLY PAID</option>
+                    <option value="BALANCE_DUE">BALANCE DUE</option>
+                  </select>
+                </div>
+
+                {/* Reset Button */}
+                {(fullPageSearchTerm || fullPageFilterCourse !== 'ALL' || fullPageFilterStatus !== 'ALL') && (
+                  <button 
+                    onClick={() => {
+                      setFullPageSearchTerm('');
+                      setFullPageFilterCourse('ALL');
+                      setFullPageFilterStatus('ALL');
+                    }}
+                    className="px-4 py-2.5 bg-red-50 text-red-600 hover:bg-red-100 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Table Area */}
+            <div className="flex-1 overflow-auto bg-white custom-scrollbar">
+              <div className="min-w-max">
+                <table className="w-full text-left border-collapse">
+                  <thead className="sticky top-0 bg-gray-50 z-10">
+                    <tr className="border-b border-gray-200 bg-gray-100 text-[#111111] text-[11px] font-extrabold uppercase tracking-wider">
+                      <th className="px-8 py-5">Receipt</th>
+                      <th className="px-8 py-5">Inst.</th>
+                      <th className="px-8 py-5">Student</th>
+                      <th className="px-8 py-5">Father's Name</th>
+                      <th className="px-8 py-5">Mobile No</th>
+                      <th className="px-8 py-5">Course Name</th>
+                      <th className="px-8 py-5">Fee Type</th>
+                      <th className="px-8 py-5 flex items-center gap-1">Due Date</th>
+                      <th className="px-8 py-5">Total Fees</th>
+                      <th className="px-8 py-5">Discount</th>
+                      <th className="px-8 py-5">Late Fees</th>
+                      <th className="px-8 py-5">Paid</th>
+                      <th className="px-8 py-5">Balance</th>
+                      <th className="px-8 py-5 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-250 bg-white">
+                    {(() => {
+                      const filteredPayments = (clubbedFeePayments || []).filter(p => {
+                        const student = (students || []).find(s => s.id === p.studentId);
+                        if (!student || student.franchiseId !== currentUser?.franchiseId) return false;
+
+                        const matchesSearch = p.receiptNo.toLowerCase().includes(fullPageSearchTerm.toLowerCase()) || 
+                          student.name.toLowerCase().includes(fullPageSearchTerm.toLowerCase()) ||
+                          (student.fatherName && student.fatherName.toLowerCase().includes(fullPageSearchTerm.toLowerCase())) ||
+                          student.contact.toLowerCase().includes(fullPageSearchTerm.toLowerCase());
+
+                        const matchesCourse = fullPageFilterCourse === 'ALL' || student.course === fullPageFilterCourse;
+                        
+                        let matchesStatus = true;
+                        if (fullPageFilterStatus === 'FULLY_PAID') {
+                          matchesStatus = p.balance === 0;
+                        } else if (fullPageFilterStatus === 'BALANCE_DUE') {
+                          matchesStatus = p.balance > 0;
+                        }
+
+                        return matchesSearch && matchesCourse && matchesStatus;
+                      });
+
+                      if (filteredPayments.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={14} className="py-24 text-center">
+                              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-300 mb-4 shadow-inner">
+                                <History size={32} />
+                              </div>
+                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">No matching payments found in ledger</p>
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return filteredPayments.slice().reverse().map(payment => {
+                        const student = (students || []).find(s => s.id === payment.studentId);
+                        const instStr = getInstallmentNumber(payment.date, payment.studentId);
+                        const instNumber = instStr.match(/\d+/) ? instStr.match(/\d+/)![0] : (instStr === 'N/A' || !instStr ? '--' : instStr);
+
+                        return (
+                          <tr key={payment.id} className="hover:bg-blue-50/20 transition-colors group">
+                            {/* Receipt */}
+                            <td className="px-8 py-5">
+                              <div className="flex flex-col">
+                                <span className="text-[13px] font-extrabold text-[#111111] uppercase tracking-normal">{payment.receiptNo}</span>
+                                <span className="text-[11px] font-bold text-gray-500 uppercase tracking-normal mt-1">{payment.date}</span>
+                              </div>
+                            </td>
+
+                            {/* Inst. */}
+                            <td className="px-8 py-5">
+                              <div className="flex flex-col">
+                                <span className="text-[10px] font-black text-blue-800 uppercase tracking-wider leading-none">INSTALLMENT</span>
+                                <span className="text-[14px] font-black text-blue-800 mt-1.5 leading-none font-sans">{instNumber}</span>
+                              </div>
+                            </td>
+
+                            {/* Student */}
+                            <td className="px-8 py-5 font-black text-sm text-[#111111] uppercase tracking-tight">
+                              {student?.name || 'Unknown'}
+                            </td>
+
+                            {/* FatherName */}
+                            <td className="px-8 py-5 font-extrabold text-xs text-[#222222] uppercase tracking-tight">
+                              {student?.fatherName || '--'}
+                            </td>
+
+                            {/* Contact */}
+                            <td className="px-8 py-5 font-extrabold text-xs text-gray-950 uppercase tracking-normal">
+                              {student?.contact || '--'}
+                            </td>
+
+                            {/* Course Name */}
+                            <td className="px-8 py-5 font-black text-sm text-blue-800 uppercase tracking-normal">
+                              {student?.course || '--'}
+                            </td>
+
+                            {/* Fee Type Badges stack */}
+                            <td className="px-8 py-5">
+                              <div className="flex flex-col gap-1.5 items-start">
+                                {payment.feeType.split(/[\s,_|]+/).filter(Boolean).map((word, wIdx) => (
+                                  <span key={wIdx} className="px-2.5 py-1 bg-gray-200 text-[10px] font-extrabold text-gray-900 uppercase tracking-wider rounded-lg border border-gray-300">
+                                    {word}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+
+                            {/* Due Date */}
+                            <td className="px-8 py-5 text-sm font-mono font-black text-red-600 uppercase tracking-wide">
+                              {payment.dueDate || '--'}
+                            </td>
+
+                            {/* Total Fees */}
+                            <td className="px-8 py-4 text-sm font-black text-gray-900">
+                              ₹{(payment.amount ?? 0).toLocaleString()}
+                            </td>
+
+                            {/* Discount */}
+                            <td className="px-8 py-5 text-sm font-black text-orange-600">
+                              ₹{(payment.discount ?? 0).toLocaleString()}
+                            </td>
+
+                            {/* Late Fee */}
+                            <td className="px-8 py-5 text-sm font-black text-red-600">
+                              ₹{(payment.penalty ?? 0).toLocaleString()}
+                            </td>
+
+                            {/* Paid */}
+                            <td className="px-8 py-5 text-sm font-black text-emerald-700">
+                              ₹{payment.paidAmount.toLocaleString()}
+                            </td>
+
+                            {/* Balance */}
+                            <td className="px-8 py-5 text-sm font-black text-red-600">
+                              ₹{payment.balance.toLocaleString()}
+                            </td>
+
+                            {/* Actions */}
+                            <td className="px-8 py-5">
+                              <div className="flex items-center justify-center space-x-2">
+                                 <button 
+                                   onClick={() => {
+                                     setReceiptType('SINGLE');
+                                     setShowReceipt(payment);
+                                   }}
+                                   className="p-2.5 text-gray-400 hover:text-blue-600 hover:bg-gray-50 rounded-xl transition-all border border-transparent hover:border-gray-100"
+                                   title="Print Receipt"
+                                  >
+                                   <Printer size={16} />
+                                 </button>
+                                 <button 
+                                   onClick={() => {
+                                     const studentPayments = clubbedFeePayments.filter(p => p.studentId === payment.studentId);
+                                     setReceiptType('HISTORY');
+                                     setShowReceipt(studentPayments[studentPayments.length - 1]);
+                                   }}
+                                   className="p-2.5 text-gray-400 hover:text-purple-600 hover:bg-gray-50 rounded-xl transition-all border border-transparent hover:border-gray-100"
+                                   title="Print Summary"
+                                 >
+                                   <FileText size={16} />
+                                 </button>
+                                 <button 
+                                   onClick={() => student && sendWhatsAppReceipt(payment, student)}
+                                   className="p-2.5 text-gray-400 hover:text-emerald-600 hover:bg-gray-50 rounded-xl transition-all border border-transparent hover:border-gray-100"
+                                   title="WhatsApp Reminder"
+                                 >
+                                   <MessageCircle size={16} />
+                                 </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Payment Modal */}
       <AnimatePresence>
