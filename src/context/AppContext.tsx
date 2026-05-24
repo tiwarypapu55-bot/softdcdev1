@@ -1411,10 +1411,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addSession = async (s: AcademicSession) => {
-    setSessions(prev => [...prev, s]);
+    const cleanSession = { ...s, id: ensureUUID(s.id) };
+    setSessions(prev => [...prev, cleanSession]);
     try {
       await supabaseAdmin.from('academic_sessions').insert({
-        id: ensureUUID(s.id),
+        id: cleanSession.id,
         name: s.name,
         start_date: s.startDate,
         end_date: s.endDate,
@@ -1435,7 +1436,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (updates.endDate !== undefined) mappedUpdates.end_date = updates.endDate;
       if (updates.status !== undefined) mappedUpdates.status = updates.status;
       if (updates.isDefault !== undefined) mappedUpdates.is_default = updates.isDefault;
-      await supabaseAdmin.from('academic_sessions').update(mappedUpdates).eq('id', id);
+      await supabaseAdmin.from('academic_sessions').update(mappedUpdates).eq('id', ensureUUID(id));
     } catch (err) {
       console.error('Failed to sync session update:', err);
     }
@@ -1444,7 +1445,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteSession = async (id: string) => {
     setSessions(prev => prev.filter(s => s.id !== id));
     try {
-      await supabaseAdmin.from('academic_sessions').delete().eq('id', id);
+      await supabaseAdmin.from('academic_sessions').delete().eq('id', ensureUUID(id));
     } catch (err) {
       console.error('Failed to sync session deletion:', err);
     }
@@ -1478,10 +1479,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addExam = async (e: Exam) => {
-    setExams(prev => [...prev, e]);
+    const cleanExam = { ...e, id: ensureUUID(e.id) };
+    setExams(prev => [...prev, cleanExam]);
     try {
       await supabaseAdmin.from('exams').insert({
-        id: ensureUUID(e.id),
+        id: cleanExam.id,
         name: e.name,
         session: e.session,
         trade: e.trade,
@@ -1510,7 +1512,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (updates.remarks !== undefined) mappedUpdates.remarks = updates.remarks;
       if (updates.status !== undefined) mappedUpdates.status = updates.status;
       if (updates.invigilator !== undefined) mappedUpdates.invigilator = updates.invigilator;
-      await supabaseAdmin.from('exams').update(mappedUpdates).eq('id', id);
+      await supabaseAdmin.from('exams').update(mappedUpdates).eq('id', ensureUUID(id));
     } catch (err) {
       console.error('Failed to sync exam update:', err);
     }
@@ -1519,7 +1521,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteExam = async (id: string) => {
     setExams(prev => prev.filter(e => e.id !== id));
     try {
-      await supabaseAdmin.from('exams').delete().eq('id', id);
+      await supabaseAdmin.from('exams').delete().eq('id', ensureUUID(id));
     } catch (err) {
       console.error('Failed to sync exam delete:', err);
     }
@@ -1656,10 +1658,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addFranchiseFee = async (f: FranchiseFee) => {
-    setFranchiseFees(prev => [...prev, f]);
+    const cleanFee = { ...f, id: ensureUUID(f.id) };
+    setFranchiseFees(prev => [...prev, cleanFee]);
     try {
       await supabaseAdmin.from('fee_structures').insert({
-        id: ensureUUID(f.id),
+        id: cleanFee.id,
         head: 'FRANCHISE_FEE_RECORD',
         course_id: f.franchiseId,
         course_name: f.franchiseName,
@@ -1683,7 +1686,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (updates.registrationFees !== undefined) mappedUpdates.amount = updates.registrationFees;
       if (updates.marksheetFees !== undefined) mappedUpdates.discount = updates.marksheetFees;
       if (updates.description !== undefined) mappedUpdates.frequency = updates.description;
-      await supabaseAdmin.from('fee_structures').update(mappedUpdates).eq('id', id);
+      await supabaseAdmin.from('fee_structures').update(mappedUpdates).eq('id', ensureUUID(id));
     } catch (err) {
       console.error('Failed to sync franchise fee update:', err);
     }
