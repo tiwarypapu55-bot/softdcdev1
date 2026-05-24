@@ -542,8 +542,14 @@ export const FeeCollection = () => {
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Receipt</th>
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Inst.</th>
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Student</th>
+                    <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Father's Name</th>
+                    <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Mobile No</th>
+                    <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Course Name</th>
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Fee Type</th>
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Due Date</th>
+                    <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Total Fees</th>
+                    <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Discount</th>
+                    <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Late Fees</th>
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Paid</th>
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Balance</th>
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest text-center">Action</th>
@@ -564,12 +570,18 @@ export const FeeCollection = () => {
                           <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{getInstallmentNumber(payment.date, payment.studentId)}</span>
                         </td>
                         <td className="px-8 py-6 font-bold text-[10px] text-[#141414] uppercase tracking-tight">{student?.name || 'Unknown'}</td>
+                        <td className="px-8 py-6 font-bold text-[10px] text-[#141414] uppercase tracking-tight">{student?.fatherName || '--'}</td>
+                        <td className="px-8 py-6 font-bold text-[10px] text-[#141414] uppercase tracking-tight">{student?.contact || '--'}</td>
+                        <td className="px-8 py-6 font-bold text-[10px] text-blue-600 uppercase tracking-tight">{student?.course || '--'}</td>
                         <td className="px-8 py-6">
                           <span className="px-3 py-1 bg-gray-50 text-[8px] font-black uppercase tracking-widest rounded-full">{payment.feeType}</span>
                         </td>
                         <td className="px-8 py-6 text-xs font-mono font-bold text-red-600 uppercase">
                           {payment.dueDate || '--'}
                         </td>
+                        <td className="px-8 py-6 text-xs font-black text-gray-800">₹{(payment.amount ?? 0).toLocaleString()}</td>
+                        <td className="px-8 py-6 text-xs font-black text-orange-500">₹{(payment.discount ?? 0).toLocaleString()}</td>
+                        <td className="px-8 py-6 text-xs font-black text-red-500">₹{(payment.penalty ?? 0).toLocaleString()}</td>
                         <td className="px-8 py-6 text-xs font-black text-emerald-600">₹{payment.paidAmount.toLocaleString()}</td>
                         <td className="px-8 py-6 text-xs font-black text-red-600">₹{payment.balance.toLocaleString()}</td>
                         <td className="px-8 py-6">
@@ -1120,14 +1132,6 @@ export const FeeCollection = () => {
                                  <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
                                    <div className="px-4 flex items-center font-black bg-blue-50 text-blue-600 text-[10px]">Student Name</div>
                                    <div className="px-4 flex items-center font-black uppercase text-blue-600 text-[10px]">{student.name}</div>
-                                  </div>
-                                  <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                    <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Payment Mode</div>
-                                    <div className="px-4 flex items-center font-black uppercase text-emerald-600 truncate text-[10px]">
-                                      {showReceipt.paymentModes && showReceipt.paymentModes.length > 0 
-                                        ? showReceipt.paymentModes.map(m => m.mode).join(' + ')
-                                        : showReceipt.paymentMode || 'N/A'}
-                                    </div>
                                  </div>
                                </div>
 

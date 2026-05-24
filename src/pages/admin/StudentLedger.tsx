@@ -46,12 +46,16 @@ export const StudentLedger = () => {
 
   const getStudentLedger = (student: Student) => {
     const studentPayments = (feePayments || []).filter(p => p.studentId === student.id);
-    const totalPaid = studentPayments.reduce((acc, p) => acc + p.paidAmount, 0);
-    const balance = (student.totalFees || 0) - totalPaid;
+    const totalPaid = studentPayments.reduce((acc, p) => acc + (p.paidAmount || 0), 0);
+    const totalDiscount = studentPayments.reduce((acc, p) => acc + (p.discount || 0), 0);
+    const totalPenalty = studentPayments.reduce((acc, p) => acc + (p.penalty || 0), 0);
+    const totalDebit = (student.totalFees || 0) + totalPenalty;
+    const totalCredit = totalPaid + totalDiscount;
+    const balance = Math.max(0, totalDebit - totalCredit);
 
     // Build transaction list
     // 1. Initial Debit (Course Fee)
-    const transactions = [
+    const transactions: any[] = [
       {
         id: `debit-${student.id}`,
         date: student.admissionDate,
@@ -62,11 +66,38 @@ export const StudentLedger = () => {
       }
     ];
 
-    // 2. Credits (Payments)
+    // 2. Credits and Debits (Payments + Penalties + Discounts)
     let runningBalance = student.totalFees || 0;
     const sortedPayments = [...studentPayments].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
     sortedPayments.forEach(p => {
+      // If there is a penalty, it increases running balance by the penalty amount
+      if (p.penalty && p.penalty > 0) {
+        runningBalance += p.penalty;
+        transactions.push({
+          id: `${p.id}-penalty`,
+          date: p.date,
+          description: `Late Fee Charged: Ref ${p.receiptNo}`,
+          type: 'DEBIT',
+          amount: p.penalty,
+          balance: runningBalance
+        });
+      }
+
+      // If there is a discount, it decreases running balance by discount amount (acting as a credit)
+      if (p.discount && p.discount > 0) {
+        runningBalance -= p.discount;
+        transactions.push({
+          id: `${p.id}-discount`,
+          date: p.date,
+          description: `Discount Applied: Ref ${p.receiptNo}`,
+          type: 'CREDIT',
+          amount: p.discount,
+          balance: runningBalance
+        });
+      }
+
+      // The actual paid amount decreases the running balance
       runningBalance -= p.paidAmount;
       transactions.push({
         id: p.id,
@@ -81,13 +112,16 @@ export const StudentLedger = () => {
     return {
       transactions,
       totalPaid,
+      totalDiscount,
+      totalPenalty,
       balance,
-      totalDebit: student.totalFees || 0
+      totalDebit,
+      baseFee: student.totalFees || 0
     };
   };
 
   const exportMasterLedger = () => {
-    const headers = ['Student ID', 'Name', 'Course', 'Branch', 'Total Fee', 'Total Paid', 'Balance', 'Status'];
+    const headers = ['Student ID', 'Name', 'Course', 'Branch', 'Base Course Fee', 'Late Fee Charged', 'Discount Allowed', 'Total Paid', 'Net Balance Due', 'Status'];
     const data = (students || []).map(student => {
       const ledger = getStudentLedger(student);
       const branch = (franchises || []).find(f => f.id === student.franchiseId);
@@ -96,7 +130,9 @@ export const StudentLedger = () => {
         student.name,
         student.course,
         branch?.name || 'N/A',
-        ledger.totalDebit,
+        ledger.baseFee,
+        ledger.totalPenalty,
+        ledger.totalDiscount,
         ledger.totalPaid,
         ledger.balance,
         ledger.balance <= 0 ? 'Full Paid' : 'Pending'
@@ -214,8 +250,16 @@ export const StudentLedger = () => {
                     <div className="flex justify-end pr-4">
                       <div className="w-full md:w-64 space-y-3">
                         <div className="flex justify-between text-[11px] font-black border-b border-gray-100 pb-2">
-                           <span className="uppercase text-gray-400">Total Fees:</span>
-                           <span>₹{getStudentLedger(printStudent).totalDebit.toLocaleString()}</span>
+                           <span className="uppercase text-gray-400">Base Course Fee:</span>
+                           <span>₹{getStudentLedger(printStudent).baseFee.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px] font-black border-b border-gray-100 pb-2">
+                           <span className="uppercase text-red-600">Total Late Fees (+):</span>
+                           <span className="text-red-600">₹{getStudentLedger(printStudent).totalPenalty.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px] font-black border-b border-gray-100 pb-2">
+                           <span className="uppercase text-orange-500">Total Discount (-):</span>
+                           <span className="text-orange-500">₹{getStudentLedger(printStudent).totalDiscount.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between text-[11px] font-black border-b border-gray-100 pb-2">
                            <span className="uppercase text-gray-400">Total Paid:</span>
@@ -313,8 +357,10 @@ export const StudentLedger = () => {
             <tr className="bg-gray-50 border-b border-gray-100">
               <th className="px-8 py-5 text-[10px] font-black text-[#888888] uppercase tracking-widest">Student Information</th>
               <th className="px-8 py-5 text-[10px] font-black text-[#888888] uppercase tracking-widest">Branch</th>
-              <th className="px-8 py-5 text-[10px] font-black text-[#888888] uppercase tracking-widest text-right">Debit (Fee)</th>
-              <th className="px-8 py-5 text-[10px] font-black text-[#888888] uppercase tracking-widest text-right">Credit (Paid)</th>
+              <th className="px-8 py-5 text-[10px] font-black text-[#888888] uppercase tracking-widest text-right">Base Fee</th>
+              <th className="px-8 py-5 text-[10px] font-black text-red-600 uppercase tracking-widest text-right">Late Fee</th>
+              <th className="px-8 py-5 text-[10px] font-black text-orange-500 uppercase tracking-widest text-right">Discount</th>
+              <th className="px-8 py-5 text-[10px] font-black text-emerald-600 uppercase tracking-widest text-right">Paid</th>
               <th className="px-8 py-5 text-[10px] font-black text-[#888888] uppercase tracking-widest text-right">Balance Due</th>
               <th className="px-8 py-5 text-[10px] font-black text-[#888888] uppercase tracking-widest text-center">Status</th>
             </tr>
@@ -354,7 +400,9 @@ export const StudentLedger = () => {
                          <span className="text-[10px] font-bold uppercase truncate max-w-[120px]">{branch?.name || 'N/A'}</span>
                       </div>
                     </td>
-                    <td className="px-8 py-6 text-right font-mono font-black text-xs text-[#141414]">₹{ledger.totalDebit.toLocaleString()}</td>
+                    <td className="px-8 py-6 text-right font-mono font-black text-xs text-[#141414]">₹{ledger.baseFee.toLocaleString()}</td>
+                    <td className="px-8 py-6 text-right font-mono font-black text-xs text-red-600">₹{ledger.totalPenalty.toLocaleString()}</td>
+                    <td className="px-8 py-6 text-right font-mono font-black text-xs text-orange-500">₹{ledger.totalDiscount.toLocaleString()}</td>
                     <td className="px-8 py-6 text-right font-mono font-black text-xs text-emerald-600">₹{ledger.totalPaid.toLocaleString()}</td>
                     <td className="px-8 py-6 text-right font-mono font-black text-xs text-red-600">₹{ledger.balance.toLocaleString()}</td>
                     <td className="px-8 py-6">
@@ -373,7 +421,7 @@ export const StudentLedger = () => {
                   <AnimatePresence>
                     {isExpanded && (
                       <tr>
-                        <td colSpan={6} className="px-8 py-0 border-none">
+                        <td colSpan={8} className="px-8 py-0 border-none">
                           <motion.div 
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
@@ -451,19 +499,27 @@ export const StudentLedger = () => {
                                    </div>
 
                                    <div className="flex justify-between items-center bg-gray-50 p-6 rounded-2xl border border-gray-100">
-                                      <div className="grid grid-cols-3 gap-12 w-full">
+                                      <div className="grid grid-cols-2 md:grid-cols-5 gap-6 w-full text-left">
                                          <div>
-                                            <p className="text-[9px] font-black text-[#888888] uppercase tracking-widest mb-1">Total Debit</p>
-                                            <p className="text-lg font-black text-[#141414]">₹{ledger.totalDebit.toLocaleString()}</p>
+                                            <p className="text-[9px] font-black text-[#888888] uppercase tracking-widest mb-1">Base Fee</p>
+                                            <p className="text-base font-black text-[#141414]">₹{ledger.baseFee.toLocaleString()}</p>
                                          </div>
                                          <div>
-                                            <p className="text-[9px] font-black text-[#888888] uppercase tracking-widest mb-1">Total Credit</p>
-                                            <p className="text-lg font-black text-emerald-600">₹{ledger.totalPaid.toLocaleString()}</p>
+                                            <p className="text-[9px] font-black text-red-600 uppercase tracking-widest mb-1">Late Fee (+)</p>
+                                            <p className="text-base font-black text-red-600">₹{ledger.totalPenalty.toLocaleString()}</p>
                                          </div>
-                                         <div className="text-right">
-                                            <p className="text-[9px] font-black text-[#888888] uppercase tracking-widest mb-1">Net Balance Due</p>
+                                         <div>
+                                            <p className="text-[9px] font-black text-orange-500 uppercase tracking-widest mb-1">Discount (-)</p>
+                                            <p className="text-base font-black text-orange-500">₹{ledger.totalDiscount.toLocaleString()}</p>
+                                         </div>
+                                         <div>
+                                            <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Total Paid</p>
+                                            <p className="text-base font-black text-emerald-600">₹{ledger.totalPaid.toLocaleString()}</p>
+                                         </div>
+                                         <div className="md:text-right">
+                                            <p className="text-[9px] font-black text-[#888888] uppercase tracking-widest mb-1">Balance Due</p>
                                             <p className={clsx(
-                                              "text-lg font-black",
+                                              "text-base font-black",
                                               ledger.balance > 0 ? "text-red-600" : "text-emerald-600"
                                             )}>₹{ledger.balance.toLocaleString()}</p>
                                          </div>

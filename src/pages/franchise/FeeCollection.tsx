@@ -44,6 +44,20 @@ export const FeeCollection = () => {
     }
   }, [location.state, students]);
   
+  const getCalculatedPenalty = (dueDateStr: string, rate: number) => {
+    if (!dueDateStr) return 0;
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const due = new Date(dueDateStr);
+    due.setHours(0,0,0,0);
+    if (today > due) {
+      const diffTime = today.getTime() - due.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      return Math.max(0, diffDays * rate);
+    }
+    return 0;
+  };
+
   const [paymentData, setPaymentData] = useState({
     feeType: '',
     amount: 0,
@@ -53,25 +67,47 @@ export const FeeCollection = () => {
     paymentMode: 'Cash',
     transactionId: '',
     remarks: '',
-    isFullPayment: true
+    isFullPayment: true,
+    dueDate: new Date().toISOString().split('T')[0],
+    penaltyRate: 50
   });
 
-  // Reset payment data when modal opens
+  // Reset payment data and load default matching course fee when modal opens or student changes
   useEffect(() => {
     if (showPaymentModal && selectedStudent) {
+      const matched = (feeStructures || []).find(f => 
+        f.status === 'ACTIVE' && 
+        f.head === 'Course Fee' && 
+        (f.courseName === selectedStudent.course || f.courseId === 'all' || f.courseName === 'All IT Courses') &&
+        f.session === selectedStudent.session
+      ) || (feeStructures || []).find(f => 
+        f.status === 'ACTIVE' && 
+        f.head === 'Course Fee' && 
+        (f.courseName === selectedStudent.course || f.courseId === 'all' || f.courseName === 'All IT Courses')
+      );
+
+      const baseAmount = matched ? (matched.amount || 0) : 0;
+      const discount = matched ? (matched.discount || 0) : 0;
+      const penaltyRate = matched ? (matched.latePenalty ?? 50) : 50;
+      const dueDate = new Date().toISOString().split('T')[0];
+      const penalty = getCalculatedPenalty(dueDate, penaltyRate);
+      const finalPaid = Math.max(0, (baseAmount + penalty) - discount);
+
       setPaymentData({
-        feeType: '',
-        amount: 0,
-        discount: 0,
-        penalty: 0,
-        paidAmount: 0,
+        feeType: 'Course Fee',
+        amount: baseAmount,
+        discount: discount,
+        penalty: penalty,
+        paidAmount: finalPaid,
         paymentMode: 'Cash',
         transactionId: '',
         remarks: '',
-        isFullPayment: true
+        isFullPayment: true,
+        dueDate: dueDate,
+        penaltyRate: penaltyRate
       });
     }
-  }, [showPaymentModal, selectedStudent]);
+  }, [showPaymentModal, selectedStudent, feeStructures]);
 
   const handleFeeTypeChange = (chosenType: string) => {
     const matched = (feeStructures || []).find(f => 
@@ -88,7 +124,9 @@ export const FeeCollection = () => {
     if (matched) {
       const baseAmount = matched.amount || 0;
       const discount = matched.discount || 0;
-      const penalty = matched.latePenalty || 0;
+      const penaltyRate = matched.latePenalty ?? 50;
+      const dueDate = new Date().toISOString().split('T')[0];
+      const penalty = getCalculatedPenalty(dueDate, penaltyRate);
       const finalPaid = Math.max(0, (baseAmount + penalty) - discount);
 
       setPaymentData(prev => ({
@@ -97,7 +135,9 @@ export const FeeCollection = () => {
         amount: baseAmount,
         discount: discount,
         penalty: penalty,
-        paidAmount: finalPaid
+        paidAmount: finalPaid,
+        dueDate: dueDate,
+        penaltyRate: penaltyRate
       }));
     } else {
       setPaymentData(prev => ({
@@ -106,7 +146,9 @@ export const FeeCollection = () => {
         amount: 0,
         discount: 0,
         penalty: 0,
-        paidAmount: 0
+        paidAmount: 0,
+        dueDate: new Date().toISOString().split('T')[0],
+        penaltyRate: 50
       }));
     }
   };
@@ -153,7 +195,9 @@ export const FeeCollection = () => {
       paymentMode: paymentData.paymentMode,
       transactionId: paymentData.transactionId,
       status: balance <= 0 ? 'Paid' : (paymentData.paidAmount > 0 ? 'Partial' : 'Pending'),
-      remarks: paymentData.remarks
+      remarks: paymentData.remarks,
+      dueDate: paymentData.dueDate,
+      penaltyRate: paymentData.penaltyRate
     };
 
     addFeePayment(newPayment);
@@ -466,7 +510,13 @@ export const FeeCollection = () => {
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Receipt</th>
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Inst.</th>
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Student</th>
+                    <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Father's Name</th>
+                    <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Mobile No</th>
+                    <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Course Name</th>
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Fee Type</th>
+                    <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Total Fees</th>
+                    <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Discount</th>
+                    <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Late Fees</th>
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Paid</th>
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest">Balance</th>
                     <th className="px-8 py-4 text-[9px] font-black text-[#888888] uppercase tracking-widest text-center">Action</th>
@@ -490,9 +540,15 @@ export const FeeCollection = () => {
                           <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{getInstallmentNumber(payment.date, payment.studentId)}</span>
                         </td>
                         <td className="px-8 py-6 font-bold text-[10px] text-[#141414] uppercase tracking-tight">{student?.name || 'Unknown'}</td>
+                        <td className="px-8 py-6 font-bold text-[10px] text-[#141414] uppercase tracking-tight">{student?.fatherName || '--'}</td>
+                        <td className="px-8 py-6 font-bold text-[10px] text-[#141414] uppercase tracking-tight">{student?.contact || '--'}</td>
+                        <td className="px-8 py-6 font-bold text-[10px] text-blue-600 uppercase tracking-tight">{student?.course || '--'}</td>
                         <td className="px-8 py-6">
                           <span className="px-3 py-1 bg-gray-50 text-[8px] font-black uppercase tracking-widest rounded-full">{payment.feeType}</span>
                         </td>
+                        <td className="px-8 py-6 text-xs font-black text-gray-800">₹{(payment.amount ?? 0).toLocaleString()}</td>
+                        <td className="px-8 py-6 text-xs font-black text-orange-500">₹{(payment.discount ?? 0).toLocaleString()}</td>
+                        <td className="px-8 py-6 text-xs font-black text-red-500">₹{(payment.penalty ?? 0).toLocaleString()}</td>
                         <td className="px-8 py-6 text-xs font-black text-emerald-600">₹{payment.paidAmount.toLocaleString()}</td>
                         <td className="px-8 py-6 text-xs font-black text-red-600">₹{payment.balance.toLocaleString()}</td>
                         <td className="px-8 py-6">
@@ -677,6 +733,42 @@ export const FeeCollection = () => {
                       className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-[#888888] uppercase tracking-widest ml-1">Due Date</label>
+                    <input 
+                      type="date"
+                      value={paymentData.dueDate || ''}
+                      onChange={(e) => {
+                        const dStr = e.target.value;
+                        const calcPenalty = getCalculatedPenalty(dStr, paymentData.penaltyRate || 0);
+                        setPaymentData(prev => ({
+                          ...prev,
+                          dueDate: dStr,
+                          penalty: calcPenalty,
+                          paidAmount: Math.max(0, (prev.amount + calcPenalty) - prev.discount)
+                        }));
+                      }}
+                      className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-[#141414]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-[#888888] uppercase tracking-widest ml-1">Late Penalty Rate / Day (₹)</label>
+                    <input 
+                      type="number"
+                      value={paymentData.penaltyRate === undefined ? 50 : paymentData.penaltyRate}
+                      onChange={(e) => {
+                        const rVal = e.target.value === '' ? 0 : Number(e.target.value);
+                        const calcPenalty = getCalculatedPenalty(paymentData.dueDate, rVal);
+                        setPaymentData(prev => ({
+                          ...prev,
+                          penaltyRate: rVal,
+                          penalty: calcPenalty,
+                          paidAmount: Math.max(0, (prev.amount + calcPenalty) - prev.discount)
+                        }));
+                      }}
+                      className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-[#141414]"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -850,14 +942,7 @@ export const FeeCollection = () => {
                                    <div className="px-4 flex items-center font-black bg-blue-50 text-blue-600 text-[10px]">Student Name</div>
                                    <div className="px-4 flex items-center font-black uppercase text-blue-600 text-[10px]">{student.name}</div>
                                   </div>
-                                  <div className="grid grid-cols-2 divide-x-2 divide-black h-10">
-                                    <div className="px-4 flex items-center font-black bg-blue-50 text-[10px]">Payment Mode</div>
-                                    <div className="px-4 flex items-center font-black uppercase text-emerald-600 truncate text-[10px]">
-                                      {showReceipt.paymentModes && showReceipt.paymentModes.length > 0 
-                                        ? showReceipt.paymentModes.map(m => m.mode).join(' + ')
-                                        : showReceipt.paymentMode || 'N/A'}
-                                    </div>
-                                 </div>
+                                 
                                </div>
 
                                <div className="divide-y-2 divide-black text-left">
