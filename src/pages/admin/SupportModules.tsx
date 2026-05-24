@@ -441,8 +441,10 @@ export const CertificateStudio = () => {
               onChange={(e) => setSelectedStudentId(e.target.value)}
               className="px-4 py-2 bg-white border border-gray-100 rounded-xl text-[10px] font-black uppercase outline-none focus:ring-2 focus:ring-blue-600 shadow-sm"
             >
-              {students.slice(0, 10).map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
+              {students.map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.name} {s.fatherName ? `(S/O: ${s.fatherName})` : ''} - {s.course} {s.contact ? `[${s.contact}]` : ''}
+                </option>
               ))}
             </select>
           )}

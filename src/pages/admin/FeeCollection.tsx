@@ -21,10 +21,130 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx } from 'clsx';
-import { Student, FeePayment } from '../../types';
+import { Student, FeePayment, FeeHeadDetail, PaymentModeDetail } from '../../types';
+
+const getClubbedFeePayments = (payments: FeePayment[]): FeePayment[] => {
+  if (!payments || payments.length === 0) return [];
+  
+  // Group by studentId and date
+  const groups: { [key: string]: FeePayment[] } = {};
+  payments.forEach(p => {
+    const key = `${p.studentId}_${p.date}`;
+    if (!groups[key]) {
+      groups[key] = [];
+    }
+    groups[key].push(p);
+  });
+
+  const clubbed: FeePayment[] = [];
+  
+  Object.values(groups).forEach(group => {
+    if (group.length === 1) {
+      clubbed.push(group[0]);
+      return;
+    }
+    
+    // Sort group chronologically (oldest first) to accurately trace balance decrement
+    const sortedGroup = [...group].sort((a, b) => a.id.localeCompare(b.id));
+    const first = sortedGroup[0];
+    const last = sortedGroup[sortedGroup.length - 1];
+    
+    // Merge receipt numbers
+    const uniqueReceipts = Array.from(new Set(sortedGroup.map(g => g.receiptNo).filter(Boolean)));
+    const receiptNo = uniqueReceipts.join(' + ');
+    
+    // Merge fee types
+    const uniqueFeeTypes = Array.from(new Set(sortedGroup.map(g => g.feeType).filter(Boolean)));
+    const feeType = uniqueFeeTypes.join(', ');
+    
+    // Merge heads
+    const allHeads: FeeHeadDetail[] = [];
+    sortedGroup.forEach(p => {
+      if (p.heads && p.heads.length > 0) {
+        allHeads.push(...p.heads);
+      } else {
+        allHeads.push({
+          type: p.feeType,
+          amount: p.amount || 0,
+          discount: p.discount || 0,
+          penalty: p.penalty || 0,
+          dueDate: p.dueDate,
+          penaltyRate: p.penaltyRate
+        });
+      }
+    });
+
+    // Merge payment modes
+    const allPaymentModes: PaymentModeDetail[] = [];
+    sortedGroup.forEach(p => {
+      if (p.paymentModes && p.paymentModes.length > 0) {
+        allPaymentModes.push(...p.paymentModes);
+      } else {
+        allPaymentModes.push({
+          mode: p.paymentMode || 'Cash',
+          amount: p.paidAmount || 0,
+          transactionId: p.transactionId || ''
+        });
+      }
+    });
+    
+    // De-duplicate paymentModes by mode name
+    const mergedModesMap: { [mode: string]: PaymentModeDetail } = {};
+    allPaymentModes.forEach(m => {
+      if (!mergedModesMap[m.mode]) {
+        mergedModesMap[m.mode] = { ...m };
+      } else {
+        mergedModesMap[m.mode].amount += m.amount;
+        if (m.transactionId && !mergedModesMap[m.mode].transactionId?.includes(m.transactionId)) {
+          mergedModesMap[m.mode].transactionId = mergedModesMap[m.mode].transactionId 
+            ? `${mergedModesMap[m.mode].transactionId}, ${m.transactionId}`
+            : m.transactionId;
+        }
+      }
+    });
+    const mergedPaymentModes = Object.values(mergedModesMap);
+    const paymentMode = mergedPaymentModes.map(m => m.mode).join(' + ');
+    
+    const amount = sortedGroup.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const discount = sortedGroup.reduce((sum, p) => sum + (p.discount || 0), 0);
+    const penalty = sortedGroup.reduce((sum, p) => sum + (p.penalty || 0), 0);
+    const paidAmount = sortedGroup.reduce((sum, p) => sum + (p.paidAmount || 0), 0);
+    
+    const balance = last.balance;
+    const finalStatus = balance <= 0 ? 'Paid' : (paidAmount > 0 ? 'Partial' : 'Pending');
+    
+    const uniqueRemarks = Array.from(new Set(sortedGroup.map(g => g.remarks).filter(Boolean)));
+    const remarks = uniqueRemarks.join(' | ');
+    const collectionTime = first.collectionTime || '';
+
+    clubbed.push({
+      id: first.id,
+      studentId: first.studentId,
+      receiptNo,
+      date: first.date,
+      collectionTime,
+      feeType,
+      heads: allHeads,
+      amount,
+      discount,
+      penalty,
+      paidAmount,
+      balance,
+      paymentMode,
+      paymentModes: mergedPaymentModes,
+      status: finalStatus,
+      remarks,
+      dueDate: last.dueDate || first.dueDate,
+      penaltyRate: last.penaltyRate || first.penaltyRate
+    } as FeePayment);
+  });
+  
+  return clubbed;
+};
 
 export const FeeCollection = () => {
   const { students, feePayments, feeStructures, addFeePayment, businessProfile, courses, franchises } = useApp();
+  const clubbedFeePayments = getClubbedFeePayments(feePayments || []);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCourse, setFilterCourse] = useState('ALL');
   const [filterBranch, setFilterBranch] = useState('ALL');
@@ -266,7 +386,7 @@ export const FeeCollection = () => {
   };
 
   const getInstallmentNumber = (currentDate: string, studentId: string) => {
-    const studentPayments = (feePayments || [])
+    const studentPayments = (clubbedFeePayments || [])
       .filter(p => p.studentId === studentId)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
@@ -403,38 +523,51 @@ export const FeeCollection = () => {
                   className="bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden"
                 >
                   {(filteredStudents || []).length > 0 ? (
-                    (filteredStudents || []).map(s => (
-                      <button 
-                        key={s.id}
-                        onClick={() => handleSelectStudent(s)}
-                        className="w-full p-4 flex items-center space-x-3 hover:bg-blue-50 text-left transition-colors border-b border-gray-50 last:border-0"
-                      >
-                        <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400">
-                          <User size={18} />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-xs font-black text-[#141414] uppercase">{s.name}</p>
-                          <p className="text-[8px] font-black text-blue-600 uppercase tracking-widest">{s.admissionNo}</p>
-                        </div>
-                        <div 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectStudent(s);
-                            const studentPayments = (feePayments || []).filter(p => p.studentId === s.id);
-                            if (studentPayments.length > 0) {
-                              setReceiptType('HISTORY');
-                              setShowReceipt(studentPayments[studentPayments.length - 1]);
-                            } else {
-                              alert('No payment records found for this student.');
-                            }
-                          }}
-                          className="p-2 border border-gray-100 rounded-lg hover:bg-white hover:text-purple-600 text-gray-400 transition-all"
-                          title="Print Summary"
+                    (filteredStudents || []).map(s => {
+                      const sFranchise = (franchises || []).find(f => f.id === s.franchiseId);
+                      return (
+                        <button 
+                          key={s.id}
+                          onClick={() => handleSelectStudent(s)}
+                          className="w-full p-4 flex items-center space-x-3 hover:bg-blue-50 text-left transition-colors border-b border-gray-50 last:border-0"
                         >
-                          <FileText size={14} />
-                        </div>
-                      </button>
-                    ))
+                          <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 flex-shrink-0">
+                            <User size={18} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-baseline justify-between gap-1">
+                              <p className="text-xs font-black text-[#141414] uppercase truncate">{s.name}</p>
+                              {s.fatherName && (
+                                <span className="text-[9px] font-bold text-gray-500 capitalize truncate">S/O: {s.fatherName}</span>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-1 text-[8px] font-black text-gray-400 uppercase tracking-tight">
+                              <span className="text-blue-600 tracking-widest font-mono">{s.admissionNo}</span>
+                              {s.contact && <span>• {s.contact}</span>}
+                              <span className="text-cyan-600 max-w-[120px] truncate">{s.course}</span>
+                              {sFranchise && <span className="text-purple-600 max-w-[100px] truncate">• {sFranchise.name}</span>}
+                            </div>
+                          </div>
+                          <div 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectStudent(s);
+                              const studentPayments = (clubbedFeePayments || []).filter(p => p.studentId === s.id);
+                              if (studentPayments.length > 0) {
+                                setReceiptType('HISTORY');
+                                setShowReceipt(studentPayments[studentPayments.length - 1]);
+                              } else {
+                                alert('No payment records found for this student.');
+                              }
+                            }}
+                            className="p-2 border border-gray-100 rounded-lg hover:bg-white hover:text-purple-600 text-gray-400 transition-all flex-shrink-0"
+                            title="Print Summary"
+                          >
+                            <FileText size={14} />
+                          </div>
+                        </button>
+                      );
+                    })
                   ) : (
                     <div className="p-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">No matching results</div>
                   )}
@@ -484,7 +617,7 @@ export const FeeCollection = () => {
                     </button>
                     <button 
                       onClick={() => {
-                        const studentPayments = (feePayments || []).filter(p => p.studentId === selectedStudent.id);
+                        const studentPayments = (clubbedFeePayments || []).filter(p => p.studentId === selectedStudent.id);
                         if (studentPayments.length > 0) {
                           setReceiptType('HISTORY');
                           setShowReceipt(studentPayments[studentPayments.length - 1]);
@@ -556,7 +689,7 @@ export const FeeCollection = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {(feePayments || []).filter(p => !selectedStudent || p.studentId === selectedStudent.id).slice().reverse().map(payment => {
+                  {(clubbedFeePayments || []).filter(p => !selectedStudent || p.studentId === selectedStudent.id).slice().reverse().map(payment => {
                     const student = (students || []).find(s => s.id === payment.studentId);
                     return (
                       <tr key={payment.id} className="hover:bg-blue-50/20 transition-colors group">
@@ -598,7 +731,7 @@ export const FeeCollection = () => {
                              </button>
                              <button 
                                onClick={() => {
-                                 const studentPayments = feePayments.filter(p => p.studentId === payment.studentId);
+                                 const studentPayments = clubbedFeePayments.filter(p => p.studentId === payment.studentId);
                                  setReceiptType('HISTORY');
                                  setShowReceipt(studentPayments[studentPayments.length - 1]);
                                }}
@@ -621,7 +754,7 @@ export const FeeCollection = () => {
                   })}
                 </tbody>
               </table>
-              {(feePayments.length === 0 || (selectedStudent && feePayments.filter(p => p.studentId === selectedStudent.id).length === 0)) && (
+              {(clubbedFeePayments.length === 0 || (selectedStudent && clubbedFeePayments.filter(p => p.studentId === selectedStudent.id).length === 0)) && (
                 <div className="p-20 text-center space-y-4">
                   <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-200">
                     <History size={32} />
@@ -1195,7 +1328,7 @@ export const FeeCollection = () => {
                                    const student = students.find(s => s.id === showReceipt.studentId);
                                    if (!student) return null;
                                    
-                                   const studentPayments = feePayments.filter(p => p.studentId === student.id);
+                                   const studentPayments = clubbedFeePayments.filter(p => p.studentId === student.id);
                                    const summary: Record<string, { amount: number, discount: number, penalty: number, paid: number }> = {};
                                    
                                    summary['Course Fee'] = {
@@ -1355,7 +1488,7 @@ export const FeeCollection = () => {
                                 </thead>
                                 <tbody className="divide-y-[1.5px] divide-black border-b-[1.5px] border-r-[1.5px] border-black">
                                    {(() => {
-                                      const studentPayments = (feePayments || [])
+                                      const studentPayments = (clubbedFeePayments || [])
                                         .filter(p => p.studentId === showReceipt.studentId)
                                         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
                                       
@@ -1379,7 +1512,7 @@ export const FeeCollection = () => {
                                       });
                                    })()}
                                    {(() => {
-                                       const studentPayments = (feePayments || []).filter(p => p.studentId === showReceipt.studentId);
+                                       const studentPayments = (clubbedFeePayments || []).filter(p => p.studentId === showReceipt.studentId);
                                        const totalPaid = studentPayments.reduce((acc, p) => acc + p.paidAmount, 0);
                                        
                                        return (

@@ -53,60 +53,76 @@ export const StudentLedger = () => {
     const totalCredit = totalPaid + totalDiscount;
     const balance = Math.max(0, totalDebit - totalCredit);
 
-    // Build transaction list
-    // 1. Initial Debit (Course Fee)
-    const transactions: any[] = [
-      {
-        id: `debit-${student.id}`,
-        date: student.admissionDate,
-        description: `Course Admission: ${student.course}`,
-        type: 'DEBIT',
-        amount: student.totalFees || 0,
-        balance: student.totalFees || 0
-      }
-    ];
+    // Build comprehensive transaction list date-wise
+    const rawTx: any[] = [];
 
-    // 2. Credits and Debits (Payments + Penalties + Discounts)
-    let runningBalance = student.totalFees || 0;
-    const sortedPayments = [...studentPayments].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
-    sortedPayments.forEach(p => {
-      // If there is a penalty, it increases running balance by the penalty amount
+    // 1. Initial Course Admission Debit
+    rawTx.push({
+      id: `debit-${student.id}`,
+      date: student.admissionDate || new Date().toISOString().split('T')[0],
+      description: `Course Admission: ${student.course}`,
+      type: 'DEBIT',
+      amount: student.totalFees || 0,
+    });
+
+    // 2. Add penalty charges, discount allowances, and paid receipts dynamically
+    studentPayments.forEach(p => {
       if (p.penalty && p.penalty > 0) {
-        runningBalance += p.penalty;
-        transactions.push({
+        rawTx.push({
           id: `${p.id}-penalty`,
           date: p.date,
           description: `Late Fee Charged: Ref ${p.receiptNo}`,
           type: 'DEBIT',
-          amount: p.penalty,
-          balance: runningBalance
+          amount: p.penalty
         });
       }
 
-      // If there is a discount, it decreases running balance by discount amount (acting as a credit)
       if (p.discount && p.discount > 0) {
-        runningBalance -= p.discount;
-        transactions.push({
+        rawTx.push({
           id: `${p.id}-discount`,
           date: p.date,
           description: `Discount Applied: Ref ${p.receiptNo}`,
           type: 'CREDIT',
-          amount: p.discount,
-          balance: runningBalance
+          amount: p.discount
         });
       }
 
-      // The actual paid amount decreases the running balance
-      runningBalance -= p.paidAmount;
-      transactions.push({
-        id: p.id,
-        date: p.date,
-        description: `Fee Receipt: ${p.receiptNo} (${p.feeType})`,
-        type: 'CREDIT',
-        amount: p.paidAmount,
+      if (p.paidAmount && p.paidAmount > 0) {
+        rawTx.push({
+          id: p.id,
+          date: p.date,
+          description: `Fee Receipt: ${p.receiptNo} (${p.feeType})`,
+          type: 'CREDIT',
+          amount: p.paidAmount
+        });
+      }
+    });
+
+    // Sort all raw transactions strictly by date
+    const sortedRaw = [...rawTx].sort((a, b) => {
+      const timeA = new Date(a.date).getTime();
+      const timeB = new Date(b.date).getTime();
+      if (timeA !== timeB) return timeA - timeB;
+      
+      // If of the exact same date, process DEBITS first so that a charge is registered before it is offset by credit
+      if (a.type !== b.type) {
+        return a.type === 'DEBIT' ? -1 : 1;
+      }
+      return a.id.localeCompare(b.id);
+    });
+
+    // Recompute chronological running balance
+    let runningBalance = 0;
+    const transactions = sortedRaw.map(tx => {
+      if (tx.type === 'DEBIT') {
+        runningBalance += tx.amount;
+      } else {
+        runningBalance -= tx.amount;
+      }
+      return {
+        ...tx,
         balance: runningBalance
-      });
+      };
     });
 
     return {
@@ -389,8 +405,17 @@ export const StudentLedger = () => {
                             <ChevronRight size={18} />
                          </div>
                          <div>
-                            <p className="text-xs font-black text-[#141414] uppercase truncate max-w-[200px]">{student.name}</p>
-                            <p className="text-[8px] font-black text-blue-600 font-mono tracking-widest uppercase">ID: {student.admissionNo}</p>
+                            <p className="text-xs font-black text-[#141414] uppercase truncate max-w-[200px]" title={student.name}>
+                              {student.name}
+                              {student.fatherName && (
+                                <span className="text-[9px] font-bold text-gray-400 capitalize normal-case ml-1"> (S/O: {student.fatherName})</span>
+                              )}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[8px] font-black text-[#888888] font-mono tracking-wider uppercase mt-0.5">
+                              <span className="text-blue-600">ID: {student.admissionNo}</span>
+                              {student.contact && <span>• MOB: {student.contact}</span>}
+                              <span className="text-purple-600">• {student.course}</span>
+                            </div>
                          </div>
                       </div>
                     </td>

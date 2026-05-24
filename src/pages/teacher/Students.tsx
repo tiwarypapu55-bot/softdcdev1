@@ -71,8 +71,12 @@ export const Students = () => {
 
             <div className="space-y-4">
                <div>
-                  <h3 className="text-sm font-black text-[#141414] uppercase truncate">{student.name}</h3>
+                  <h3 className="text-sm font-black text-[#141414] uppercase truncate" title={student.name}>
+                    {student.name}
+                    {student.fatherName && <span className="text-[10px] text-gray-400 capitalize normal-case ml-1 font-bold"> (S/O: {student.fatherName})</span>}
+                  </h3>
                   <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest mt-0.5">{student.course}</p>
+                  {student.admissionNo && <p className="text-[8.5px] font-black text-[#888888] uppercase mt-0.5 font-mono">ID: {student.admissionNo}</p>}
                </div>
 
                <div className="space-y-2 border-t border-gray-50 pt-4">

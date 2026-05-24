@@ -102,8 +102,17 @@ export const Attendance = () => {
                              {student.name.charAt(0)}
                           </div>
                           <div>
-                            <p className="text-sm font-black text-[#141414] uppercase tracking-tight">{student.name}</p>
-                            <p className="text-[10px] font-mono text-[#888888] mt-0.5">{student.enrollmentNo}</p>
+                            <p className="text-sm font-black text-[#141414] uppercase tracking-tight">
+                              {student.name}
+                              {student.fatherName && (
+                                <span className="text-[11px] font-bold text-gray-400 capitalize normal-case ml-1"> (S/O: {student.fatherName})</span>
+                              )}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-x-1.5 text-[9px] font-mono text-[#888888] mt-0.5 uppercase tracking-wide">
+                              <span className="text-blue-600 font-bold">{student.enrollmentNo || student.admissionNo}</span>
+                              {student.contact && <span>• MOB: {student.contact}</span>}
+                              <span className="text-purple-600 font-bold">• {student.course}</span>
+                            </div>
                           </div>
                         </div>
                       </td>
