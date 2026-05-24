@@ -1129,47 +1129,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
-    setWalletTransactions(prev => [t, ...prev]);
+    const cleanTx = { ...t, id: ensureUUID(t.id) };
+    setWalletTransactions(prev => [cleanTx, ...prev]);
     
-    if (t.status === 'SUCCESS') {
-      const amountChange = t.type === 'CREDIT' ? t.amount : -t.amount;
-      const targetFranchise = franchises.find(f => f.id === t.franchiseId);
+    if (cleanTx.status === 'SUCCESS') {
+      const amountChange = cleanTx.type === 'CREDIT' ? cleanTx.amount : -cleanTx.amount;
+      const targetFranchise = franchises.find(f => f.id === cleanTx.franchiseId);
       const originalBalance = targetFranchise?.walletBalance || 0;
       const newBalance = originalBalance + amountChange;
 
       setFranchises(prev => prev.map(f => 
-        f.id === t.franchiseId 
+        f.id === cleanTx.franchiseId 
           ? { ...f, walletBalance: newBalance }
           : f
       ));
 
       try {
-        await supabaseAdmin.from('franchises').update({ wallet_balance: newBalance }).eq('id', t.franchiseId);
+        await supabaseAdmin.from('franchises').update({ wallet_balance: newBalance }).eq('id', cleanTx.franchiseId);
       } catch (err) {
         console.error('Failed to update wallet balance on franchise:', err);
       }
     }
 
     try {
-      await supabaseAdmin.from('wallet_transactions').insert(camelToSnake(t));
+      await supabaseAdmin.from('wallet_transactions').insert(camelToSnake(cleanTx));
     } catch (err) {
       console.error('Failed to sync wallet transaction to database:', err);
     }
   };
 
   const addBusinessTransaction = async (t: BusinessTransaction) => {
-    setBusinessTransactions(prev => [t, ...prev]);
+    const cleanTx = { ...t, id: ensureUUID(t.id) };
+    setBusinessTransactions(prev => [cleanTx, ...prev]);
     try {
-      await supabaseAdmin.from('business_transactions').insert(camelToSnake(t));
+      await supabaseAdmin.from('business_transactions').insert(camelToSnake(cleanTx));
     } catch (err) {
       console.error('Failed to sync business transaction to database:', err);
     }
   };
 
   const addVoucher = async (v: Voucher) => {
-    setVouchers(prev => [v, ...prev]);
+    const cleanVoucher = { ...v, id: ensureUUID(v.id) };
+    setVouchers(prev => [cleanVoucher, ...prev]);
     try {
-      await supabaseAdmin.from('vouchers').insert(camelToSnake(v));
+      await supabaseAdmin.from('vouchers').insert(camelToSnake(cleanVoucher));
     } catch (err) {
       console.error('Failed to sync voucher to database:', err);
     }
@@ -1178,7 +1181,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateVoucher = async (id: string, updates: Partial<Voucher>) => {
     setVouchers(prev => prev.map(v => v.id === id ? { ...v, ...updates } : v));
     try {
-      await supabaseAdmin.from('vouchers').update(camelToSnake(updates)).eq('id', id);
+      await supabaseAdmin.from('vouchers').update(camelToSnake(updates)).eq('id', ensureUUID(id));
     } catch (err) {
       console.error('Failed to sync update voucher on database:', err);
     }
@@ -1192,7 +1195,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     // Add transaction to wallet
     const newTx: WalletTransaction = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: generateUUID(),
       franchiseId: voucher.franchiseId,
       amount: voucher.amount,
       type: 'CREDIT',
@@ -1205,7 +1208,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Also add to business transactions
     await addBusinessTransaction({
-      id: Math.random().toString(36).substr(2, 9),
+      id: generateUUID(),
       date: new Date().toISOString().split('T')[0],
       type: 'INCOME',
       category: 'Franchise Fund',
@@ -1452,9 +1455,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addAnnouncement = async (a: Announcement) => {
-    setAnnouncements(prev => [a, ...prev]);
+    const cleanAnnouncement = { ...a, id: ensureUUID(a.id) };
+    setAnnouncements(prev => [cleanAnnouncement, ...prev]);
     try {
-      await supabaseAdmin.from('announcements').insert(camelToSnake(a));
+      await supabaseAdmin.from('announcements').insert(camelToSnake(cleanAnnouncement));
     } catch (err) {
       console.error('Failed to sync insert announcement:', err);
     }
@@ -1463,7 +1467,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateAnnouncement = async (id: string, updates: Partial<Announcement>) => {
     setAnnouncements(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
     try {
-      await supabaseAdmin.from('announcements').update(camelToSnake(updates)).eq('id', id);
+      await supabaseAdmin.from('announcements').update(camelToSnake(updates)).eq('id', ensureUUID(id));
     } catch (err) {
       console.error('Failed to sync update announcement:', err);
     }
@@ -1472,7 +1476,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteAnnouncement = async (id: string) => {
     setAnnouncements(prev => prev.filter(a => a.id !== id));
     try {
-      await supabaseAdmin.from('announcements').delete().eq('id', id);
+      await supabaseAdmin.from('announcements').delete().eq('id', ensureUUID(id));
     } catch (err) {
       console.error('Failed to sync delete announcement:', err);
     }
@@ -1558,7 +1562,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateFeeStructure = async (id: string, updates: Partial<FeeStructure>) => {
     setFeeStructures(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
     try {
-      await supabaseAdmin.from('fee_structures').update(camelToSnake(updates)).eq('id', id);
+      await supabaseAdmin.from('fee_structures').update(camelToSnake(updates)).eq('id', ensureUUID(id));
     } catch (err) {
       console.error('Failed to sync fee structure update:', err);
     }
@@ -1567,7 +1571,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteFeeStructure = async (id: string) => {
     setFeeStructures(prev => prev.filter(f => f.id !== id));
     try {
-      await supabaseAdmin.from('fee_structures').delete().eq('id', id);
+      await supabaseAdmin.from('fee_structures').delete().eq('id', ensureUUID(id));
     } catch (err) {
       console.error('Failed to sync fee structure delete:', err);
     }
@@ -1616,9 +1620,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.error('Failed to sync fee payment insert:', err);
     }
 
-    // Record as business transaction (Income)
+    // Record as business transaction (Income) with a valid UUID
     await addBusinessTransaction({
-      id: Math.random().toString(36).substr(2, 9),
+      id: generateUUID(),
       date: p.date,
       type: 'INCOME',
       category: 'Fee Collection',
@@ -1631,9 +1635,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addEnquiry = async (e: AdmissionEnquiry) => {
-    setEnquiries(prev => [e, ...prev]);
+    const cleanEnquiry = { ...e, id: ensureUUID(e.id) };
+    setEnquiries(prev => [cleanEnquiry, ...prev]);
     try {
-      await supabaseAdmin.from('admission_enquiries').insert(camelToSnake(e));
+      await supabaseAdmin.from('admission_enquiries').insert(camelToSnake(cleanEnquiry));
     } catch (err) {
       console.error('Failed to sync enquiry insert:', err);
     }
@@ -1642,7 +1647,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateEnquiry = async (id: string, updates: Partial<AdmissionEnquiry>) => {
     setEnquiries(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
     try {
-      await supabaseAdmin.from('admission_enquiries').update(camelToSnake(updates)).eq('id', id);
+      await supabaseAdmin.from('admission_enquiries').update(camelToSnake(updates)).eq('id', ensureUUID(id));
     } catch (err) {
       console.error('Failed to sync enquiry update:', err);
     }
@@ -1651,7 +1656,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteEnquiry = async (id: string) => {
     setEnquiries(prev => prev.filter(e => e.id !== id));
     try {
-      await supabaseAdmin.from('admission_enquiries').delete().eq('id', id);
+      await supabaseAdmin.from('admission_enquiries').delete().eq('id', ensureUUID(id));
     } catch (err) {
       console.error('Failed to sync enquiry delete:', err);
     }
