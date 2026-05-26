@@ -82,6 +82,7 @@ export interface Franchise {
   validityTo?: string;
   loginId?: string;
   password?: string;
+  directorName?: string;
   approvalCertificateUrl?: string;
   directorPhotoUrl?: string;
   logoUrl?: string;

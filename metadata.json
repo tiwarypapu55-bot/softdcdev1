@@ -2,5 +2,7 @@
   "name": "Remix: SOFTDEV TALLY GURU - Institute Management",
   "description": "Professional Institute and Franchise Management System for Softdev Tally Guru.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

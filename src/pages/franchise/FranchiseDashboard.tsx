@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { clsx } from 'clsx';
+import { FranchiseCollaborationCertificate } from '../../components/FranchiseCollaborationCertificate';
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -77,6 +78,7 @@ export const FranchiseDashboard = () => {
   const { students, currentUser, certificates, walletTransactions, franchises, logout, courses } = useApp();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<{ id: number, type: string, title: string, message: string, time: string, icon: any, color: string, bg: string }[]>([]);
+  const [showCollaborationCertificate, setShowCollaborationCertificate] = useState(false);
 
   const removeNotification = (id: number) => {
     setNotifications(notifications.filter(n => n.id !== id));
@@ -221,6 +223,13 @@ export const FranchiseDashboard = () => {
                  <RefreshCw size={14} className="text-[#888888]" />
               </button>
            </div>
+           <button 
+             onClick={() => setShowCollaborationCertificate(true)}
+             className="px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-black text-xs font-black uppercase tracking-widest rounded-2xl hover:from-amber-600 hover:to-amber-500 transition-all flex items-center space-x-2 shadow-sm cursor-pointer"
+           >
+              <Award size={16} />
+              <span>Collaboration Certificate</span>
+           </button>
            <button 
              onClick={() => navigate('/franchise/registration')}
              className="px-6 py-3 bg-[#141414] text-white text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-blue-600 transition-all flex items-center space-x-2"
@@ -512,6 +521,13 @@ export const FranchiseDashboard = () => {
               ))}
            </div>
         </div>
+      )}
+
+      {showCollaborationCertificate && currentFranchise && (
+        <FranchiseCollaborationCertificate 
+          franchise={currentFranchise} 
+          onClose={() => setShowCollaborationCertificate(false)} 
+        />
       )}
     </div>
   );

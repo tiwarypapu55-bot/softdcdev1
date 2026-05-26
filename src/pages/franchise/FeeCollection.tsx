@@ -23,6 +23,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { clsx } from 'clsx';
 import { Student, FeePayment, FeeHeadDetail, PaymentModeDetail } from '../../types';
 
+const discountOptions = [0, 50, 100, 200, 300, 500, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 8000, 10000];
+const penaltyRateOptions = [0, 5, 10, 20, 50, 100, 150, 200];
+
 const getClubbedFeePayments = (payments: FeePayment[]): FeePayment[] => {
   if (!payments || payments.length === 0) return [];
   
@@ -194,7 +197,8 @@ export const FeeCollection = () => {
     remarks: '',
     isFullPayment: true,
     dueDate: new Date().toISOString().split('T')[0],
-    penaltyRate: 50
+    penaltyRate: 50,
+    paymentModes: [{ mode: 'Cash', amount: 0, transactionId: '' }] as { mode: string; amount: number; transactionId: string }[]
   });
 
   // Reset payment data and load default matching course fee when modal opens or student changes
@@ -211,8 +215,8 @@ export const FeeCollection = () => {
         (f.courseName === selectedStudent.course || f.courseId === 'all' || f.courseName === 'All IT Courses')
       );
 
-      const baseAmount = matched ? (matched.amount || 0) : 0;
-      const discount = matched ? (matched.discount || 0) : 0;
+      const baseAmount = Math.max(0, (selectedStudent.totalFees || 0) - (selectedStudent.paidAmount || 0));
+      const discount = 0;
       const penaltyRate = matched ? (matched.latePenalty ?? 50) : 50;
       const dueDate = new Date().toISOString().split('T')[0];
       const penalty = getCalculatedPenalty(dueDate, penaltyRate);
@@ -229,7 +233,8 @@ export const FeeCollection = () => {
         remarks: '',
         isFullPayment: true,
         dueDate: dueDate,
-        penaltyRate: penaltyRate
+        penaltyRate: penaltyRate,
+        paymentModes: [{ mode: 'Cash', amount: finalPaid, transactionId: '' }]
       });
     }
   }, [showPaymentModal, selectedStudent, feeStructures]);
@@ -247,8 +252,10 @@ export const FeeCollection = () => {
     );
 
     if (matched) {
-      const baseAmount = matched.amount || 0;
-      const discount = matched.discount || 0;
+      const baseAmount = chosenType === 'Course Fee'
+        ? Math.max(0, (selectedStudent?.totalFees || 0) - (selectedStudent?.paidAmount || 0))
+        : (matched.amount || 0);
+      const discount = chosenType === 'Course Fee' ? 0 : (matched.discount || 0);
       const penaltyRate = matched.latePenalty ?? 50;
       const dueDate = new Date().toISOString().split('T')[0];
       const penalty = getCalculatedPenalty(dueDate, penaltyRate);
@@ -262,7 +269,8 @@ export const FeeCollection = () => {
         penalty: penalty,
         paidAmount: finalPaid,
         dueDate: dueDate,
-        penaltyRate: penaltyRate
+        penaltyRate: penaltyRate,
+        paymentModes: [{ mode: prev.paymentModes?.[0]?.mode || 'Cash', amount: finalPaid, transactionId: '' }]
       }));
     } else {
       setPaymentData(prev => ({
@@ -273,7 +281,8 @@ export const FeeCollection = () => {
         penalty: 0,
         paidAmount: 0,
         dueDate: new Date().toISOString().split('T')[0],
-        penaltyRate: 50
+        penaltyRate: 50,
+        paymentModes: [{ mode: prev.paymentModes?.[0]?.mode || 'Cash', amount: 0, transactionId: '' }]
       }));
     }
   };
@@ -303,8 +312,22 @@ export const FeeCollection = () => {
     if (!selectedStudent) return;
 
     const netAmount = (paymentData.amount + paymentData.penalty) - paymentData.discount;
-    const balance = netAmount - paymentData.paidAmount;
     
+    // Calculate total paid across all payment modes if using multi-mode, otherwise fallback
+    const totalPaidInModes = paymentData.paymentModes && paymentData.paymentModes.length > 0
+      ? paymentData.paymentModes.reduce((acc, m) => acc + m.amount, 0)
+      : paymentData.paidAmount;
+
+    const balance = netAmount - totalPaidInModes;
+    
+    const modeString = paymentData.paymentModes && paymentData.paymentModes.length > 0
+      ? paymentData.paymentModes.map(m => m.mode).join(' + ')
+      : paymentData.paymentMode;
+    
+    const txnIdString = paymentData.paymentModes && paymentData.paymentModes.length > 0
+      ? paymentData.paymentModes.map(m => m.transactionId).filter(Boolean).join(', ')
+      : paymentData.transactionId;
+
     const newPayment: FeePayment = {
       id: `p${Date.now()}`,
       studentId: selectedStudent.id,
@@ -315,11 +338,13 @@ export const FeeCollection = () => {
       amount: paymentData.amount,
       discount: paymentData.discount,
       penalty: paymentData.penalty,
-      paidAmount: paymentData.paidAmount,
+      paidAmount: totalPaidInModes,
       balance: balance > 0 ? balance : 0,
-      paymentMode: paymentData.paymentMode,
-      transactionId: paymentData.transactionId,
-      status: balance <= 0 ? 'Paid' : (paymentData.paidAmount > 0 ? 'Partial' : 'Pending'),
+      paymentMode: modeString,
+      paymentModes: paymentData.paymentModes && paymentData.paymentModes.length > 0 
+        ? paymentData.paymentModes 
+        : [{ mode: paymentData.paymentMode, amount: totalPaidInModes, transactionId: paymentData.transactionId }],
+      status: balance <= 0 ? 'Paid' : (totalPaidInModes > 0 ? 'Partial' : 'Pending'),
       remarks: paymentData.remarks,
       dueDate: paymentData.dueDate,
       penaltyRate: paymentData.penaltyRate
@@ -1104,67 +1129,109 @@ export const FeeCollection = () => {
                       <option value="Exam Fee">Exam Fee</option>
                     </select>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black text-[#888888] uppercase tracking-widest ml-1">Payment Mode</label>
-                    <select 
-                      value={paymentData.paymentMode}
-                      onChange={(e) => setPaymentData({...paymentData, paymentMode: e.target.value})}
-                      className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 font-bold"
-                    >
-                      <option>Cash</option>
-                      <option>UPI / Online</option>
-                      <option>Bank Transfer</option>
-                      <option>Check</option>
-                    </select>
-                  </div>
+                  
                   <div className="space-y-2">
                     <label className="text-[9px] font-black text-[#888888] uppercase tracking-widest ml-1">Total Fee Amount (₹)</label>
                     <input 
                       type="number"
                       required
-                      value={paymentData.amount || ''}
+                      value={paymentData.amount !== undefined && paymentData.amount !== null ? paymentData.amount : ''}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => {
                         const amountVal = e.target.value === '' ? 0 : Number(e.target.value);
-                        setPaymentData(prev => ({
-                          ...prev,
-                          amount: amountVal,
-                          paidAmount: Math.max(0, (amountVal + prev.penalty) - prev.discount)
-                        }));
+                        setPaymentData(prev => {
+                          const paid = Math.max(0, (amountVal + prev.penalty) - prev.discount);
+                          const newModes = [...(prev.paymentModes || [])];
+                          if (newModes.length === 1) {
+                            newModes[0].amount = paid;
+                          }
+                          return {
+                            ...prev,
+                            amount: amountVal,
+                            paidAmount: paid,
+                            paymentModes: newModes
+                          };
+                        });
                       }}
                       className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[9px] font-black text-emerald-600 uppercase tracking-widest ml-1">Discount Given (₹)</label>
-                    <input 
-                      type="number"
-                      value={paymentData.discount || ''}
-                      onFocus={(e) => e.target.select()}
+                    <select
+                      value={discountOptions.includes(paymentData.discount ?? 0) ? (paymentData.discount ?? 0).toString() : 'custom'}
                       onChange={(e) => {
-                        const discountVal = e.target.value === '' ? 0 : Number(e.target.value);
-                        setPaymentData(prev => ({
-                          ...prev,
-                          discount: discountVal,
-                          paidAmount: Math.max(0, (prev.amount + prev.penalty) - discountVal)
-                        }));
+                        const val = e.target.value;
+                        const discountVal = val === 'custom' ? (paymentData.discount || 0) : Number(val);
+                        setPaymentData(prev => {
+                          const paid = Math.max(0, (prev.amount + prev.penalty) - discountVal);
+                          const newModes = [...(prev.paymentModes || [])];
+                          if (newModes.length === 1) {
+                            newModes[0].amount = paid;
+                          }
+                          return {
+                            ...prev,
+                            discount: discountVal,
+                            paidAmount: paid,
+                            paymentModes: newModes
+                          };
+                        });
                       }}
-                      className="w-full p-4 bg-emerald-50 border border-emerald-100 rounded-2xl outline-none font-bold text-emerald-700"
-                    />
+                      className="w-full p-4 bg-emerald-50 border border-emerald-100 rounded-2xl outline-none font-bold text-emerald-700 appearance-none cursor-pointer text-sm"
+                    >
+                      {discountOptions.map(opt => (
+                        <option key={opt} value={opt}>₹{opt}</option>
+                      ))}
+                      <option value="custom">Custom...</option>
+                    </select>
+                    {!discountOptions.includes(paymentData.discount ?? 0) && (
+                      <input 
+                        type="number"
+                        required
+                        value={paymentData.discount !== undefined && paymentData.discount !== null ? paymentData.discount : ''}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => {
+                          const discountVal = e.target.value === '' ? 0 : Number(e.target.value);
+                          setPaymentData(prev => {
+                            const paid = Math.max(0, (prev.amount + prev.penalty) - discountVal);
+                            const newModes = [...(prev.paymentModes || [])];
+                            if (newModes.length === 1) {
+                              newModes[0].amount = paid;
+                            }
+                            return {
+                              ...prev,
+                              discount: discountVal,
+                              paidAmount: paid,
+                              paymentModes: newModes
+                            };
+                          });
+                        }}
+                        className="w-full p-4 bg-emerald-50 border border-emerald-100 rounded-2xl outline-none font-bold text-emerald-700 animate-in slide-in-from-top-2 text-sm mt-2"
+                        placeholder="Enter custom discount..."
+                      />
+                    )}
                   </div>
                   <div className="space-y-2">
                     <label className="text-[9px] font-black text-red-500 uppercase tracking-widest ml-1">Penalty / Late Fee (₹)</label>
                     <input 
                       type="number"
-                      value={paymentData.penalty || ''}
+                      value={paymentData.penalty !== undefined && paymentData.penalty !== null ? paymentData.penalty : ''}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => {
                         const penaltyVal = e.target.value === '' ? 0 : Number(e.target.value);
-                        setPaymentData(prev => ({
-                          ...prev,
-                          penalty: penaltyVal,
-                          paidAmount: Math.max(0, (prev.amount + penaltyVal) - prev.discount)
-                        }));
+                        setPaymentData(prev => {
+                          const paid = Math.max(0, (prev.amount + penaltyVal) - prev.discount);
+                          const newModes = [...(prev.paymentModes || [])];
+                          if (newModes.length === 1) {
+                            newModes[0].amount = paid;
+                          }
+                          return {
+                            ...prev,
+                            penalty: penaltyVal,
+                            paidAmount: paid,
+                            paymentModes: newModes
+                          };
+                        });
                       }}
                       className="w-full p-4 bg-red-50 border border-red-100 rounded-2xl outline-none font-bold text-red-700"
                     />
@@ -1174,7 +1241,20 @@ export const FeeCollection = () => {
                       <label className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Paid Amount (₹) *</label>
                       <button 
                         type="button"
-                        onClick={() => setPaymentData({...paymentData, paidAmount: (paymentData.amount + paymentData.penalty) - paymentData.discount})}
+                        onClick={() => {
+                          const fullPaid = (paymentData.amount + paymentData.penalty) - paymentData.discount;
+                          setPaymentData(prev => {
+                            const newModes = [...(prev.paymentModes || [])];
+                            if (newModes.length === 1) {
+                              newModes[0].amount = fullPaid;
+                            }
+                            return {
+                              ...prev,
+                              paidAmount: fullPaid,
+                              paymentModes: newModes
+                            };
+                          });
+                        }}
                         className="text-[8px] font-black text-blue-600 uppercase tracking-wider hover:underline"
                       >
                         Set Full Payment
@@ -1183,22 +1263,26 @@ export const FeeCollection = () => {
                     <input 
                       type="number"
                       required
-                      value={paymentData.paidAmount || ''}
+                      value={paymentData.paidAmount !== undefined && paymentData.paidAmount !== null ? paymentData.paidAmount : ''}
                       onFocus={(e) => e.target.select()}
-                      onChange={(e) => setPaymentData({...paymentData, paidAmount: e.target.value === '' ? 0 : Number(e.target.value)})}
+                      onChange={(e) => {
+                        const paidVal = e.target.value === '' ? 0 : Number(e.target.value);
+                        setPaymentData(prev => {
+                          const newModes = [...(prev.paymentModes || [])];
+                          if (newModes.length === 1) {
+                            newModes[0].amount = paidVal;
+                          }
+                          return {
+                            ...prev,
+                            paidAmount: paidVal,
+                            paymentModes: newModes
+                          };
+                        });
+                      }}
                       className="w-full p-4 bg-blue-50 border border-blue-100 rounded-2xl outline-none font-black text-blue-800 text-lg"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black text-[#888888] uppercase tracking-widest ml-1">Transaction ID / Ref (Optional)</label>
-                    <input 
-                      type="text"
-                      value={paymentData.transactionId}
-                      onChange={(e) => setPaymentData({...paymentData, transactionId: e.target.value})}
-                      placeholder="e.g. TXN123456"
-                      className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold"
-                    />
-                  </div>
+                  
                   <div className="space-y-2">
                     <label className="text-[9px] font-black text-[#888888] uppercase tracking-widest ml-1">Due Date</label>
                     <input 
@@ -1206,34 +1290,202 @@ export const FeeCollection = () => {
                       value={paymentData.dueDate || ''}
                       onChange={(e) => {
                         const dStr = e.target.value;
-                        const calcPenalty = getCalculatedPenalty(dStr, paymentData.penaltyRate || 0);
-                        setPaymentData(prev => ({
-                          ...prev,
-                          dueDate: dStr,
-                          penalty: calcPenalty,
-                          paidAmount: Math.max(0, (prev.amount + calcPenalty) - prev.discount)
-                        }));
+                        const calcPenalty = getCalculatedPenalty(dStr, paymentData.penaltyRate ?? 50);
+                        setPaymentData(prev => {
+                          const paid = Math.max(0, (prev.amount + calcPenalty) - prev.discount);
+                          const newModes = [...(prev.paymentModes || [])];
+                          if (newModes.length === 1) {
+                            newModes[0].amount = paid;
+                          }
+                          return {
+                            ...prev,
+                            dueDate: dStr,
+                            penalty: calcPenalty,
+                            paidAmount: paid,
+                            paymentModes: newModes
+                          };
+                        });
                       }}
                       className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-[#141414]"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[9px] font-black text-[#888888] uppercase tracking-widest ml-1">Late Penalty Rate / Day (₹)</label>
-                    <input 
-                      type="number"
-                      value={paymentData.penaltyRate === undefined ? 50 : paymentData.penaltyRate}
+                    <select
+                      value={penaltyRateOptions.includes(paymentData.penaltyRate === undefined ? 50 : paymentData.penaltyRate) ? (paymentData.penaltyRate === undefined ? 50 : paymentData.penaltyRate).toString() : 'custom'}
                       onChange={(e) => {
-                        const rVal = e.target.value === '' ? 0 : Number(e.target.value);
+                        const val = e.target.value;
+                        const rVal = val === 'custom' ? (paymentData.penaltyRate ?? 50) : Number(val);
                         const calcPenalty = getCalculatedPenalty(paymentData.dueDate, rVal);
-                        setPaymentData(prev => ({
-                          ...prev,
-                          penaltyRate: rVal,
-                          penalty: calcPenalty,
-                          paidAmount: Math.max(0, (prev.amount + calcPenalty) - prev.discount)
-                        }));
+                        setPaymentData(prev => {
+                          const paid = Math.max(0, (prev.amount + calcPenalty) - prev.discount);
+                          const newModes = [...(prev.paymentModes || [])];
+                          if (newModes.length === 1) {
+                            newModes[0].amount = paid;
+                          }
+                          return {
+                            ...prev,
+                            penaltyRate: rVal,
+                            penalty: calcPenalty,
+                            paidAmount: paid,
+                            paymentModes: newModes
+                          };
+                        });
                       }}
-                      className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-[#141414]"
-                    />
+                      className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-[#141414] appearance-none cursor-pointer text-sm"
+                    >
+                      {penaltyRateOptions.map(opt => (
+                        <option key={opt} value={opt}>₹{opt} / Day</option>
+                      ))}
+                      <option value="custom">Custom...</option>
+                    </select>
+                    {!penaltyRateOptions.includes(paymentData.penaltyRate === undefined ? 50 : paymentData.penaltyRate) && (
+                      <input 
+                        type="number"
+                        required
+                        value={paymentData.penaltyRate === undefined ? 50 : paymentData.penaltyRate}
+                        onChange={(e) => {
+                          const rVal = e.target.value === '' ? 0 : Number(e.target.value);
+                          const calcPenalty = getCalculatedPenalty(paymentData.dueDate, rVal);
+                          setPaymentData(prev => {
+                            const paid = Math.max(0, (prev.amount + calcPenalty) - prev.discount);
+                            const newModes = [...(prev.paymentModes || [])];
+                            if (newModes.length === 1) {
+                              newModes[0].amount = paid;
+                            }
+                            return {
+                              ...prev,
+                              penaltyRate: rVal,
+                              penalty: calcPenalty,
+                              paidAmount: paid,
+                              paymentModes: newModes
+                            };
+                          });
+                        }}
+                        className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none font-bold text-[#141414] animate-in slide-in-from-top-2 text-sm mt-2"
+                        placeholder="Enter rate..."
+                      />
+                    )}
+                  </div>
+
+                  {/* Payment Mode (Supports Multi-mode Payment) */}
+                  <div className="space-y-3 col-span-full">
+                    <div className="flex items-center justify-between ml-1">
+                      <label className="text-[9px] font-black text-[#141414] uppercase tracking-widest">Payment Mode Split-up ({paymentData.paymentModes?.length || 1} Modes)</label>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setPaymentData(prev => ({
+                            ...prev,
+                            paymentModes: [...(prev.paymentModes || []), { mode: 'UPI / Online', amount: 0, transactionId: '' }]
+                          }));
+                        }}
+                        className="px-3 py-1 bg-blue-50 text-blue-600 text-[8px] font-black uppercase tracking-widest rounded-lg hover:bg-blue-100 transition-all flex items-center space-x-1"
+                      >
+                        <Plus size={10} />
+                        <span>Add Mode</span>
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {(paymentData.paymentModes || []).map((pm, idx) => (
+                        <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-emerald-50/30 rounded-2xl relative border border-emerald-100/50">
+                          {paymentData.paymentModes.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newModes = [...paymentData.paymentModes];
+                                newModes.splice(idx, 1);
+                                const newPaid = newModes.reduce((acc, m) => acc + m.amount, 0);
+                                setPaymentData(prev => ({
+                                  ...prev,
+                                  paymentModes: newModes,
+                                  paidAmount: newPaid
+                                }));
+                              }}
+                              className="absolute -top-2 -right-2 w-6 h-6 bg-rose-50 border border-rose-100 rounded-full flex items-center justify-center text-rose-500 hover:bg-rose-100 shadow-sm z-10 cursor-pointer"
+                            >
+                              <X size={12} />
+                            </button>
+                          )}
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black text-[#888888] uppercase tracking-widest">Mode</label>
+                            <select 
+                              value={pm.mode}
+                              onChange={(e) => {
+                                const newModes = [...paymentData.paymentModes];
+                                newModes[idx].mode = e.target.value;
+                                setPaymentData(prev => ({ ...prev, paymentModes: newModes }));
+                              }}
+                              className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none focus:ring-1 focus:ring-emerald-600 font-bold text-[11px]"
+                            >
+                              <option>Cash</option>
+                              <option>UPI / Online</option>
+                              <option>Bank Transfer</option>
+                              <option>Cheque</option>
+                              <option>Card</option>
+                            </select>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[8px] font-black text-[#888888] uppercase tracking-widest">Amount (₹)</label>
+                              {idx === 0 && (
+                                <button 
+                                  type="button" 
+                                  onClick={() => {
+                                    const payable = (paymentData.amount + paymentData.penalty) - paymentData.discount;
+                                    const otherModesTotal = paymentData.paymentModes.slice(1).reduce((sum, m) => sum + m.amount, 0);
+                                    const remaining = Math.max(0, payable - otherModesTotal);
+                                    const newModes = [...paymentData.paymentModes];
+                                    newModes[0].amount = remaining;
+                                    setPaymentData(prev => ({ 
+                                      ...prev, 
+                                      paymentModes: newModes,
+                                      paidAmount: remaining + otherModesTotal
+                                    }));
+                                  }}
+                                  className="text-[7px] font-black text-emerald-600 uppercase hover:underline"
+                                >
+                                  Set Remaining
+                                </button>
+                              )}
+                            </div>
+                            <input 
+                              type="number"
+                              required
+                              value={pm.amount !== undefined && pm.amount !== null ? pm.amount : ''}
+                              onFocus={(e) => e.target.select()}
+                              onChange={(e) => {
+                                const val = e.target.value === '' ? 0 : Number(e.target.value);
+                                const newModes = [...paymentData.paymentModes];
+                                newModes[idx].amount = val;
+                                const totalPaid = newModes.reduce((sum, m) => sum + m.amount, 0);
+                                setPaymentData(prev => ({ 
+                                  ...prev, 
+                                  paymentModes: newModes,
+                                  paidAmount: totalPaid
+                                }));
+                              }}
+                              className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[11px] text-[#141414]"
+                            />
+                          </div>
+                          <div className="space-y-1 col-span-1">
+                            <label className="text-[8px] font-black text-[#888888] uppercase tracking-widest">Transaction Ref</label>
+                            <input 
+                              type="text"
+                              value={pm.transactionId}
+                              onChange={(e) => {
+                                const newModes = [...paymentData.paymentModes];
+                                newModes[idx].transactionId = e.target.value;
+                                setPaymentData(prev => ({ ...prev, paymentModes: newModes }));
+                              }}
+                              placeholder="e.g. TXN12345"
+                              className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[11px]"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -1476,7 +1728,7 @@ export const FeeCollection = () => {
                                    
                                    summary['Course Fee'] = {
                                      amount: student.totalFees || 0,
-                                     discount: (student as any).discount || 0,
+                                     discount: 0,
                                      penalty: 0,
                                      paid: 0
                                    };
@@ -1485,7 +1737,7 @@ export const FeeCollection = () => {
                                      const heads = p.heads || [{ type: p.feeType, amount: p.amount, discount: p.discount, penalty: p.penalty }];
                                      heads.forEach(h => {
                                        if (!summary[h.type]) {
-                                          summary[h.type] = { amount: h.amount, discount: h.discount, penalty: h.penalty, paid: 0 };
+                                          summary[h.type] = { amount: h.amount, discount: 0, penalty: 0, paid: 0 };
                                        }
                                      });
                                    });
@@ -1494,22 +1746,28 @@ export const FeeCollection = () => {
                                       const heads = p.heads || [{ type: p.feeType, amount: p.amount, discount: p.discount, penalty: p.penalty }];
                                       heads.forEach(h => {
                                          if (summary[h.type]) {
-                                            summary[h.type].paid += p.paidAmount * (h.amount / (p.amount || 1));
+                                            const headPayable = h.amount + (h.penalty || 0) - (h.discount || 0);
+                                            const receiptPayable = (p.heads || []).reduce((sum, h2) => sum + (h2.amount + (h2.penalty || 0) - (h2.discount || 0)), 0) || (p.amount + (p.penalty || 0) - (p.discount || 0)) || 1;
+                                            summary[h.type].paid += p.paidAmount * (headPayable / receiptPayable);
+                                            summary[h.type].discount += h.discount || 0;
+                                            summary[h.type].penalty += h.penalty || 0;
                                          }
                                       });
                                    });
 
                                    return Object.entries(summary)
-                                     .filter(([type]) => type !== 'Course Fee')
+                                     // Included Course Fee in Summary
                                      .map(([type, data], idx) => {
-                                     const balance = Math.max(0, (data.amount + data.penalty) - data.discount - data.paid);
+                                     const isCourseFee = type === 'Course Fee';
+                                     const displayAmount = isCourseFee ? (data.amount + data.discount) : data.amount;
+                                     const balance = Math.max(0, (displayAmount + data.penalty) - data.discount - data.paid);
                                      const status = balance <= 0 ? 'Paid' : (data.paid > 0 ? 'Partial' : 'Pending');
                                      
                                      return (
                                        <tr key={idx} className="divide-x-[1.5px] divide-black bg-white">
                                           <td className="py-2.5">{idx + 1}</td>
                                           <td className="py-2.5 px-4 text-left font-black">{type}</td>
-                                          <td className="py-2.5 font-black text-emerald-600 font-black">₹{data.amount.toFixed(2)}</td>
+                                          <td className="py-2.5 font-black text-emerald-600 font-black">₹{displayAmount.toFixed(2)}</td>
                                           <td className="py-2.5 text-orange-500 font-black">₹{data.discount.toFixed(2)}</td>
                                           <td className="py-2.5 text-red-600 font-black">₹{data.penalty.toFixed(2)}</td>
                                           <td className="py-2.5 text-blue-600 font-black font-black">₹{data.paid.toFixed(2)}</td>

@@ -49,7 +49,8 @@ export const StudentLedger = () => {
     const totalPaid = studentPayments.reduce((acc, p) => acc + (p.paidAmount || 0), 0);
     const totalDiscount = studentPayments.reduce((acc, p) => acc + (p.discount || 0), 0);
     const totalPenalty = studentPayments.reduce((acc, p) => acc + (p.penalty || 0), 0);
-    const totalDebit = (student.totalFees || 0) + totalPenalty;
+    const baseFee = (student.totalFees || 0) + totalDiscount;
+    const totalDebit = baseFee + totalPenalty;
     const totalCredit = totalPaid + totalDiscount;
     const balance = Math.max(0, totalDebit - totalCredit);
 
@@ -62,7 +63,7 @@ export const StudentLedger = () => {
       date: student.admissionDate || new Date().toISOString().split('T')[0],
       description: `Course Admission: ${student.course}`,
       type: 'DEBIT',
-      amount: student.totalFees || 0,
+      amount: baseFee,
     });
 
     // 2. Add penalty charges, discount allowances, and paid receipts dynamically
@@ -132,7 +133,7 @@ export const StudentLedger = () => {
       totalPenalty,
       balance,
       totalDebit,
-      baseFee: student.totalFees || 0
+      baseFee,
     };
   };
 

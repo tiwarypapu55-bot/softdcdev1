@@ -29,6 +29,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { clsx } from 'clsx';
 import { FeeStructure } from '../../types';
 
+const discountOptions = [0, 50, 100, 200, 300, 500, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 8000, 10000];
+const penaltyOptions = [0, 5, 10, 20, 50, 100, 150, 200];
+
 export const FeeMaster = () => {
   const { feeStructures, courses, addFeeStructure, updateFeeStructure, deleteFeeStructure, courseCategories } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
@@ -51,6 +54,9 @@ export const FeeMaster = () => {
     status: 'ACTIVE'
   });
 
+  const [customDiscount, setCustomDiscount] = useState<boolean>(false);
+  const [customPenalty, setCustomPenalty] = useState<boolean>(false);
+
   const sessions = ['All', ...Array.from(new Set(feeStructures.map(f => f.session)))];
   const types = ['All', ...Array.from(new Set(feeStructures.map(f => f.type)))];
 
@@ -58,6 +64,8 @@ export const FeeMaster = () => {
     if (fee) {
       setEditingFee(fee);
       setFormData(fee);
+      setCustomDiscount(!discountOptions.includes(fee.discount ?? 0));
+      setCustomPenalty(!penaltyOptions.includes(fee.latePenalty ?? 0));
     } else {
       setEditingFee(null);
       setFormData({
@@ -68,10 +76,12 @@ export const FeeMaster = () => {
         amount: 0,
         discount: 0,
         latePenalty: 0,
-        session: '2025-26',
+        session: '2024-25',
         type: 'Academic',
         status: 'ACTIVE'
       });
+      setCustomDiscount(false);
+      setCustomPenalty(false);
     }
     setIsModalOpen(true);
   };
@@ -390,23 +400,71 @@ export const FeeMaster = () => {
                      </div>
                      <div className="space-y-2">
                         <label className="text-[9px] font-black text-[#888888] uppercase tracking-widest ml-1 text-emerald-600">Discount Amount (₹)</label>
-                        <input 
-                           type="number"
-                           value={formData.discount || ''}
-                           onFocus={(e) => e.target.select()}
-                           onChange={(e) => setFormData({...formData, discount: e.target.value === '' ? 0 : Number(e.target.value)})}
-                           className="w-full p-4 bg-emerald-50 border border-emerald-100 rounded-2xl focus:ring-2 focus:ring-emerald-600 outline-none font-bold text-emerald-700"
-                        />
+                        <div className="space-y-2 col-span-full">
+                           <select 
+                              value={customDiscount ? 'custom' : (formData.discount ?? 0)}
+                              onChange={(e) => {
+                                 const val = e.target.value;
+                                 if (val === 'custom') {
+                                    setCustomDiscount(true);
+                                 } else {
+                                    setCustomDiscount(false);
+                                    setFormData({...formData, discount: Number(val)});
+                                 }
+                              }}
+                              className="w-full p-4 bg-emerald-50 border border-emerald-100 rounded-2xl focus:ring-2 focus:ring-emerald-600 outline-none font-bold text-emerald-700 appearance-none cursor-pointer text-sm"
+                           >
+                              {discountOptions.map(opt => (
+                                 <option key={opt} value={opt}>₹{opt}</option>
+                              ))}
+                              <option value="custom">Custom Amount...</option>
+                           </select>
+                           {customDiscount && (
+                              <input 
+                                 type="number"
+                                 required
+                                 value={formData.discount || ''}
+                                 onFocus={(e) => e.target.select()}
+                                 onChange={(e) => setFormData({...formData, discount: e.target.value === '' ? 0 : Number(e.target.value)})}
+                                 placeholder="Enter custom discount amount..."
+                                 className="w-full p-4 bg-emerald-50 border border-emerald-100 rounded-2xl focus:ring-2 focus:ring-emerald-600 outline-none font-bold text-emerald-700 animate-in slide-in-from-top-2 text-sm"
+                              />
+                           )}
+                        </div>
                      </div>
                      <div className="space-y-2">
                         <label className="text-[9px] font-black text-[#888888] uppercase tracking-widest ml-1 text-red-500">Late Penalty (₹ / Day)</label>
-                        <input 
-                           type="number"
-                           value={formData.latePenalty || ''}
-                           onFocus={(e) => e.target.select()}
-                           onChange={(e) => setFormData({...formData, latePenalty: e.target.value === '' ? 0 : Number(e.target.value)})}
-                           className="w-full p-4 bg-red-50 border border-red-100 rounded-2xl focus:ring-2 focus:ring-red-600 outline-none font-bold text-red-700"
-                        />
+                        <div className="space-y-2 col-span-full">
+                           <select 
+                              value={customPenalty ? 'custom' : (formData.latePenalty ?? 0)}
+                              onChange={(e) => {
+                                 const val = e.target.value;
+                                 if (val === 'custom') {
+                                    setCustomPenalty(true);
+                                 } else {
+                                    setCustomPenalty(false);
+                                    setFormData({...formData, latePenalty: Number(val)});
+                                 }
+                              }}
+                              className="w-full p-4 bg-red-50 border border-red-100 rounded-2xl focus:ring-2 focus:ring-red-600 outline-none font-bold text-red-700 appearance-none cursor-pointer text-sm"
+                           >
+                              {penaltyOptions.map(opt => (
+                                 <option key={opt} value={opt}>₹{opt} / Day</option>
+                              ))}
+                              <option value="custom">Custom Amount...</option>
+                           </select>
+                           {customPenalty && (
+                              <input 
+                                 type="number"
+                                 required
+                                 value={formData.latePenalty !== undefined && formData.latePenalty !== null ? formData.latePenalty : ''}
+                                 onFocus={(e) => e.target.select()}
+                                 onChange={(e) => setFormData({...formData, latePenalty: e.target.value === '' ? 0 : Number(e.target.value)})}
+                                 placeholder="Enter custom penalty rate..."
+                                 className="w-full p-4 bg-red-50 border border-red-100 rounded-2xl focus:ring-2 focus:ring-red-600 outline-none font-bold text-red-700 animate-in slide-in-from-top-2 text-sm"
+                              />
+                           )}
+                        </div>
                      </div>
                      <div className="space-y-2">
                         <label className="text-[9px] font-black text-[#888888] uppercase tracking-widest ml-1">Category / Type</label>

@@ -23,12 +23,14 @@ import {
   FileText,
   Ban,
   Trash2,
-  Edit2
+  Edit2,
+  Award
 } from 'lucide-react';
 import { Franchise } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx } from 'clsx';
 import { compressImage } from '../../lib/storage';
+import { FranchiseCollaborationCertificate } from '../../components/FranchiseCollaborationCertificate';
 
 export const AdminFranchiseManagement = () => {
   const { franchises, updateFranchise, addFranchise, deleteFranchise } = useApp();
@@ -36,6 +38,7 @@ export const AdminFranchiseManagement = () => {
   const [statusFilter, setStatusFilter] = React.useState<'ALL' | 'APPROVED' | 'PENDING' | 'REJECTED' | 'BLOCKED'>('ALL');
   const [showOnboardModal, setShowOnboardModal] = React.useState(false);
   const [editingFranchise, setEditingFranchise] = React.useState<Franchise | null>(null);
+  const [selectedCertFranchise, setSelectedCertFranchise] = React.useState<Franchise | null>(null);
   
   // New branch form state
   const [newBranch, setNewBranch] = React.useState({
@@ -160,6 +163,7 @@ export const AdminFranchiseManagement = () => {
       validityTo: newBranch.validityTo,
       loginId: newBranch.loginId,
       password: newBranch.password,
+      directorName: newBranch.directorName,
       approvalCertificateUrl: newBranch.certificateUrl || `https://example.com/certs/${newBranch.branchId}.pdf`,
       directorPhotoUrl: newBranch.directorPhotoUrl,
       logoUrl: newBranch.logoUrl,
@@ -286,9 +290,16 @@ export const AdminFranchiseManagement = () => {
                         {f.approvalCertificateUrl && (
                           <a href={f.approvalCertificateUrl} target="_blank" rel="noreferrer" className="flex items-center space-x-1">
                             <FileText size={12} />
-                            <span className="text-[10px] font-black uppercase underline">View Certificate</span>
+                            <span className="text-[10px] font-black uppercase underline">View Document</span>
                           </a>
                         )}
+                        <button 
+                          onClick={() => setSelectedCertFranchise(f)}
+                          className="flex items-center space-x-1 text-amber-600 hover:text-amber-700 transition-colors cursor-pointer"
+                        >
+                          <Award size={12} />
+                          <span className="text-[10px] font-black uppercase underline">Collaboration Cert</span>
+                        </button>
                       </div>
                       {f.loginId && (
                          <div className="flex items-center space-x-1 text-[#888888] mt-1">
@@ -647,6 +658,10 @@ export const AdminFranchiseManagement = () => {
                        <div className="space-y-1.5">
                           <label className="text-[10px] font-bold text-[#888888] uppercase tracking-widest">Institute Name</label>
                           <input required type="text" value={editingFranchise.name} onChange={(e) => setEditingFranchise({...editingFranchise, name: e.target.value})} className="w-full p-3 bg-[#F5F5F5] border-none rounded-xl focus:ring-2 focus:ring-blue-600 outline-none text-sm" />
+                        </div>
+                        <div className="space-y-1.5">
+                           <label className="text-[10px] font-bold text-[#888888] uppercase tracking-widest">Director’s Name</label>
+                           <input type="text" value={editingFranchise.directorName || ''} onChange={(e) => setEditingFranchise({...editingFranchise, directorName: e.target.value})} className="w-full p-3 bg-[#F5F5F5] border-none rounded-xl focus:ring-2 focus:ring-blue-600 outline-none text-sm" placeholder="Enter director name..." />
                        </div>
                        <div className="space-y-1.5">
                           <label className="text-[10px] font-bold text-[#888888] uppercase tracking-widest">Contact Number</label>
@@ -790,6 +805,13 @@ export const AdminFranchiseManagement = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {selectedCertFranchise && (
+        <FranchiseCollaborationCertificate 
+          franchise={selectedCertFranchise} 
+          onClose={() => setSelectedCertFranchise(null)} 
+        />
+      )}
     </div>
   );
 };

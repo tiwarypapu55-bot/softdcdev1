@@ -396,14 +396,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const initialFranchises: Franchise[] = [
         {
-          id: 'f1', name: 'Basti Main Campus', ownerId: 'u2', contact: '9450455378', address: 'Gandhi Nagar, Basti',
+          id: 'f1', name: 'SOFT DEV TALLY GURU', ownerId: 'u2', contact: '9450455378', address: 'Gandhi Nagar, Basti, Uttar Pradesh - 272001',
           walletBalance: 50000, status: 'APPROVED', revenueSharePercent: 20, createdAt: new Date().toISOString(),
-          licenseDocs: [], loginId: 'basti_root', password: 'password', logoUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=BC'
+          licenseDocs: [], loginId: 'basti_root', password: 'password', logoUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=BC',
+          directorName: 'Ram Preet Prajapati', validityFrom: '2026-03-04', validityTo: '2027-03-04'
         },
         {
-          id: 'f2', name: 'Lucknow Center', ownerId: 'u3', contact: '8888888888', address: 'Hazratganj, Lucknow',
+          id: 'f2', name: 'Lucknow Center', ownerId: 'u3', contact: '8888888888', address: 'Hazratganj, Lucknow, Uttar Pradesh - 226001',
           walletBalance: 15000, status: 'APPROVED', revenueSharePercent: 25, createdAt: new Date().toISOString(),
-          licenseDocs: [], loginId: 'lucknow_ct', password: 'password'
+          licenseDocs: [], loginId: 'lucknow_ct', password: 'password',
+          directorName: 'Amit Sharma', validityFrom: '2026-01-10', validityTo: '2027-01-10'
         }
       ];
 

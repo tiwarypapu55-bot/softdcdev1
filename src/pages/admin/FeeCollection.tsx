@@ -23,6 +23,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { clsx } from 'clsx';
 import { Student, FeePayment, FeeHeadDetail, PaymentModeDetail } from '../../types';
 
+const discountOptions = [0, 50, 100, 200, 300, 500, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 8000, 10000];
+const penaltyRateOptions = [0, 5, 10, 20, 50, 100, 150, 200];
+
 const getClubbedFeePayments = (payments: FeePayment[]): FeePayment[] => {
   if (!payments || payments.length === 0) return [];
   
@@ -194,8 +197,8 @@ export const FeeCollection = () => {
         (f.courseName === selectedStudent.course || f.courseId === 'all' || f.courseName === 'All IT Courses')
       );
 
-      const baseAmount = matched ? (matched.amount || 0) : 0;
-      const discount = matched ? (matched.discount || 0) : 0;
+      const baseAmount = Math.max(0, (selectedStudent.totalFees || 0) - (selectedStudent.paidAmount || 0));
+      const discount = 0;
       const penaltyRate = matched ? (matched.latePenalty ?? 50) : 50;
       const dueDate = new Date().toISOString().split('T')[0];
       const penalty = getCalculatedPenalty(dueDate, penaltyRate);
@@ -1185,8 +1188,8 @@ export const FeeCollection = () => {
                                 const pRate = matched ? (matched.latePenalty ?? 50) : 50;
                                 const dDate = (head as any).dueDate || new Date().toISOString().split('T')[0];
                                 
-                                newHeads[idx].amount = baseAmount;
-                                newHeads[idx].discount = discount;
+                                newHeads[idx].amount = chosenType === 'Course Fee' ? Math.max(0, (selectedStudent?.totalFees || 0) - (selectedStudent?.paidAmount || 0)) : baseAmount;
+                                newHeads[idx].discount = chosenType === 'Course Fee' ? 0 : discount;
                                 (newHeads[idx] as any).penaltyRate = pRate;
                                 (newHeads[idx] as any).dueDate = dDate;
                                 
@@ -1243,26 +1246,46 @@ export const FeeCollection = () => {
 
                           <div className="space-y-1">
                             <label className="text-[8px] font-black text-[#888888] uppercase tracking-widest">Penalty Rate (₹/Day)</label>
-                            <input 
-                              type="number"
-                              required
-                              value={(head as any).penaltyRate ?? 0}
-                              onFocus={(e) => e.target.select()}
+                            <select
+                              value={penaltyRateOptions.includes((head as any).penaltyRate ?? 0) ? ((head as any).penaltyRate ?? 0).toString() : 'custom'}
                               onChange={(e) => {
-                                const pRate = e.target.value === '' ? 0 : Number(e.target.value);
+                                const val = e.target.value;
+                                const pRate = val === 'custom' ? ((head as any).penaltyRate ?? 1) : Number(val);
                                 const newHeads = [...paymentData.heads];
                                 (newHeads[idx] as any).penaltyRate = pRate;
-                                
                                 const dDate = (newHeads[idx] as any).dueDate || '';
                                 newHeads[idx].penalty = getCalculatedPenalty(dDate, pRate);
-                                
                                 const newTotalPayable = newHeads.reduce((acc, iH) => acc + (iH.amount + (iH.penalty || 0) - (iH.discount || 0)), 0);
                                 const newModes = paymentData.paymentModes.map((m, mIdx) => mIdx === 0 ? { ...m, amount: newTotalPayable } : m);
-                                
                                 setPaymentData({ ...paymentData, heads: newHeads, paymentModes: newModes });
                               }}
-                              className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px]"
-                            />
+                              className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px] appearance-none cursor-pointer"
+                            >
+                              {penaltyRateOptions.map(opt => (
+                                <option key={opt} value={opt}>₹{opt}/Day</option>
+                              ))}
+                              <option value="custom">Custom...</option>
+                            </select>
+                            {!penaltyRateOptions.includes((head as any).penaltyRate ?? 0) && (
+                              <input 
+                                type="number"
+                                required
+                                value={(head as any).penaltyRate ?? ''}
+                                onFocus={(e) => e.target.select()}
+                                onChange={(e) => {
+                                  const pRate = e.target.value === '' ? 0 : Number(e.target.value);
+                                  const newHeads = [...paymentData.heads];
+                                  (newHeads[idx] as any).penaltyRate = pRate;
+                                  const dDate = (newHeads[idx] as any).dueDate || '';
+                                  newHeads[idx].penalty = getCalculatedPenalty(dDate, pRate);
+                                  const newTotalPayable = newHeads.reduce((acc, iH) => acc + (iH.amount + (iH.penalty || 0) - (iH.discount || 0)), 0);
+                                  const newModes = paymentData.paymentModes.map((m, mIdx) => mIdx === 0 ? { ...m, amount: newTotalPayable } : m);
+                                  setPaymentData({ ...paymentData, heads: newHeads, paymentModes: newModes });
+                                }}
+                                className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px] mt-1"
+                                placeholder="Enter rate..."
+                              />
+                            )}
                           </div>
                         </div>
 
@@ -1288,21 +1311,42 @@ export const FeeCollection = () => {
 
                           <div className="space-y-1">
                             <label className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">Disc (₹)</label>
-                            <input 
-                              type="number"
-                              required
-                              value={head.discount || ''}
-                              onFocus={(e) => e.target.select()}
+                            <select
+                              value={discountOptions.includes(head.discount ?? 0) ? (head.discount ?? 0).toString() : 'custom'}
                               onChange={(e) => {
-                                const v = e.target.value === '' ? 0 : Number(e.target.value);
+                                const val = e.target.value;
+                                const discountVal = val === 'custom' ? (head.discount ?? 1) : Number(val);
                                 const newHeads = [...paymentData.heads];
-                                newHeads[idx].discount = v;
+                                newHeads[idx].discount = discountVal;
                                 const newTotalPayable = newHeads.reduce((acc, iH) => acc + (iH.amount + (iH.penalty || 0) - (iH.discount || 0)), 0);
                                 const newModes = paymentData.paymentModes.map((m, mIdx) => mIdx === 0 ? { ...m, amount: newTotalPayable } : m);
                                 setPaymentData({ ...paymentData, heads: newHeads, paymentModes: newModes });
                               }}
-                              className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px] text-emerald-600"
-                            />
+                              className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px] text-emerald-600 appearance-none cursor-pointer"
+                            >
+                              {discountOptions.map(opt => (
+                                <option key={opt} value={opt}>₹{opt}</option>
+                              ))}
+                              <option value="custom">Custom...</option>
+                            </select>
+                            {!discountOptions.includes(head.discount ?? 0) && (
+                              <input 
+                                type="number"
+                                required
+                                value={head.discount || ''}
+                                onFocus={(e) => e.target.select()}
+                                onChange={(e) => {
+                                  const v = e.target.value === '' ? 0 : Number(e.target.value);
+                                  const newHeads = [...paymentData.heads];
+                                  newHeads[idx].discount = v;
+                                  const newTotalPayable = newHeads.reduce((acc, iH) => acc + (iH.amount + (iH.penalty || 0) - (iH.discount || 0)), 0);
+                                  const newModes = paymentData.paymentModes.map((m, mIdx) => mIdx === 0 ? { ...m, amount: newTotalPayable } : m);
+                                  setPaymentData({ ...paymentData, heads: newHeads, paymentModes: newModes });
+                                }}
+                                className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold text-[10px] text-emerald-600 mt-1"
+                                placeholder="Enter discount..."
+                              />
+                            )}
                           </div>
 
                           <div className="space-y-1">
@@ -1327,7 +1371,7 @@ export const FeeCollection = () => {
                             <input 
                               type="number"
                               required
-                              value={head.penalty || ''}
+                              value={head.penalty !== undefined && head.penalty !== null ? head.penalty : ''}
                               onFocus={(e) => e.target.select()}
                               onChange={(e) => {
                                 const v = e.target.value === '' ? 0 : Number(e.target.value);
@@ -1375,7 +1419,7 @@ export const FeeCollection = () => {
                             <option>Cash</option>
                             <option>UPI / Online</option>
                             <option>Bank Transfer</option>
-                            <option>Check</option>
+                            <option>Cheque</option>
                             <option>Card</option>
                           </select>
                         </div>
@@ -1681,7 +1725,7 @@ export const FeeCollection = () => {
                                    
                                    summary['Course Fee'] = {
                                      amount: student.totalFees || 0,
-                                     discount: (student as any).discount || 0,
+                                     discount: 0,
                                      penalty: 0,
                                      paid: 0
                                    };
@@ -1690,7 +1734,7 @@ export const FeeCollection = () => {
                                      const heads = p.heads || [{ type: p.feeType, amount: p.amount, discount: p.discount, penalty: p.penalty }];
                                      heads.forEach(h => {
                                        if (!summary[h.type]) {
-                                          summary[h.type] = { amount: h.amount, discount: h.discount, penalty: h.penalty, paid: 0 };
+                                          summary[h.type] = { amount: h.amount, discount: 0, penalty: 0, paid: 0 };
                                        }
                                      });
                                    });
@@ -1699,22 +1743,28 @@ export const FeeCollection = () => {
                                       const heads = p.heads || [{ type: p.feeType, amount: p.amount, discount: p.discount, penalty: p.penalty }];
                                       heads.forEach(h => {
                                          if (summary[h.type]) {
-                                            summary[h.type].paid += p.paidAmount * (h.amount / (p.amount || 1));
+                                            const headPayable = h.amount + (h.penalty || 0) - (h.discount || 0);
+                                            const receiptPayable = (p.heads || []).reduce((sum, h2) => sum + (h2.amount + (h2.penalty || 0) - (h2.discount || 0)), 0) || (p.amount + (p.penalty || 0) - (p.discount || 0)) || 1;
+                                            summary[h.type].paid += p.paidAmount * (headPayable / receiptPayable);
+                                            summary[h.type].discount += h.discount || 0;
+                                            summary[h.type].penalty += h.penalty || 0;
                                          }
                                       });
                                    });
 
                                    return Object.entries(summary)
-                                     .filter(([type]) => type !== 'Course Fee')
+                                     // Included Course Fee in Summary
                                      .map(([type, data], idx) => {
-                                     const balance = Math.max(0, (data.amount + data.penalty) - data.discount - data.paid);
+                                     const isCourseFee = type === 'Course Fee';
+                                     const displayAmount = isCourseFee ? (data.amount + data.discount) : data.amount;
+                                     const balance = Math.max(0, (displayAmount + data.penalty) - data.discount - data.paid);
                                      const status = balance <= 0 ? 'Paid' : (data.paid > 0 ? 'Partial' : 'Pending');
                                      
                                      return (
                                        <tr key={idx} className="divide-x-[1.5px] divide-black bg-white">
                                           <td className="py-2.5">{idx + 1}</td>
                                           <td className="py-2.5 px-4 text-left font-black">{type}</td>
-                                          <td className="py-2.5 font-black text-emerald-600 font-black">₹{data.amount.toFixed(2)}</td>
+                                          <td className="py-2.5 font-black text-emerald-600 font-black">₹{displayAmount.toFixed(2)}</td>
                                           <td className="py-2.5 text-orange-500 font-black">₹{data.discount.toFixed(2)}</td>
                                           <td className="py-2.5 text-red-600 font-black">₹{data.penalty.toFixed(2)}</td>
                                           <td className="py-2.5 text-blue-600 font-black font-black">₹{data.paid.toFixed(2)}</td>
